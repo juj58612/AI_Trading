@@ -4,6 +4,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import yfinance as yf
+from bs4 import BeautifulSoup
+import strategy_core
 import requests
 from datetime import datetime, timedelta
 import os
@@ -231,34 +233,8 @@ async def scan_all_stocks(request: Request):
                 if is_mock or not inst_data:
                     return None
                 
-                # 3. Calculate Chip Score
-                chip_score = 0
-                signal_text = "等待主力表態"
-                
-                if latest_close >= ma5:
-                    chip_score += 1 # 站上 5MA 基礎分
-                    if inst_data and len(inst_data) >= 2:
-                        last1 = inst_data[-1]
-                        last2 = inst_data[-2]
-                        
-                        # 投信今日買超
-                        if last1['trust'] > 0:
-                            chip_score += 2
-                            signal_text = "投信進駐"
-                        
-                        # 投信連買加分
-                        if last1['trust'] > 0 and last2['trust'] > 0:
-                            chip_score += 1
-                            signal_text = "🔥 投信連買"
-                            
-                        # 外資今日買超
-                        if last1['foreign'] > 0:
-                            chip_score += 1
-                            if last1['trust'] > 0:
-                                signal_text = "🔥 土洋同買"
-                else:
-                    chip_score -= 2 # 跌破 5MA 直接扣分
-                    signal_text = "⚠️ 跌破 5MA 轉弱"
+                # 3. Calculate Chip Score (using unified strategy_core)
+                chip_score, signal_text = strategy_core.calculate_chip_score(latest_close, ma5, inst_data)
                 
                 momentum = round((latest_close - ma20) / ma20, 4) if ma20 > 0 else 0
                 vol_ratio = round(vol_today / vol_ma5, 2) if vol_ma5 > 0 else 0

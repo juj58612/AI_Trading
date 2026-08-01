@@ -150,6 +150,43 @@ btnRunBacktest.addEventListener('click', async () => {
     btnRunBacktest.textContent = originalText;
 });
 
+window.runGridSearch = async function() {
+    const btn = document.getElementById('btnRunGridSearch');
+    if (!btn) return;
+    const originalText = btn.textContent;
+    btn.textContent = "⏳ AI 網格運算中 (約需 10~30 秒)...";
+    btn.disabled = true;
+
+    try {
+        const payload = {
+            capital: parseFloat(document.getElementById('btCapital').value.replace(/,/g, '')),
+            fee_rate: parseFloat(document.getElementById('btFee').value),
+            start_date: `${document.getElementById('btStartYear').value}-${document.getElementById('btStartMonth').value}-${document.getElementById('btStartDay').value}`,
+            end_date: `${document.getElementById('btEndYear').value}-${document.getElementById('btEndMonth').value}-${document.getElementById('btEndDay').value}`
+        };
+
+        const res = await fetch(`${API_BASE}/api/backtest/grid_search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            alert("網格搜索完成！請前往「大數據戰情室」查看最新結果分佈圖！");
+            window.location.href = "analysis.html";
+        } else {
+            const err = await res.json();
+            alert(`執行失敗: ${err.detail}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert(`連線失敗: ${e.message}`);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+};
+
 function renderLeaderboard() {
     if (emptyRow) emptyRow.style.display = 'none';
     

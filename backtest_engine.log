@@ -1,48 +1,41 @@
-INFO:     Started server process [8795]
+INFO:     Started server process [9034]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:58889 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55732 - "GET /api/backtest/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55737 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55739 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55739 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55760 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55760 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55768 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55768 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55769 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55790 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55790 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55791 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55793 - "POST /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56049 - "OPTIONS /api/backtest/download HTTP/1.1" 200 OK
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: 3583.TWO"}}}
+$6414.TWO: possibly delisted; no price data found  (1d 2020-01-01 -> 2022-08-01)
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: 6531.TWO"}}}
+$3583.TWO: possibly delisted; no timezone found
+$6531.TWO: possibly delisted; no timezone found
+$4966.TW: possibly delisted; no timezone found
+$8046.TWO: possibly delisted; no price data found  (1d 2020-01-01 -> 2022-08-01)
+$5269.TWO: possibly delisted; no timezone found
+
+6 Failed downloads:
+['6414.TWO', '8046.TWO']: possibly delisted; no price data found  (1d 2020-01-01 -> 2022-08-01)
+['3583.TWO', '6531.TWO', '4966.TW', '5269.TWO']: possibly delisted; no timezone found
+INFO:     127.0.0.1:56049 - "POST /api/backtest/download HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56083 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56255 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56083 - "POST /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56255 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56346 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56346 - "POST /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56347 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56347 - "POST /api/backtest/run HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56347 - "OPTIONS /api/backtest/download HTTP/1.1" 200 OK
+$3583.TWO: possibly delisted; no timezone found
+$6531.TWO: possibly delisted; no timezone found
+$6414.TWO: possibly delisted; no price data found  (1d 2023-01-01 -> 2024-08-01)
+$4966.TW: possibly delisted; no timezone found
+$5269.TWO: possibly delisted; no timezone found
+$8046.TWO: possibly delisted; no price data found  (1d 2023-01-01 -> 2024-08-01)
+
+6 Failed downloads:
+['3583.TWO', '6531.TWO', '4966.TW', '5269.TWO']: possibly delisted; no timezone found
+['6414.TWO', '8046.TWO']: possibly delisted; no price data found  (1d 2023-01-01 -> 2024-08-01)
+INFO:     127.0.0.1:56347 - "POST /api/backtest/download HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56347 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56347 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56347 - "POST /api/backtest/run HTTP/1.1" 200 OK

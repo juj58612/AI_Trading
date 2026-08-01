@@ -153,12 +153,19 @@
             font-size: 0.9rem;
             color: var(--text-sub);
         }
+        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; margin-right: 10px; transition: all 0.2s; }
+        .btn-nav:hover { background: #30363d; border-color: #8b949e; }
+        .btn-nav-primary { background: #238636; color: white; border: 1px solid rgba(240,246,252,0.1); }
+        .btn-nav-primary:hover { background: #2ea043; border-color: rgba(240,246,252,0.1); }
     </style>
 </head>
 <body>
     <div class="backtest-container">
-        <div class="nav-links">
-            <a href="index.html">← 返回主控制台 (生產環境)</a>
+        <div class="nav-links" style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <a href="index.html" class="btn-nav">🏠 返回主控制台</a>
+                <a href="analysis.html" class="btn-nav btn-nav-primary">📊 進入大數據戰情室</a>
+            </div>
         </div>
         
         <h1 style="color: #fff; margin-bottom: 5px;">🔬 AI 獨立回測實驗室</h1>
@@ -241,8 +248,9 @@
                 </div>
             </div>
             
-            <div class="action-bar">
-                <button id="btnRunBacktest" class="btn-search" style="width: 250px;">🚀 開始執行回測</button>
+            <div class="action-bar" style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btnRunBacktest" class="btn-search" style="width: 250px;">🚀 開始執行單次回測</button>
+                <button id="btnRunGridSearch" class="btn-search" style="width: 350px; background: #8957e5;">🤖 啟動 AI 網格最佳化 (Grid Search)</button>
             </div>
         </div>
         

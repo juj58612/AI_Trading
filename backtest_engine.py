@@ -8,6 +8,7 @@ import pandas as pd
 import yfinance as yf
 import math
 import sqlite3
+import strategy_core
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -320,71 +321,14 @@ async def run_backtest(req: BacktestRequest):
             today_price = df.loc[current_date]
             close = today_price['close']
             
-            # Update trailing stop & extremes
-            if close > p['highest_price']:
-                p['highest_price'] = close
-                atr_val = today_price['ATR']
-                atr_val = atr_val if not pd.isna(atr_val) else 0.0
-                p['trailing_stop'] = close - (p['atr_multiplier'] * atr_val)
-            if close < p['lowest_price']:
-                p['lowest_price'] = close
-                
-            sell_reason = None
+            yesterday_idx = df.index.get_loc(current_date) - 1 if current_date in df.index and df.index.get_loc(current_date) > 0 else -1
+            yesterday_close = df.iloc[yesterday_idx]['close'] if yesterday_idx >= 0 else None
             
-            # Check Time limit
-            days_held = (current_date - pd.Timestamp(p['buy_date'])).days
-            if days_held >= req.max_hold_days:
-                sell_reason = "時間到期"
-                
-            # Check Stop Loss (Trailing or Fixed)
-            elif close < p['trailing_stop']:
-                sell_reason = "觸發停損"
-                
-            # Check Take profit (15%) - Disabled for Strategy D (Let profits run)
-            elif close >= p['buy_price'] * 1.15 and req.exit_strategy != 'D':
-                sell_reason = "15%停利"
-                
-            # Check Chip Loosening
-            else:
-                if req.exit_strategy in ['C', 'D']: # Dynamic ATR
-                    if current_date in cdf.index:
-                        today_chip = cdf.loc[current_date]
-                        if today_chip['foreign'] < 0 or today_chip['trust'] < 0:
-                            p['chip_weak_days'] = p.get('chip_weak_days', 0) + 1
-                        else:
-                            p['chip_weak_days'] = 0
-                            
-                        if p['chip_weak_days'] >= 2:
-                            # 收縮防線
-                            p['atr_multiplier'] = 1.0
-                            atr_val = today_price['ATR']
-                            atr_val = atr_val if not pd.isna(atr_val) else 0.0
-                            new_stop = df.loc[current_date - pd.Timedelta(days=1)]['close'] - (1.0 * atr_val) if (current_date - pd.Timedelta(days=1)) in df.index else close - (1.0 * atr_val)
-                            p['trailing_stop'] = max(p['trailing_stop'], new_stop)
-                            if close < p['trailing_stop']:
-                                sell_reason = "動態停損"
-                                
-                elif req.exit_strategy == 'A': # Score Reversal
-                    if current_date in cdf.index:
-                        # compute mock chip score for yesterday and today
-                        today_chip = cdf.loc[current_date]
-                        score = 1 if close >= today_price['MA5'] else -2
-                        if today_chip['foreign'] < 0: score -= 1
-                        if today_chip['trust'] < 0: score -= 2
-                        
-                        if score < 0:
-                            p['score_weak_days'] = p.get('score_weak_days', 0) + 1
-                        else:
-                            p['score_weak_days'] = 0
-                            
-                        if p['score_weak_days'] >= 2:
-                            sell_reason = "積分轉負"
-                            
-                elif req.exit_strategy == 'B': # Dual Sell
-                    if current_date in cdf.index:
-                        today_chip = cdf.loc[current_date]
-                        if today_chip['foreign'] < 0 and today_chip['trust'] < 0:
-                            sell_reason = "土洋雙賣"
+            sell_reason, p = strategy_core.evaluate_exit(
+                p, today_price, yesterday_close, 
+                cdf.loc[current_date] if current_date in cdf.index else {}, 
+                req.exit_strategy, req.max_hold_days, current_date
+            )
 
             if sell_reason:
                 # Sell!
@@ -398,6 +342,7 @@ async def run_backtest(req: BacktestRequest):
                 
                 mfe = (p['highest_price'] - p['buy_price']) / p['buy_price'] * 100
                 mae = (p['lowest_price'] - p['buy_price']) / p['buy_price'] * 100
+                days_held = (current_date - pd.Timestamp(p['buy_date'])).days
                 
                 trade_history.append({
                     "ticker": t,
@@ -436,35 +381,22 @@ async def run_backtest(req: BacktestRequest):
                 
                 close = today_price['close']
                 
-                # Calculate Chip Score (Simplified for backtest)
-                score = 0
-                if close >= today_price['MA5']: score += 1
-                else: score -= 2
-                
-                today_chip = cdf.loc[current_date]
-                if today_chip['foreign'] > 0: score += 1
-                elif today_chip['foreign'] < 0: score -= 1
-                if today_chip['trust'] > 0: score += 2
-                elif today_chip['trust'] < 0: score -= 2
-                
-                if score >= 1:
-                    ma20 = today_price['MA20']
-                    atr = today_price['ATR']
+                inst_list = []
+                idx = cdf.index.get_loc(current_date) if current_date in cdf.index else -1
+                if idx >= 1:
+                    inst_list.append(cdf.iloc[idx-1].to_dict())
+                if idx >= 0:
+                    inst_list.append(cdf.iloc[idx].to_dict())
                     
-                    # Strategy D: Trend Filter (Close > MA20)
-                    if req.exit_strategy == 'D':
-                        if pd.isna(ma20) or close <= ma20:
-                            continue
-                            
-                    momentum = (close - ma20) / ma20 if not pd.isna(ma20) and ma20 != 0 else 0.0
-                    atr = atr if not pd.isna(atr) else 0.0
-                    
+                eval_res = strategy_core.evaluate_entry(today_price, inst_list, req.exit_strategy)
+                
+                if eval_res:
                     candidates.append({
                         "ticker": t,
-                        "score": score,
-                        "momentum": momentum,
+                        "score": eval_res['score'],
+                        "momentum": eval_res['momentum'],
                         "price": close,
-                        "atr": atr
+                        "atr": eval_res['atr']
                     })
                     
             candidates.sort(key=lambda x: (x['score'], x['momentum']), reverse=True)
@@ -647,6 +579,34 @@ async def run_grid_search(req: GridSearchRequest):
                 
     results.sort(key=lambda x: x["metrics"]["total_return"], reverse=True)
     return {"status": "success", "grid_results": results}
+
+@app.get("/api/analysis/experiments")
+def get_experiments():
+    if not os.path.exists(SQLITE_PATH):
+        return {"data": []}
+        
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM experiments ORDER BY id DESC")
+    rows = c.fetchall()
+    conn.close()
+    
+    return {"data": [dict(r) for r in rows]}
+
+@app.get("/api/analysis/trades/{experiment_id}")
+def get_trades(experiment_id: int):
+    if not os.path.exists(SQLITE_PATH):
+        return {"data": []}
+        
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM trades WHERE experiment_id = ?", (experiment_id,))
+    rows = c.fetchall()
+    conn.close()
+    
+    return {"data": [dict(r) for r in rows]}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=58889)
