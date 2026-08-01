@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 獨立回測實驗室 (Backtest Sandbox)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 回測專屬樣式 */
+        .backtest-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .config-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .config-item label {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+        .config-item select, .config-item input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .config-item select:focus, .config-item input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .best-badge {
+            color: #fbbf24;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        .action-bar {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* 排行榜樣式 */
+        .leaderboard-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .leaderboard-header {
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .leaderboard-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+        table.lb-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.lb-table th {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        table.lb-table th:first-child { text-align: left; }
+        table.lb-table th:hover { color: #fff; }
+        
+        table.lb-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-main);
+        }
+        table.lb-table td:first-child { text-align: left; }
+        
+        tr.best-row {
+            background: rgba(251, 191, 36, 0.1) !important;
+        }
+        tr.best-row td {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        
+        .nav-links {
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .nav-links a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .nav-links a:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+        
+        /* 下載資料庫 UI */
+        .db-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .db-info {
+            flex-grow: 1;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+<body>
+    <div class="backtest-container">
+        <div class="nav-links">
+            <a href="index.html">← 返回主控制台 (生產環境)</a>
+        </div>
+        
+        <h1 style="color: #fff; margin-bottom: 5px;">🔬 AI 獨立回測實驗室</h1>
+        <p style="color: var(--text-sub); margin-bottom: 25px;">在此環境進行的任何參數調整與模擬交易，皆與生產環境完全隔離。請先點擊「同步資料庫」下載最新歷史數據。</p>
+        
+        <div class="db-status">
+            <div class="db-info">
+                <strong>本地離線快取資料庫狀態：</strong> <span id="dbDateStatus">尚未檢查...</span>
+            </div>
+            <button id="btnSyncDB" class="btn-blue" style="width: auto; padding: 10px 20px;">🔄 同步歷史資料庫</button>
+        </div>
+
+        <div class="config-panel">
+            <h2 style="color: #fff; margin-bottom: 20px; font-size: 1.1rem;">⚙️ 回測參數設定 (Hyperparameters)</h2>
+            
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>初始總資金 (NTD)</label>
+                    <input type="text" id="btCapital" value="1,000,000" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')">
+                </div>
+                <div class="config-item">
+                    <label>最大持倉檔數 (自動均分資金)</label>
+                    <select id="btMaxPositions">
+                        <option value="1">1 檔 (全倉單押)</option>
+                        <option value="2">2 檔</option>
+                        <option value="3" selected>3 檔</option>
+                        <option value="4">4 檔</option>
+                        <option value="5">5 檔</option>
+                        <option value="10">10 檔</option>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>單邊交易成本 (滑價+手續費)</label>
+                    <select id="btFee">
+                        <option value="0.003" selected>0.3% (來回 0.6%) - 真實嚴苛</option>
+                        <option value="0.0015">0.15% - 優惠手續費</option>
+                        <option value="0">0% - 無成本(僅供理論分析)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>回測開始 (Start Date)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="btStartYear" style="flex: 1.2;"></select>
+                        <select id="btStartMonth" style="flex: 1;"></select>
+                        <select id="btStartDay" style="flex: 1;"></select>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>回測結束 (End Date)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="btEndYear" style="flex: 1.2;"></select>
+                        <select id="btEndMonth" style="flex: 1;"></select>
+                        <select id="btEndDay" style="flex: 1;"></select>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>最大持倉期限 (強制平倉 - 天數)</label>
+                    <input list="holdDaysList" type="number" id="btMaxHoldDays" value="30">
+                    <datalist id="holdDaysList">
+                        <option value="10" label="10 天"></option>
+                        <option value="30" label="30 天"></option>
+                        <option value="60" label="60 天"></option>
+                        <option value="999" label="無限制"></option>
+                    </datalist>
+                </div>
+            </div>
+            
+            <div class="config-grid" style="grid-template-columns: 1fr;">
+                <div class="config-item">
+                    <label>【核心】籌碼鬆動出場策略 (Exit Logic)</label>
+                    <select id="btExitStrategy">
+                        <option value="D" selected>方案 D：專家級順勢波段法 (月線保護 + 1.5ATR + 讓獲利狂奔) 🏆 系統最佳建議</option>
+                        <option value="C">方案 C：動態防線收縮法 (籌碼轉弱時，停損縮為 1ATR)</option>
+                        <option value="A">方案 A：積分反轉法 (破 5MA 且籌碼積分 < 0 即賣)</option>
+                        <option value="B">方案 B：土洋無情倒貨法 (同一天外資與投信皆賣超即賣)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="action-bar">
+                <button id="btnRunBacktest" class="btn-search" style="width: 250px;">🚀 開始執行回測</button>
+            </div>
+        </div>
+        
+        <div class="leaderboard-panel" id="chartContainer" style="display: none; margin-bottom: 20px;">
+            <div class="leaderboard-header">
+                <div class="leaderboard-title">📈 資金成長與回撤曲線 (Equity & Drawdown)</div>
+            </div>
+            <div style="padding: 15px;">
+                <canvas id="equityChart" height="100"></canvas>
+            </div>
+        </div>
+        
+        <div class="leaderboard-panel">
+            <div class="leaderboard-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="leaderboard-title">🏆 綜合策略排行榜 (Strategy Leaderboard)</div>
+                <button id="btnClearLeaderboard" class="btn-search" style="background-color: #ef4444; width: auto; padding: 5px 15px; font-size: 0.9rem;">🗑️ 清空所有紀錄</button>
+            </div>
+            <table class="lb-table" id="lbTable">
+                <thead>
+                    <tr>
+                        <th data-sort="strategy">策略組合 (出場法)</th>
+                        <th>回測條件參數</th>
+                        <th data-sort="trades">交易次數</th>
+                        <th data-sort="winrate">勝率</th>
+                        <th data-sort="pf">獲利因子</th>
+                        <th data-sort="mdd">MDD (最大虧損)</th>
+                        <th data-sort="return">總報酬率</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="lbBody">
+                    <tr id="emptyRow">
+                        <td colspan="7" style="text-align: center; color: var(--text-sub);">尚未執行任何回測，請在上方設定條件後點擊開始。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="backtest.js"></script>
+</body>
+</html>

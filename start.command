@@ -15,4 +15,4 @@ python3 -m uvicorn main:app --port 58888 &
 sleep 2
 
 # 5. 自動以預設瀏覽器打開控制台 (透過 FastAPI 直接存取網頁)
-open http://127.0.0.1:58888
+open -a "Google Chrome" http://localhost:58888 2>/dev/null || open -a "Microsoft Edge" http://localhost:58888 2>/dev/null || open http://localhost:58888

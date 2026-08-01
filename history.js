@@ -1,4 +1,4 @@
-const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost")
+const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
     ? "http://127.0.0.1:58888"
     : window.location.origin;
 
@@ -20,6 +20,9 @@ async function loadData() {
         
         myPortfolio = await portRes.json();
         myHistory = await histRes.json();
+        
+        if (!Array.isArray(myPortfolio)) myPortfolio = [];
+        if (!Array.isArray(myHistory)) myHistory = [];
         
         // --- 啟動自動同步 (Sync Latest Data) ---
         let portfolioChanged = false;
@@ -126,7 +129,8 @@ async function loadData() {
         renderStatsDashboard();
     } catch (e) {
         console.error("載入資料失敗", e);
-        document.getElementById('activeGrid').innerHTML = '<div class="empty-msg">⚠️ 載入失敗</div>';
+        const errMsg = e.stack ? e.stack.replace(/\n/g, '<br>') : e.message;
+        document.getElementById('activeGrid').innerHTML = `<div class="empty-msg" style="color:red; text-align:left; font-size:14px; padding:20px; background:rgba(255,0,0,0.1); border-radius:8px;">⚠️ 載入失敗<br><br>${errMsg}</div>`;
         document.getElementById('historyContainer').innerHTML = '<div class="empty-msg">⚠️ 載入失敗</div>';
     }
 }
@@ -228,9 +232,9 @@ window.removeFromPortfolio = async function(index) {
         console.error("歸檔失敗", e);
     }
 
-    if (window.chartInstances[`canvas-inst-${item.ticker}`]) window.chartInstances[`canvas-inst-${item.ticker}`].destroy();
-    if (window.chartInstances[`canvas-margin-${item.ticker}`]) window.chartInstances[`canvas-margin-${item.ticker}`].destroy();
-    if (window.chartInstances[`canvas-price-${item.ticker}`]) window.chartInstances[`canvas-price-${item.ticker}`].destroy();
+    if (window.chartInstances[`canvas-inst-${item.ticker}-${index}`]) window.chartInstances[`canvas-inst-${item.ticker}-${index}`].destroy();
+    if (window.chartInstances[`canvas-margin-${item.ticker}-${index}`]) window.chartInstances[`canvas-margin-${item.ticker}-${index}`].destroy();
+    if (window.chartInstances[`canvas-price-${item.ticker}-${index}`]) window.chartInstances[`canvas-price-${item.ticker}-${index}`].destroy();
     
     myPortfolio.splice(index, 1);
     savePortfolioToStorage();
@@ -348,20 +352,20 @@ function renderActive(data) {
 
         let chartSectionHtml = "";
         if (!item.is_mock) {
-            stocksToRenderCharts.push(item);
+            stocksToRenderCharts.push({ ...item, idx: index });
             chartSectionHtml = `
             <div class="charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                 <div class="chart-wrapper" style="grid-column: 1/-1;">
                     <h4>📈 近30日收盤價走勢</h4>
                     <div class="chart-canvas-container" style="height: 180px;">
-                        <canvas id="canvas-price-${item.ticker}"></canvas>
+                        <canvas id="canvas-price-${item.ticker}-${index}"></canvas>
                     </div>
                 </div>
                 
                 <div class="chart-wrapper">
                     <h4>📊 法人買賣超</h4>
                     <div class="chart-canvas-container">
-                        <canvas id="canvas-inst-${item.ticker}"></canvas>
+                        <canvas id="canvas-inst-${item.ticker}-${index}"></canvas>
                     </div>
                     <details style="margin-top: 10px; cursor: pointer; color: var(--text-sub); font-size: 0.9rem;">
                         <summary style="padding: 5px; outline: none; user-select: none;">▶ 展開每日詳細資料</summary>
@@ -375,7 +379,7 @@ function renderActive(data) {
                 <div class="chart-wrapper">
                     <h4>📊 融資融券</h4>
                     <div class="chart-canvas-container">
-                        <canvas id="canvas-margin-${item.ticker}"></canvas>
+                        <canvas id="canvas-margin-${item.ticker}-${index}"></canvas>
                     </div>
                     <details style="margin-top: 10px; cursor: pointer; color: var(--text-sub); font-size: 0.9rem;">
                         <summary style="padding: 5px; outline: none; user-select: none;">▶ 展開每日詳細資料</summary>
@@ -439,14 +443,14 @@ function renderActive(data) {
     });
 
     stocksToRenderCharts.forEach(stock => {
-        initAdvancedCharts(stock.ticker, stock.inst_data, stock.margin_data, stock.history_dates, stock.history_prices);
+        initAdvancedCharts(stock.ticker, stock.idx, stock.inst_data, stock.margin_data, stock.history_dates, stock.history_prices);
     });
 }
 
-function initAdvancedCharts(ticker, inst_data, margin_data, history_dates, history_prices) {
-    const instCanvasId = `canvas-inst-${ticker}`;
-    const marginCanvasId = `canvas-margin-${ticker}`;
-    const priceCanvasId = `canvas-price-${ticker}`;
+function initAdvancedCharts(ticker, idx, inst_data, margin_data, history_dates, history_prices) {
+    const instCanvasId = `canvas-inst-${ticker}-${idx}`;
+    const marginCanvasId = `canvas-margin-${ticker}-${idx}`;
+    const priceCanvasId = `canvas-price-${ticker}-${idx}`;
 
     const instCtx = document.getElementById(instCanvasId);
     const marginCtx = document.getElementById(marginCanvasId);

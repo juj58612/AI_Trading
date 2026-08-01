@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+
+# Personal Portfolio Data
+portfolio.json
+
+# Local Backups
+backup_v1/
