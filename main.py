@@ -227,6 +227,10 @@ async def scan_all_stocks(request: Request):
                 # 2. Fetch Chips
                 inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
                 
+                # 如果無法取得真實籌碼 (被鎖或 API 壞掉)，直接丟棄該股票，拒絕給假資料
+                if is_mock or not inst_data:
+                    return None
+                
                 # 3. Calculate Chip Score
                 chip_score = 0
                 signal_text = "等待主力表態"
@@ -280,7 +284,7 @@ async def scan_all_stocks(request: Request):
         results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
         
         if not results and tickers:
-            raise HTTPException(status_code=500, detail="Yahoo Finance / FinMind 伺服器拒絕連線 (可能遇到 IP 阻擋或 Rate Limit)，導致無法抓取任何股票資料。")
+            raise HTTPException(status_code=500, detail="目前無法取得真實資料，無法推薦！(Yahoo Finance / FinMind 伺服器拒絕連線或發生錯誤)")
             
         return {"data": results}
     except Exception as e:

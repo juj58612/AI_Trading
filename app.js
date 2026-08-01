@@ -464,13 +464,10 @@ async function renderStockCards(count) {
                 
                 // 排分邏輯：籌碼優先，動能次之
                 s.aiScore = (sd.chip_score * 100) + sd.momentum;
-            } else {
-                s.aiScore = -999;
-                s.latestClose = s.defaultPrice;
-            }
-            
-            if (filterByPriceRange(s.latestClose, rangeKey)) {
-                filteredStocks.push(s);
+                
+                if (filterByPriceRange(s.latestClose, rangeKey)) {
+                    filteredStocks.push(s);
+                }
             }
         });
         
@@ -495,7 +492,7 @@ async function renderStockCards(count) {
     const selectedStocks = filteredStocks.slice(0, targetCount);
 
     if (selectedStocks.length === 0) {
-        stocksGrid.innerHTML = `<div class="empty-msg" style="grid-column: 1/-1;">⚠️ 在「${buyPriceRange.options[buyPriceRange.selectedIndex].text}」區間內，無符合條件之標的。</div>`;
+        stocksGrid.innerHTML = `<div class="empty-msg" style="grid-column: 1/-1;">⚠️ 目前無法取得真實資料，無法推薦！(可能遭到阻擋或假日無連線)</div>`;
         return;
     }
 
