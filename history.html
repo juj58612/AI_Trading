@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歷史交易庫房 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .history-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .history-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        .history-meta {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+        }
+        .history-body {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .history-data-point {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .history-notes {
+            background: rgba(59, 130, 246, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-blue);
+        }
+        .history-notes strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--accent-blue);
+        }
+        .outcome-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .outcome-profit { background: rgba(239, 68, 68, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .outcome-loss { background: rgba(16, 185, 129, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
+        .outcome-neutral { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header style="position: relative;">
+        <h1>📂 歷史交易庫房 (Portfolio Archive)</h1>
+        <p>檢視您的實戰紀錄、出場表現與交易日誌</p>
+        <a href="index.html" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-purple);">🏠 返回主控制台</a>
+    </header>
+
+    <div class="section-title" style="color: var(--accent-blue); border-bottom-color: var(--accent-blue);">
+        ⚔️ 現役部隊 (目前持倉總覽)
+    </div>
+    
+    <div class="settings-panel" style="margin-bottom: 20px;">
+        <div class="count-setting discount-setting">
+            <label for="discountRate">高/低點打折係數 (防守級別)：</label>
+            <input type="number" id="discountRate" step="0.01" min="0.80" max="1.00" value="0.95" title="預設0.95表示高點打95折為回撤防守點">
+        </div>
+    </div>
+
+    <div id="activeGrid" class="cards-grid">
+        <div class="empty-msg">載入中...</div>
+    </div>
+
+    <div class="section-title" style="color: var(--accent-yellow); border-bottom-color: var(--accent-yellow); margin-top: 40px;">
+        🎯 戰情損益統計看板
+    </div>
+    <div id="statsDashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+            <div style="color: var(--text-sub); margin-bottom: 10px;">未實現損益 (現役持倉)</div>
+            <div id="unrealizedPnl" style="font-size: 2rem; font-weight: bold; color: var(--text-main);">-</div>
+        </div>
+        <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+            <div style="color: var(--text-sub); margin-bottom: 10px;">已實現損益 (歷史結案)</div>
+            <div id="realizedPnl" style="font-size: 2rem; font-weight: bold; color: var(--text-main);">-</div>
+        </div>
+        <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--accent-purple); text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--accent-purple);"></div>
+            <div style="color: var(--text-sub); margin-bottom: 10px;">總戰果 (Total PnL)</div>
+            <div id="totalPnl" style="font-size: 2.2rem; font-weight: bold; color: var(--text-main);">-</div>
+        </div>
+    </div>
+
+    <div class="section-title" style="color: var(--accent-purple); border-bottom-color: var(--accent-purple); margin-top: 40px; display: flex; justify-content: space-between; align-items: center;">
+        <span>📜 退役結案紀錄 (歷史交易日誌)</span>
+        <div style="font-size: 0.9rem; display: flex; gap: 10px;">
+            <button id="btnDeleteSelected" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: none;" onclick="deleteSelectedHistory()">🗑️ 刪除選取紀錄</button>
+            <button id="btnExportCSV" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="exportHistoryToCSV()">📊 匯出試算表 (CSV)</button>
+        </div>
+    </div>
+    <div id="historyContainer">
+        <div class="empty-msg">載入中...</div>
+    </div>
+</div>
+
+<script src="history.js"></script>
+</body>
+</html>
