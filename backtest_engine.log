@@ -156,3 +156,4 @@ INFO:     127.0.0.1:57242 - "GET /api/backtest/mega_grid/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57312 - "GET /api/backtest/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57313 - "OPTIONS /api/backtest/run HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57313 - "POST /api/backtest/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57599 - "GET /api/backtest/status HTTP/1.1" 200 OK

@@ -432,6 +432,43 @@ window.runMegaGrid = async function() {
     }
 };
 
+async function fetchLeaderboardFromDB() {
+    try {
+        const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.data && Array.isArray(data.data)) {
+                leaderboardData = data.data.map(exp => ({
+                    strategy: exp.exit_strategy,
+                    positions: exp.max_positions,
+                    holdDays: exp.max_hold_days,
+                    return: exp.total_return,
+                    mdd: exp.mdd,
+                    winRate: exp.win_rate,
+                    profitFactor: exp.profit_factor,
+                    isOOS: exp.is_out_of_sample,
+                    returns_yearly: {
+                        '2021': exp.return_2021 || 0,
+                        '2022': exp.return_2022 || 0,
+                        '2023': exp.return_2023 || 0,
+                        '2024': exp.return_2024 || 0,
+                        '2025': exp.return_2025 || 0,
+                        '2026': exp.return_2026 || 0
+                    }
+                }));
+                renderLeaderboard();
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch leaderboard from DB:", e);
+    }
+}
+
+// 頁面初次載入時自動從 DB 讀取歷史排行榜
+document.addEventListener('DOMContentLoaded', () => {
+    fetchLeaderboardFromDB();
+});
+
 let megaPollInterval = null;
 function pollMegaGridStatus() {
     if (megaPollInterval) clearInterval(megaPollInterval);
@@ -454,13 +491,13 @@ function pollMegaGridStatus() {
                     btn.textContent = `⏳ 大數據運算中... (${pct}%)`;
                 } else {
                     clearInterval(megaPollInterval);
-                    progressMsg.innerHTML = `<span style="color:#4ade80; font-weight:bold;">🎉 大數據網格搜索完成！已自動刷新下方「綜合策略排行榜」與「AI 決策歸因看板」！</span>`;
+                    progressMsg.innerHTML = `<span style="color:#4ade80; font-weight:bold;">🎉 巨量大數據網格搜索完成！已自動載入最新「綜合策略排行榜」與「AI 決策歸因看板」！</span>`;
                     progressBar.style.width = `100%`;
                     btn.textContent = `🎉 運算完成！`;
                     btn.disabled = false;
                     
-                    // 重新載入最新榜單
-                    renderLeaderboard();
+                    // 重新從資料庫載入最新榜單
+                    fetchLeaderboardFromDB();
                 }
             }
         } catch (e) {
