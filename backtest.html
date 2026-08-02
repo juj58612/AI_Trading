@@ -261,32 +261,36 @@
             </p>
             
             <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; color: #f0f6fc; display: block; margin-bottom: 8px;">1. 勾選要測試的最大持倉數 (Max Positions)</label>
-                <div style="display: flex; gap: 15px;">
-                    <label><input type="checkbox" name="megaPos" value="1"> 1 檔</label>
+                <label style="font-weight: bold; color: #f0f6fc; display: block; margin-bottom: 8px;">1. 勾選要測試的最大持股檔數上限 (Max Positions)</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <label><input type="checkbox" name="megaPos" value="1"> 1 檔 (集中)</label>
                     <label><input type="checkbox" name="megaPos" value="2"> 2 檔</label>
-                    <label><input type="checkbox" name="megaPos" value="3" checked> 3 檔</label>
-                    <label><input type="checkbox" name="megaPos" value="4" checked> 4 檔</label>
-                    <label><input type="checkbox" name="megaPos" value="5" checked> 5 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="3" checked> 3 檔 (推薦)</label>
+                    <label><input type="checkbox" name="megaPos" value="5" checked> 5 檔 (分散)</label>
+                    <label><input type="checkbox" name="megaPos" value="8"> 8 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="10"> 10 檔</label>
                 </div>
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: bold; color: #f0f6fc; display: block; margin-bottom: 8px;">2. 勾選要測試的出場方案 (Exit Strategies)</label>
-                <div style="display: flex; gap: 15px;">
-                    <label><input type="checkbox" name="megaStrat" value="D" checked> 方案 D (專家級順勢)</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <label><input type="checkbox" name="megaStrat" value="D" checked> 方案 D (自適應吊燈鎖利)</label>
                     <label><input type="checkbox" name="megaStrat" value="C" checked> 方案 C (動態收縮防線)</label>
-                    <label><input type="checkbox" name="megaStrat" value="A"> 方案 A (積分反轉)</label>
-                    <label><input type="checkbox" name="megaStrat" value="B"> 方案 B (土洋倒貨)</label>
+                    <label><input type="checkbox" name="megaStrat" value="A" checked> 方案 A (固定 % 停損)</label>
+                    <label><input type="checkbox" name="megaStrat" value="B" checked> 方案 B (關鍵支撐破位)</label>
                 </div>
             </div>
             
             <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <label style="font-weight: bold; color: #f0f6fc;">3. 勾選要測試的持倉天數限制 (Hold Days - 共 36 種間隔)</label>
-                    <div>
-                        <button class="btn-blue" style="padding: 2px 8px; font-size: 0.75rem; background: #30363d;" onclick="toggleAllMegaDays(true)">全選</button>
-                        <button class="btn-blue" style="padding: 2px 8px; font-size: 0.75rem; background: #30363d;" onclick="toggleAllMegaDays(false)">全不選</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                    <label style="font-weight: bold; color: #f0f6fc;">3. 勾選要測試的持倉天數限制 (Hold Days 光譜)</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="btn-blue" style="padding: 3px 8px; font-size: 0.75rem; background: #3b82f6;" onclick="selectMegaRange('short')">⚡ 短線 (2-15天)</button>
+                        <button class="btn-blue" style="padding: 3px 8px; font-size: 0.75rem; background: #f59e0b;" onclick="selectMegaRange('swing')">🎯 波段 (20-60天)</button>
+                        <button class="btn-blue" style="padding: 3px 8px; font-size: 0.75rem; background: #10b981;" onclick="selectMegaRange('long')">⏳ 長線 (90-360天)</button>
+                        <button class="btn-blue" style="padding: 3px 8px; font-size: 0.75rem; background: #8957e5;" onclick="selectMegaRange('all')">🌌 全光譜 (2-360天)</button>
+                        <button class="btn-blue" style="padding: 3px 8px; font-size: 0.75rem; background: #30363d;" onclick="selectMegaRange('none')">清空</button>
                     </div>
                 </div>
                 <div id="megaDaysContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid #30363d;">

@@ -364,15 +364,14 @@ if (document.getElementById('btnRunGridSearch')) {
 }
 
 // Mega Grid Search Functions
-const megaDays = [2, 3, 5, 7, 12, 15, 20, 25, 30, 35, 40, 60, 70, 90, 100, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600, 630, 660, 690, 720];
+const megaDays = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 300, 360];
 
 function renderMegaDays() {
     const container = document.getElementById('megaDaysContainer');
     if (!container) return;
     container.innerHTML = '';
     megaDays.forEach(day => {
-        // Pre-check some common values (30, 60, 90, 120, etc.)
-        const checked = [30, 60, 90, 120, 180, 360].includes(day) ? 'checked' : '';
+        const checked = [15, 30, 60, 90, 180].includes(day) ? 'checked' : '';
         container.innerHTML += `
             <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor:pointer;">
                 <input type="checkbox" class="mega-day-cb" value="${day}" ${checked}> ${day}天
@@ -380,6 +379,24 @@ function renderMegaDays() {
         `;
     });
 }
+
+window.selectMegaRange = function(rangeType) {
+    const cbs = document.querySelectorAll('.mega-day-cb');
+    cbs.forEach(cb => {
+        const val = parseInt(cb.value);
+        if (rangeType === 'short') {
+            cb.checked = (val >= 2 && val <= 15);
+        } else if (rangeType === 'swing') {
+            cb.checked = (val >= 20 && val <= 60);
+        } else if (rangeType === 'long') {
+            cb.checked = (val >= 90 && val <= 360);
+        } else if (rangeType === 'all') {
+            cb.checked = true;
+        } else if (rangeType === 'none') {
+            cb.checked = false;
+        }
+    });
+};
 
 window.toggleAllMegaDays = function(checked) {
     document.querySelectorAll('.mega-day-cb').forEach(cb => cb.checked = checked);

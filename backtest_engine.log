@@ -188,3 +188,5 @@ INFO:     127.0.0.1:59140 - "GET /api/backtest/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59139 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59139 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59140 - "GET /api/analysis/attribution HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59236 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59235 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
