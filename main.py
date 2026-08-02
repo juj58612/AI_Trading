@@ -592,7 +592,7 @@ async def commit_planner_orders(req: CommitRequest):
 # 掛載靜態網頁與外部檔案 (提供支援 index.html, style.css, app.js 的靜態服務)
 @app.get("/{filename}", dependencies=[Depends(authenticate)])
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
