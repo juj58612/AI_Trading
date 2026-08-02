@@ -549,23 +549,55 @@ def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depend
         market_advice = "乖離過大，隨時有暴力反彈 (V轉)，準備搶短。"
         market_color = "#059669"
 
-    # Select buys from scan results
+    # 2-Stage Pyramiding & Risk Parity Protection Selection Logic
     potential_buys = []
-    active_tickers = [p['ticker'] for p in portfolio]
+    portfolio_dict = {p.get('ticker'): p for p in portfolio if p.get('ticker')}
     
     scan_results.sort(key=lambda x: (x.get('chip_score', 0), x.get('momentum', 0)), reverse=True)
     
     for item in scan_results:
         t = item['ticker']
-        if t in active_tickers:
+        chip_score = item.get('chip_score', 0)
+        
+        if chip_score < 1:
             continue
-        if item.get('chip_score', 0) >= 1:
+            
+        held_item = portfolio_dict.get(t)
+        if held_item:
+            # Check current stage (1 = 30%, 2 = 60%, 3 = 100% full allocation)
+            current_stage = held_item.get('stage_num', 1)
+            if isinstance(current_stage, str):
+                if '30%' in current_stage or '1' in current_stage: current_stage = 1
+                elif '60%' in current_stage or '2' in current_stage: current_stage = 2
+                elif '100%' in current_stage or '3' in current_stage: current_stage = 3
+                else: current_stage = 1
+                
+            if current_stage < 3:
+                # 【情況 A】：尚未買滿！允許順勢右側加碼 Stage 2 (30%) 或 Stage 3 (40%)！
+                next_stage_num = current_stage + 1
+                next_stage_label = "加碼 30%" if next_stage_num == 2 else "滿額 40%"
+                potential_buys.append({
+                    "ticker": t,
+                    "name": item.get('name', t),
+                    "price": item.get('latest_close'),
+                    "score": chip_score,
+                    "signal": f"右側順勢加碼 (第 {next_stage_num} 階段)",
+                    "stage": f"第 {next_stage_num} 批 {next_stage_label}",
+                    "stage_num": next_stage_num
+                })
+            else:
+                # 【情況 B】：已經買滿 (Stage 3 滿額)！觸發 Risk Parity 避險機制，自動跳過，留資金給新黑馬！
+                continue
+        else:
+            # 【情況 C】：尚未持有的全新黑馬標的 ➔ 建倉第 1 階段試探盤 (30%)
             potential_buys.append({
                 "ticker": t,
                 "name": item.get('name', t),
                 "price": item.get('latest_close'),
-                "score": item.get('chip_score'),
-                "signal": item.get('signal', '')
+                "score": chip_score,
+                "signal": item.get('signal', 'S1 止跌/右側試探盤'),
+                "stage": "首批 30%",
+                "stage_num": 1
             })
             
     # Apply Budget Filter (Scheme B)
@@ -590,7 +622,8 @@ def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depend
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
-                "stage": "首批 30%"
+                "stage": b['stage'],
+                "stage_num": b.get('stage_num', 1)
             })
             current_used_cash += needed_cost
         else:
@@ -601,7 +634,8 @@ def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depend
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
-                "stage": "首批 30%"
+                "stage": b['stage'],
+                "stage_num": b.get('stage_num', 1)
             })
             
     today = datetime.today()
