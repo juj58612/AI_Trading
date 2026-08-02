@@ -21,13 +21,13 @@
     </header>
 
     <!-- 做多策略區塊 -->
-    <div class="section-title" style="color: var(--accent-purple); border-bottom-color: var(--accent-purple); margin-top: 30px; font-size: 1.4rem; font-weight: bold;">
+    <div class="section-title" style="color: var(--sell-border); border-bottom-color: var(--sell-border); margin-top: 30px; font-size: 1.4rem; font-weight: bold;">
         🤖 AI 籌碼深度掃描與排名 (做多)
     </div>
 
     <div class="search-card">
         <div class="search-header">
-            <div class="search-title" style="font-size: 1.1rem; color: var(--text-sub);">🎯 做多飆股篩選控制台</div>
+            <div class="search-title" style="font-size: 1.1rem; color: var(--sell-border);">🎯 做多飆股篩選控制台</div>
             <div class="search-controls">
                 <div class="count-setting">
                     <label for="buyPriceRange">股價區間：</label>
@@ -45,14 +45,14 @@
                     <input type="number" id="stockCount" value="15" min="1" max="60">
                     <span>檔</span>
                 </div>
-                <button class="btn-search" id="btnScanAI">🚀 啟動 AI 深度掃描 (約需 15 秒)</button>
+                <button class="btn-search" id="btnScanAI" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border-color: #ea580c;">🚀 啟動 AI 深度掃描 (約需 15 秒)</button>
             </div>
         </div>
         
         <div id="scanProgressContainer" style="display: none; margin-top: 15px; margin-bottom: 10px;">
             <div style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 5px;" id="scanStatusText">正在掃描 60 檔標的...</div>
             <div style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; height: 12px; overflow: hidden;">
-                <div id="scanProgressBar" style="width: 0%; height: 100%; background: var(--accent-blue); border-radius: 4px; transition: width 0.3s ease;"></div>
+                <div id="scanProgressBar" style="width: 0%; height: 100%; background: #ea580c; border-radius: 4px; transition: width 0.3s ease;"></div>
             </div>
         </div>
         
@@ -62,7 +62,7 @@
     <div class="stocks-grid" id="stocksGrid"></div>
 
     <!-- 做空策略區塊 -->
-    <div class="section-title" style="color: var(--sell-border); border-bottom-color: var(--sell-border); margin-top: 50px; font-size: 1.4rem; font-weight: bold;">
+    <div class="section-title" style="color: var(--accent-purple); border-bottom-color: var(--accent-purple); margin-top: 50px; font-size: 1.4rem; font-weight: bold;">
         📉 AI 賣出與放空訊號推薦引擎 (做空)
     </div>
     

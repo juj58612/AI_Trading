@@ -14,12 +14,12 @@ header h1 { font-size: 2rem; color: var(--text-main); margin-bottom: 8px; }
 header p { color: var(--text-sub); font-size: 0.95rem; }
 
 .standalone-search-card { background: linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 1) 100%); border: 2px solid var(--accent-blue); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25); }
-.search-card { background: linear-gradient(135deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%); border: 1px solid var(--accent-purple); border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15); }
-.sell-section { background: linear-gradient(135deg, rgba(67, 20, 7, 0.2) 0%, rgba(15, 23, 42, 1) 100%); border: 1px solid var(--sell-border); border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15); }
+.search-card { background: linear-gradient(135deg, rgba(67, 20, 7, 0.3) 0%, rgba(15, 23, 42, 1) 100%); border: 1px solid var(--sell-border); border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(234, 88, 12, 0.25); }
+.sell-section { background: linear-gradient(135deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%); border: 1px solid var(--accent-purple); border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15); }
 
 .search-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-.search-title { font-size: 1.2rem; color: var(--accent-purple); font-weight: bold; }
-.sell-title { font-size: 1.2rem; color: var(--sell-border); font-weight: bold; }
+.search-title { font-size: 1.2rem; color: var(--sell-border); font-weight: bold; }
+.sell-title { font-size: 1.2rem; color: var(--accent-purple); font-weight: bold; }
 .search-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .count-setting { display: flex; align-items: center; gap: 8px; background-color: var(--bg-color); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem; }
