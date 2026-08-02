@@ -62,14 +62,19 @@ def init_db():
     ''')
     
     # Migrations
-    c.execute("PRAGMA table_info(experiments)")
-    cols = [col[1] for col in c.fetchall()]
-    if 'is_out_of_sample' not in cols:
-        c.execute("ALTER TABLE experiments ADD COLUMN is_out_of_sample BOOLEAN DEFAULT 0")
-    for yr in ["2021", "2022", "2023", "2024", "2025", "2026"]:
-        col_name = f"return_{yr}"
-        if col_name not in cols:
-            c.execute(f"ALTER TABLE experiments ADD COLUMN {col_name} REAL DEFAULT 0")
+    try:
+        c.execute("PRAGMA table_info(experiments)")
+        cols = [col[1] for col in c.fetchall()]
+        if 'is_out_of_sample' not in cols:
+            c.execute("ALTER TABLE experiments ADD COLUMN is_out_of_sample BOOLEAN DEFAULT 0")
+        if "cagr" not in cols:
+            c.execute("ALTER TABLE experiments ADD COLUMN cagr REAL DEFAULT 0")
+        for yr in ["2021", "2022", "2023", "2024", "2025", "2026"]:
+            col_name = f"return_{yr}"
+            if col_name not in cols:
+                c.execute(f"ALTER TABLE experiments ADD COLUMN {col_name} REAL DEFAULT 0")
+    except Exception as e:
+        print(f"Migration notice: {e}")
 
     c.execute('''
         CREATE TABLE IF NOT EXISTS trades (
@@ -644,8 +649,20 @@ async def run_backtest(req: BacktestRequest):
                 end_val = year_data[-1]['equity']
                 yearly_returns[yr] = round((end_val - start_val) / start_val * 100, 2)
 
+    # Compute CAGR (Compound Annual Growth Rate)
+    try:
+        d1 = datetime.datetime.strptime(req.start_date, "%Y-%m-%d")
+        d2 = datetime.datetime.strptime(req.end_date, "%Y-%m-%d")
+        days = max(1, (d2 - d1).days)
+        years_cnt = max(0.05, days / 365.25)
+        tot_ratio = max(0.0001, final_equity / req.capital)
+        cagr = round(((tot_ratio ** (1.0 / years_cnt)) - 1) * 100, 2)
+    except Exception:
+        cagr = 0.0
+
     metrics_dict = {
         "total_return": round((final_equity - req.capital) / req.capital * 100, 2),
+        "cagr": cagr,
         "mdd": round(mdd, 2),
         "win_rate": round(win_rate, 2),
         "profit_factor": round(profit_factor, 2),
@@ -657,9 +674,9 @@ async def run_backtest(req: BacktestRequest):
         conn = sqlite3.connect(SQLITE_PATH)
         c = conn.cursor()
         c.execute('''
-            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
+            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
         
         experiment_id = c.lastrowid
         

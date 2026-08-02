@@ -56,7 +56,7 @@ async function checkDbStatus() {
 
 window.addEventListener('DOMContentLoaded', () => {
     checkDbStatus();
-    initDateDropdowns('Start', '2022-01-01');
+    initDateDropdowns('Start', '2021-01-01');
     initDateDropdowns('End', '2026-08-01');
     renderMegaDays();
 });

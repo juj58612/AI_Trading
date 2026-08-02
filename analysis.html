@@ -160,10 +160,12 @@
                 <thead>
                     <tr>
                         <th>排名</th>
+                        <th>回測時間區間</th>
                         <th>策略引擎</th>
                         <th>最大持股</th>
                         <th>持倉天數</th>
                         <th>總報酬率</th>
+                        <th>年化報酬 (CAGR)</th>
                         <th>最大回撤 (MDD)</th>
                         <th>勝率</th>
                         <th>獲利因子</th>
@@ -172,7 +174,7 @@
                     </tr>
                 </thead>
                 <tbody id="lbTableBody">
-                    <tr><td colspan="10">載入大數據排行榜中...</td></tr>
+                    <tr><td colspan="12">載入大數據排行榜中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -229,10 +231,12 @@ function renderTable(list) {
     tbody.innerHTML = list.slice(0, 30).map((row, idx) => `
         <tr class="${idx === 0 ? 'best-row' : ''}">
             <td>${idx === 0 ? '🏆 第 1 名' : `第 ${idx + 1} 名`}</td>
+            <td style="font-size: 0.85rem; color: #94a3b8;">${row.start_date || '2021-01-01'} ~ ${row.end_date || '2026-08-01'}</td>
             <td><b>方案 ${row.exit_strategy}</b></td>
             <td>${row.max_positions} 檔</td>
             <td>${row.max_hold_days} 天</td>
             <td style="color: #f59e0b; font-weight: bold;">+${row.total_return.toFixed(2)}%</td>
+            <td style="color: #38bdf8; font-weight: bold;">+${(row.cagr || 0).toFixed(2)}%</td>
             <td style="color: #4ade80;">${row.mdd.toFixed(2)}%</td>
             <td>${row.win_rate.toFixed(1)}%</td>
             <td>${row.profit_factor.toFixed(2)}</td>
@@ -294,17 +298,21 @@ function exportAnalysisToCSV() {
         return;
     }
     
-    let csvContent = "\uFEFF排名,策略方案,持股檔數,持倉天數,累積總報酬率(%),最大回撤MDD(%),勝率(%),獲利因子,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n";
+    let csvContent = "\uFEFF排名,回測開始日期,回測結束日期,策略方案,持股檔數,持倉天數,累積總報酬率(%),年化報酬率CAGR(%),最大回撤MDD(%),勝率(%),獲利因子,總交易次數,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n";
     
     currentAnalysisList.forEach((row, idx) => {
         const rank = idx + 1;
+        const sDate = row.start_date || "2021-01-01";
+        const eDate = row.end_date || "2026-08-01";
         const strategy = `方案 ${row.exit_strategy}`;
         const pos = row.max_positions;
         const hold = row.max_hold_days;
         const ret = row.total_return ? row.total_return.toFixed(2) : "0.00";
+        const cagr = row.cagr ? row.cagr.toFixed(2) : "0.00";
         const mdd = row.mdd ? row.mdd.toFixed(2) : "0.00";
         const win = row.win_rate ? row.win_rate.toFixed(1) : "0.0";
         const pf = row.profit_factor ? row.profit_factor.toFixed(2) : "0.00";
+        const trades = row.total_trades || 0;
         const r2021 = (row.return_2021 || 0).toFixed(2);
         const r2022 = (row.return_2022 || 0).toFixed(2);
         const r2023 = (row.return_2023 || 0).toFixed(2);
@@ -312,7 +320,7 @@ function exportAnalysisToCSV() {
         const r2025 = (row.return_2025 || 0).toFixed(2);
         const r2026 = (row.return_2026 || 0).toFixed(2);
         
-        csvContent += `${rank},"${strategy}",${pos},${hold},${ret},${mdd},${win},${pf},${r2021},${r2022},${r2023},${r2024},${r2025},${r2026}\n`;
+        csvContent += `${rank},"${sDate}","${eDate}","${strategy}",${pos},${hold},${ret},${cagr},${mdd},${win},${pf},${trades},${r2021},${r2022},${r2023},${r2024},${r2025},${r2026}\n`;
     });
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -320,7 +328,7 @@ function exportAnalysisToCSV() {
     const link = document.createElement("a");
     const today = new Date().toISOString().split('T')[0];
     link.setAttribute("href", url);
-    link.setAttribute("download", `AI_Backtest_Mega_Analysis_Report_${today}.csv`);
+    link.setAttribute("download", `AI_Backtest_Institutional_Analysis_${today}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
