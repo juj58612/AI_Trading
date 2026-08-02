@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>華爾街量化策略白皮書與系統完整操作指南 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .doc-container {
+            max-width: 960px;
+            margin: 30px auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+            line-height: 1.8;
+        }
+        .doc-header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-purple);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .doc-header h1 {
+            font-size: 2rem;
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+        .doc-header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+        .meta-box {
+            background: #0f172a;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+        .doc-section {
+            margin-bottom: 40px;
+        }
+        .doc-section h2 {
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        .doc-section h3 {
+            font-size: 1.2rem;
+            color: #c084fc;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .quote-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #fef08a;
+        }
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .doc-table th, .doc-table td {
+            padding: 12px 15px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        .doc-table th {
+            background: #1e293b;
+            color: var(--accent-blue);
+            font-weight: bold;
+        }
+        .code-block {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #38bdf8;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .btn-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn-top:hover {
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="doc-container">
+    <div class="doc-header">
+        <h1>🌌 AI 概念股通用交易策略控制台</h1>
+        <h2>華爾街量化波段策略白皮書與系統完整操作指南</h2>
+        <p>Whitepaper & Master User Manual (v2.5 Institutional Edition)</p>
+    </div>
+
+    <div class="meta-box">
+        📌 <strong>版本資訊與規格</strong>：<br>
+        • <strong>系統架構</strong>：FastAPI + Vanilla Modern JS + SQLite/JSON 多租戶數據隔離<br>
+        • <strong>核心數據庫</strong>：5.5 年完整 K 線與三大法人籌碼歷史庫 (2021/01 ~ 2026/07，共 1,351 個交易日)<br>
+        • <strong>資安機制</strong>：專屬邀請碼 (Passcode) 獨立開戶與數據物理隔離
+    </div>
+
+    <!-- 第一章 -->
+    <div class="doc-section">
+        <h2>📘 第一章：系統立意與戰略哲學 (Vision & Core Philosophy)</h2>
+        
+        <h3>1.1 棄短擇波：為什麼我們 100% 專注於波段交易 (Swing Core)？</h3>
+        <p>在台股市場中，許多散戶與極短線當沖投資人經常陷入「頻繁進出、賺小錢賠大錢」的陷阱。</p>
+        <p>本系統研發團隊曾進行 <strong>「舊版極短線衛星策略」實證回測實驗</strong>（涵蓋 2023-2026 年共 806 次極短線交易）：</p>
+        <ul>
+            <li>實驗結果顯示：極短線當沖/衛星交易雖然勝率維持在 48.88%，但在扣除 <strong>0.4425% (手續費 + 證交稅 + 買賣價差摩擦成本)</strong> 之後，<strong>淨報酬率退化至 -0.03%</strong>！</li>
+            <li>該回測實驗以鐵一般的數據證明：頻繁交易的摩擦成本，會完全吞噬掉極短線的所有微薄獲利。</li>
+        </ul>
+        
+        <div class="quote-box">
+            💡 戰略核心宣言：「寧可放棄極短線的微小波動，也要透過法人籌碼與動能，抓牢 30 ~ 60 天的 AI 飆股主升段！」
+        </div>
+
+        <h3>1.2 60 檔台股 AI 概念股護城河</h3>
+        <p>本系統專注於台股最具產業流動性與爆發力的 <strong>60 檔 AI 供應鏈核心標的</strong>（包含台積電 2330、鴻海 2317、廣達 2382、緯創 3231、緯穎 6669、奇鋐 3017、雙鴻 3324、世芯-KY 3661 等）。這 60 檔標的集中了三大法人（外資、投信）超過 80% 的資金動向，具備極高透明度與技術指標可信度。</p>
+    </div>
+
+    <!-- 第二章 -->
+    <div class="doc-section">
+        <h2>🏛️ 第二章：華爾街五維量化波段核心模型 (The 5D Quant Engine)</h2>
+        <p>為了讓使用者與法人機構認同本系統的卓越性，本控制台將華爾街投控級別的風控與量化因子深度融入演算法中：</p>
+
+        <h3>2.1 量價雙重驗證 (VWMA5 & VWMA20)</h3>
+        <p>傳統均線 (MA) 容易被無量洗盤或尾盤作帳欺騙。本系統採用 <strong>成交量加權均線 (Volume-Weighted Moving Average)</strong>：</p>
+        <div class="code-block">
+            VWMA = Σ (Close_i × Volume_i) / Σ Volume_i
+        </div>
+        <p>• 當股價站上 VWMA5 且成交量放大時，才認定為「真突破」；無量誘多將直接被系統過濾剔除。</p>
+
+        <h3>2.2 三大法人籌碼積分矩陣 (Chip Score)</h3>
+        <p>系統每日盤後掃描法人買賣超：</p>
+        <ul>
+            <li><strong>投信今日買超</strong>：+2 分（投信為台股波段中流砥柱）。</li>
+            <li><strong>投信連續買超 (連 2 日以上)</strong>：+1 分。</li>
+            <li><strong>外資今日買超 (土洋同買)</strong>：+1 分。</li>
+            <li><strong>跌破 5MA 均線</strong>：-2 分（強制扣分防禦）。</li>
+        </ul>
+
+        <h3>2.3 逆波動率資金分配模型 (Risk Parity Sizing)</h3>
+        <p>針對不同波動度（ATR）的股票，系統拒絕簡單的「等權重買進」，而是採用 <strong>Risk Parity 逆波動率模型</strong>：</p>
+        <div class="code-block">
+            Position Size ∝ 1 / (ATR / Price)
+        </div>
+        <ul>
+            <li><strong>活潑飆股 (高 ATR)</strong>：降低配置張數，防止單一高波動個股拖累總資產。</li>
+            <li><strong>平穩權值股 (低 ATR)</strong>：提高配置張數，確保總體資產配置的夏普比率 (Sharpe Ratio) 最大化。</li>
+        </ul>
+
+        <h3>2.4 自適應吊燈鎖利機制 (Adaptive Chandelier Exit)</h3>
+        <p>當個股未實現獲利 &lt; 12% 時，系統給予 <strong>2.2x ATR</strong> 的回檔容忍空間，避免被震盪洗出場；一旦未實現獲利 ≥ 12%，系統判定進入<strong>「飆股主升段」</strong>，停損乘數自動收緊至 <strong>1.25x ATR</strong>，強制鎖死頂部 85% 以上的獲利！</p>
+
+        <h3>2.5 高價股零股滑價懲罰 (Odd-Lot Slippage Penalty)</h3>
+        <p>針對股價 &gt; 1,000 元的高價股（如緯穎、世芯-KY、川湖），回測引擎自動加扣 <strong>0.2% 零股交易價差處罰</strong>，絕不上修虛假的超額報酬，確保回測與真實下單 100% 一致。</p>
+
+        <h3>2.6 三合一巨觀風控熔斷保險絲 (3-in-1 Macro Protection)</h3>
+        <p>當大盤出現系統性風險時，「覆巢之下無完卵」。系統盤後自動評估 3 大巨觀指標：</p>
+        <ol>
+            <li><strong>外資期貨淨空單</strong> ≥ 30,000 口（極端警戒）。</li>
+            <li><strong>台幣匯率 (USD/TWD)</strong> 5 日內貶值 &gt; 1.5 角（熱錢外流）。</li>
+            <li><strong>外資現貨單日賣超</strong> &gt; 100 億新台幣（提款拋售）。</li>
+        </ol>
+
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th>巨觀警報等級</th>
+                    <th>風控動作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>0 級 (綠燈安全)</strong></td>
+                    <td>100% 正常波段進攻，Risk Parity 滿額建倉。</td>
+                </tr>
+                <tr>
+                    <td><strong>1 級 (黃燈警戒)</strong></td>
+                    <td>最大持股資金上限自動降至 50%，防線收緊 30%。</td>
+                </tr>
+                <tr>
+                    <td><strong>2 級 (紅燈熔斷)</strong></td>
+                    <td><strong>【一票否決 (Veto)】</strong> 全面禁止新建多單，全數保留現金避險！</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 第三章 -->
+    <div class="doc-section">
+        <h2>🖥️ 第三章：控制台頁面與按鈕完整操作手冊 (User Manual)</h2>
+
+        <h3>3.1 首頁控制台 (index.html)</h3>
+        <p>首頁採用高對比視覺語言設計：<strong>做多控制台為「鮮豔強烈橘 (#ea580c)」，做空控制台為「低調沉穩紫 (#8957e5)」</strong>。</p>
+        <ul>
+            <li><strong>🔑 專屬邀請碼開戶/登入 Modal</strong>：首次開啟網頁時自動跳出。輸入專屬邀請碼 (Passcode)，即可自訂專屬帳號密碼，擁有 100% 獨立的個人持倉庫存。</li>
+            <li><strong>🚀 啟動 AI 深度掃描 (做多)</strong>：一天之中第一次點擊會抓取盤後數據，之後點擊會在 <strong>0.001 秒內直接讀取當日快取</strong>，0 API 連線、0 封鎖！按下後產出籌碼積分最高的前 N 名做多飆股。</li>
+            <li><strong>⚡ 掃描市場轉弱/放空標的 (做空)</strong>：掃描高點回撤 8%~10%、觸及 R1 壓力區或跌破 5MA 的轉弱標的，提供離場與避險建議。</li>
+            <li><strong>⚡ 查詢即時股價 (最底部查詢框)</strong>：位於網頁最底部，支援查詢台股任意代碼（如 2603 長榮、2454 聯發科），提供 5MA、近期高低點與技術線型，不影響上方策略排名。</li>
+        </ul>
+
+        <h3>3.2 明日下單建議 (order_planner.html)</h3>
+        <p>為實戰交易員打造的「下單策略擬定沙盒」，完美貫徹 3:3:4 建倉與 3:4:3 出場紀律：</p>
+        <ul>
+            <li><strong>3:3:4 分批進場規劃區</strong>：輸入總投資預算，系統自動計算第一批 (30%)、第二批 (30%)、第三批 (40%) 的精確張數與掛單價格。</li>
+            <li><strong>3:4:3 階梯式離場與動態停損/鎖利</strong>：防線 A (成本 -8%~-10%)、防線 B (破 Key Support 支撐)、保本鎖利 (+15% 鎖 +5%)、高點打折鎖利 (最高價 × 0.95)。</li>
+        </ul>
+
+        <h3>3.3 我的操盤室 — 現役持倉與歷史紀錄 (history.html)</h3>
+        <ul>
+            <li><strong>現役部隊 (目前持倉總覽)</strong>：展示當前持有的所有個股、成本價、即時損益、戰術防線 A/B 狀態與打折鎖利建議。支援「▶ 展開每日詳細資料」折疊選單。</li>
+            <li><strong>退役結案紀錄 (歷史交易日誌)</strong>：記錄所有已平倉結案的歷史交易與累積總損益。</li>
+            <li><strong>🗑️ 刪除選取紀錄 / 📊 匯出 Google 試算表 (CSV)</strong>：方便管理與匯出分析。</li>
+        </ul>
+
+        <h3>3.4 回測實驗室 (backtest.html)</h3>
+        <ul>
+            <li><strong>12MB 本地歷史資料庫 (backtest_database.json)</strong>：內建 5.5 年完整數據（1,351 個交易日）。回測時 0 外網連線、0 延遲、0 故障！</li>
+            <li><strong>🤖 啟動 AI 網格最佳化 (Grid Search)</strong>：調用 Optuna 貝氏優化演算法，自動尋找最佳參數組合。</li>
+            <li><strong>🗑️ 清空所有紀錄</strong>：一鍵同步清空前端排行榜表格與後端實體 SQLite 資料庫 (backtest_logs.db)。</li>
+        </ul>
+    </div>
+
+    <!-- 第四章 -->
+    <div class="doc-section">
+        <h2>🔒 第四章：數據安全與隱私隔離保障 (Security & Multi-Tenant)</h2>
+        <h3>4.1 100% 多租戶數據隔離 (Multi-Tenant Isolation)</h3>
+        <p>• <strong>管理員數據保護</strong>：系統總管理者帳號 (Admin) 的庫存資料 (portfolio.json) 受最高等級權限保護。<br>
+        • <strong>VIP 訪客獨立戶</strong>：任何透過專屬邀請碼 (Passcode) 開戶的訪客，其庫存將自動儲存於 portfolio_{username}.json，<strong>彼此 100% 獨立隔離，絕對無法存取或污染管理者的持倉數據</strong>！</p>
+
+        <h3>4.2 版控自動備份 (Scheme A Version Control)</h3>
+        <p>所有註冊使用者名冊保存於 registered_users.json，隨同自動同步機制自動備份至 Git 遠端儲存庫。<strong>即使雲端伺服器重啟或重新編譯，所有使用者的開戶資料與帳密 100% 永久保存、絕不丟失</strong>！</p>
+    </div>
+
+    <!-- 結語 -->
+    <div class="doc-section" style="text-align: center; border-top: 1px solid #334155; padding-top: 30px;">
+        <h2 style="border: none; color: #f59e0b;">🚀 結語：為台股波段交易者打造的終極神盾</h2>
+        <p>「AI 概念股通用交易策略控制台」結合了華爾街量化模型、三大法人籌碼、Risk Parity 資金風控與三合一巨觀熔斷保險絲。它不僅是一套交易工具，更是台股投資人克服人性弱點、實現紀律波段獲利的終極利器！</p>
+    </div>
+</div>
+
+<a href="#" class="btn-top">⬆️ 返回頁首</a>
+
+</body>
+</html>
