@@ -463,14 +463,16 @@ class CommitOrder(BaseModel):
 class CommitRequest(BaseModel):
     orders: List[CommitOrder]
 
-@app.get("/api/planner/recommendations", dependencies=[Depends(authenticate)])
-def get_planner_recommendations(cash: float = 100.0):
+@app.get("/api/planner/recommendations")
+def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depends(authenticate)):
     cash_twd = cash * 10000.0
+    username = credentials[0]
+    portfolio_file = get_user_portfolio_file(username)
     
     portfolio = []
-    if os.path.exists(PORTFOLIO_FILE):
+    if os.path.exists(portfolio_file):
         try:
-            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+            with open(portfolio_file, "r", encoding="utf-8") as f:
                 portfolio = json.load(f)
         except Exception:
             portfolio = []
