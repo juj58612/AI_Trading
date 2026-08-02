@@ -765,6 +765,20 @@ async def run_bayesian_optimization(req: GridSearchRequest):
         
     return {"status": "success", "message": "Bayesian Optimization Complete", "best_params": best_params}
 
+@app.post("/api/analysis/clear_db")
+def clear_experiments_db():
+    try:
+        if os.path.exists(SQLITE_PATH):
+            conn = sqlite3.connect(SQLITE_PATH)
+            c = conn.cursor()
+            c.execute("DELETE FROM trades")
+            c.execute("DELETE FROM experiments")
+            conn.commit()
+            conn.close()
+        return {"status": "success", "message": "SQLite 回測資料庫已成功清空！"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/api/analysis/experiments")
 def get_experiments():
     if not os.path.exists(SQLITE_PATH):

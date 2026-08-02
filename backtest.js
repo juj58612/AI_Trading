@@ -342,11 +342,15 @@ window.deleteRecord = function(index) {
     }
 };
 
-document.getElementById('btnClearLeaderboard').addEventListener('click', () => {
-    if (confirm('確定要清空排行榜與圖表嗎？')) {
+document.getElementById('btnClearLeaderboard').addEventListener('click', async () => {
+    if (confirm('確定要清空排行榜、歷史圖表與後端 SQLite 回測資料庫嗎？')) {
+        try {
+            await fetch(`${BACKTEST_API_URL}/api/analysis/clear_db`, { method: 'POST' });
+        } catch(e) {}
         leaderboardData = [];
         document.getElementById('chartContainer').style.display = 'none';
         renderLeaderboard();
+        alert('回測紀錄與 SQLite 資料庫已成功清空！');
     }
 });
 
