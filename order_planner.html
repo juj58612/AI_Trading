@@ -274,7 +274,6 @@
                 <div id="autoOrderList">
                     <div style="text-align:center; padding:30px; color:var(--text-sub);">載入中...</div>
                 </div>
-                <div id="budgetWarningContainer" style="display:none;"></div>
             </div>
 
             <!-- Right: Manual Draft Planner -->
@@ -292,11 +291,8 @@
             </div>
         </div>
 
-        <!-- Commit execution -->
-        <div class="commit-section">
-            <button class="btn-commit-all" onclick="commitExecutedOrders()">💾 確認下單並一鍵寫入實戰庫存</button>
-            <p style="font-size:0.8rem; color:var(--text-sub); margin-top:8px;">※ 點擊後將自動扣款/增加庫存，並將成交明細同步至「我的操盤室」與歷史交易日誌中。</p>
-        </div>
+        <!-- Full-Width Horizontal Budget Warning Banner (跨越左右兩欄下方) -->
+        <div id="budgetWarningContainer" style="display:none; margin-top: 25px; width: 100%;"></div>
     </div>
 
     <!-- Edit/Adjust Modal -->
