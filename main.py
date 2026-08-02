@@ -226,13 +226,40 @@ def get_stock_data(ticker: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+DAILY_CACHE_FILE = "daily_scan_cache.json"
+
+def get_daily_scan_cache():
+    if os.path.exists(DAILY_CACHE_FILE):
+        try:
+            with open(DAILY_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_daily_scan_cache(cache_data):
+    try:
+        with open(DAILY_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving daily scan cache: {e}")
+
 @app.post("/api/scan_all")
 async def scan_all_stocks(request: Request):
     try:
         payload = await request.json()
         tickers = payload.get("tickers", [])
+        force_refresh = payload.get("force_refresh", False)
         if not tickers:
             return {"data": []}
+            
+        today_str = datetime.today().strftime('%Y-%m-%d')
+        cache_db = get_daily_scan_cache()
+        
+        # 當日快取邏輯：若非強制重新刷洗且今日數據已存在，直接 0ms 超高速回傳！
+        if not force_refresh and today_str in cache_db and cache_db[today_str]:
+            print(f"⚡ [0ms 本地防護] 秒速載入當日 ({today_str}) 盤後保存數據，免除線上連線！")
+            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str}
             
         # 偵測是否運行於 Render 雲端環境
         IS_RENDER = os.environ.get("RENDER") == "true"
@@ -287,16 +314,26 @@ async def scan_all_stocks(request: Request):
                 
         results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
         
+        if results:
+            cache_db[today_str] = results
+            save_daily_scan_cache(cache_db)
+            return {"data": results, "cached": False, "cache_date": today_str}
+
         if not results and tickers:
-            # 當雲端 IP 被 Yahoo 封鎖時，自動讀取本機上傳的最近一次掃描快取
+            # 當當日線上連線失敗，自動回溯最近一次可用的盤後快取
+            if cache_db:
+                latest_date = sorted(cache_db.keys())[-1]
+                return {"data": cache_db[latest_date], "cached": True, "cache_date": latest_date, "fallback": True}
             if os.path.exists("latest_scan_results.json"):
                 try:
                     with open("latest_scan_results.json", "r", encoding="utf-8") as f:
                         cached_results = json.load(f)
-                    if cached_results:
-                        print("Yahoo Finance blocked cloud IP. Loaded fallback latest_scan_results.json cache.")
-                        # We return warning notice to the frontend if possible, but the API response returns {"data": ...}
-                        return {"data": cached_results}
+                    return {"data": cached_results, "cached": True, "fallback": True}
+                except Exception:
+                    pass
+            raise HTTPException(status_code=500, detail="Yahoo Finance / FinMind 伺服器拒絕連線，且無本地備份資料。")
+            
+        return {"data": results, "cached": False}
                 except Exception as e:
                     print(f"Error reading scan cache: {e}")
             raise HTTPException(status_code=500, detail="目前無法取得真實資料，無法推薦！(Yahoo Finance / FinMind 伺服器拒絕連線或發生錯誤)")
