@@ -247,9 +247,20 @@
         <div id="marketWeatherBanner" style="display: none; padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; font-size: 1.1rem; margin-bottom: 20px; border-width: 2px; border-style: solid;"></div>
 
         <!-- Target Trading Day Banner -->
-        <div style="background: rgba(137, 87, 229, 0.05); border: 1px solid rgba(137, 87, 229, 0.2); padding: 12px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: rgba(137, 87, 229, 0.05); border: 1px solid rgba(137, 87, 229, 0.2); padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.95rem;">🎯 目標交易日：<strong id="targetTradingDay" style="color:#c084fc;">載入中...</strong></span>
             <span style="font-size: 0.85rem; color: var(--text-sub);">請在此視窗開盤前執行完畢，交易完成後一鍵同步至我的操盤室。</span>
+        </div>
+
+        <!-- Top Prominent Commit Bar -->
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
+            <div style="text-align: left;">
+                <div style="font-weight: bold; color: #ef4444; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
+                    📌 實戰下單同步 (一鍵寫入庫存)
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 2px;">掛單完畢後點擊右側按鈕，自動更新至『我的操盤室』現役持倉。</div>
+            </div>
+            <button class="btn-commit-all" onclick="commitAllOrders()" style="margin:0;">確認下單並一鍵寫入實戰庫存</button>
         </div>
 
         <!-- Planner Layout Columns -->
