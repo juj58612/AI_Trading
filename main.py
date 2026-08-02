@@ -334,18 +334,6 @@ async def scan_all_stocks(request: Request):
             raise HTTPException(status_code=500, detail="Yahoo Finance / FinMind 伺服器拒絕連線，且無本地備份資料。")
             
         return {"data": results, "cached": False}
-                except Exception as e:
-                    print(f"Error reading scan cache: {e}")
-            raise HTTPException(status_code=500, detail="目前無法取得真實資料，無法推薦！(Yahoo Finance / FinMind 伺服器拒絕連線或發生錯誤)")
-            
-        # Save scan results to cache
-        try:
-            with open("latest_scan_results.json", "w", encoding="utf-8") as f:
-                json.dump(results, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Error saving scan results to cache: {e}")
-            
-        return {"data": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
