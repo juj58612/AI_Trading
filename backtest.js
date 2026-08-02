@@ -54,6 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
     checkDbStatus();
     initDateDropdowns('Start', '2022-01-01');
     initDateDropdowns('End', '2026-08-01');
+    renderMegaDays();
 });
 
 // Sync DB
@@ -165,7 +166,7 @@ window.runGridSearch = async function() {
             end_date: `${document.getElementById('btEndYear').value}-${document.getElementById('btEndMonth').value}-${document.getElementById('btEndDay').value}`
         };
 
-        const res = await fetch(`${API_BASE}/api/backtest/grid_search`, {
+        const res = await fetch(`${API_BASE_URL}/api/backtest/grid_search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -341,13 +342,129 @@ window.deleteRecord = function(index) {
     }
 };
 
-const btnClearLeaderboard = document.getElementById('btnClearLeaderboard');
-if (btnClearLeaderboard) {
-    btnClearLeaderboard.addEventListener('click', () => {
-        if (leaderboardData.length > 0 && confirm("確定要清空所有回測紀錄嗎？")) {
-            leaderboardData = [];
-            if (emptyRow) emptyRow.style.display = 'table-row';
-            renderLeaderboard();
-        }
+document.getElementById('btnClearLeaderboard').addEventListener('click', () => {
+    if (confirm('確定要清空排行榜與圖表嗎？')) {
+        leaderboardData = [];
+        document.getElementById('chartContainer').style.display = 'none';
+        renderLeaderboard();
+    }
+});
+
+// Event listeners
+if (document.getElementById('btnRunGridSearch')) {
+    document.getElementById('btnRunGridSearch').addEventListener('click', runGridSearch);
+}
+
+// Mega Grid Search Functions
+const megaDays = [2, 3, 5, 7, 12, 15, 20, 25, 30, 35, 40, 60, 70, 90, 100, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600, 630, 660, 690, 720];
+
+function renderMegaDays() {
+    const container = document.getElementById('megaDaysContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    megaDays.forEach(day => {
+        // Pre-check some common values (30, 60, 90, 120, etc.)
+        const checked = [30, 60, 90, 120, 180, 360].includes(day) ? 'checked' : '';
+        container.innerHTML += `
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor:pointer;">
+                <input type="checkbox" class="mega-day-cb" value="${day}" ${checked}> ${day}天
+            </label>
+        `;
     });
+}
+
+window.toggleAllMegaDays = function(checked) {
+    document.querySelectorAll('.mega-day-cb').forEach(cb => cb.checked = checked);
+};
+
+window.runMegaGrid = async function() {
+    const btn = document.getElementById('btnStartMegaGrid');
+    const progressPanel = document.getElementById('megaProgressPanel');
+    const progressMsg = document.getElementById('megaProgressMsg');
+    const progressBar = document.getElementById('megaProgressBar');
+    
+    if (!btn) return;
+    
+    // Read selections
+    const selectedPos = Array.from(document.querySelectorAll('input[name="megaPos"]:checked')).map(cb => parseInt(cb.value));
+    const selectedStrat = Array.from(document.querySelectorAll('input[name="megaStrat"]:checked')).map(cb => cb.value);
+    const selectedDays = Array.from(document.querySelectorAll('.mega-day-cb:checked')).map(cb => parseInt(cb.value));
+    
+    if (selectedPos.length === 0 || selectedStrat.length === 0 || selectedDays.length === 0) {
+        alert("請至少各勾選一個最大持倉數、出場方案與持倉天數！");
+        return;
+    }
+    
+    const payload = {
+        capital: parseFloat(document.getElementById('btCapital').value.replace(/,/g, '')),
+        fee_rate: parseFloat(document.getElementById('btFee').value),
+        start_date: `${document.getElementById('btStartYear').value}-${document.getElementById('btStartMonth').value}-${document.getElementById('btStartDay').value}`,
+        end_date: `${document.getElementById('btEndYear').value}-${document.getElementById('btEndMonth').value}-${document.getElementById('btEndDay').value}`,
+        positions: selectedPos,
+        hold_days: selectedDays,
+        strategies: selectedStrat
+    };
+    
+    btn.disabled = true;
+    progressPanel.style.display = 'block';
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/backtest/mega_grid`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            pollMegaGridStatus();
+        } else {
+            const err = await res.json();
+            alert(`啟動失敗: ${err.detail}`);
+            btn.disabled = false;
+        }
+    } catch (e) {
+        alert(`連線失敗: ${e.message}`);
+        btn.disabled = false;
+    }
+};
+
+let megaPollInterval = null;
+function pollMegaGridStatus() {
+    if (megaPollInterval) clearInterval(megaPollInterval);
+    
+    const btn = document.getElementById('btnStartMegaGrid');
+    const progressPanel = document.getElementById('megaProgressPanel');
+    const progressMsg = document.getElementById('megaProgressMsg');
+    const progressBar = document.getElementById('megaProgressBar');
+    
+    megaPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/backtest/mega_grid/status`);
+            if (res.ok) {
+                const status = await res.json();
+                
+                if (status.running) {
+                    const pct = status.total > 0 ? (status.current / status.total * 100).toFixed(1) : 0;
+                    progressMsg.textContent = status.message;
+                    progressBar.style.width = `${pct}%`;
+                    btn.textContent = `⏳ 大數據運算中... (${pct}%)`;
+                } else {
+                    clearInterval(megaPollInterval);
+                    progressMsg.innerHTML = `<span style="color:#4ade80; font-weight:bold;">🎉 大數據網格搜索完成！即將在 1.5 秒後為您導向至「大數據分析中心」...</span>`;
+                    progressBar.style.width = `100%`;
+                    btn.textContent = `🎉 運算完成！`;
+                    
+                    setTimeout(() => {
+                        window.location.href = "analysis.html";
+                    }, 1500);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, 1500);
+}
+
+if (document.getElementById('btnStartMegaGrid')) {
+    document.getElementById('btnStartMegaGrid').addEventListener('click', window.runMegaGrid);
 }

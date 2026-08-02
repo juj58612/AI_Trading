@@ -333,10 +333,10 @@ function renderActive(data) {
         if (item.inst_data && item.inst_data.length > 0) {
             const revInst = [...item.inst_data].reverse();
             instTableRows = revInst.map(d => {
-                const fColor = d.foreign >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
-                const tColor = d.trust >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
-                const dColor = d.dealer >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
-                const sumColor = d.total >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+                const fColor = d.foreign >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                const tColor = d.trust >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                const dColor = d.dealer >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                const sumColor = d.total >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
                 return `<tr><td>${d.date.substring(5)}</td><td style="color:${fColor}">${d.foreign}</td><td style="color:${tColor}">${d.trust}</td><td style="color:${dColor}">${d.dealer}</td><td style="color:${sumColor}; font-weight:bold;">${d.total}</td></tr>`;
             }).join('');
         }
