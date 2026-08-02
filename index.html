@@ -20,27 +20,14 @@
         </div>
     </header>
 
-    <div class="standalone-search-card">
-        <div class="search-header">
-            <div class="search-title" style="color: var(--accent-blue);">
-                🔍 個股股價與技術數據快速查詢 (支援動態任意代碼)
-            </div>
-            <div class="search-controls">
-                <div class="count-setting" style="border-color: var(--accent-blue);">
-                    <label for="globalSearchKeyword">股號/股票名稱：</label>
-                    <input type="text" id="globalSearchKeyword" placeholder="如 2330 或 台積電" style="width: 180px;">
-                </div>
-                <button class="btn-blue" id="btnGlobalSearch">⚡ 查詢即時股價</button>
-            </div>
-        </div>
-        <div class="sort-note">📌 提示：支援查詢任意台股代碼，此框為純股價查詢，不影響底下步驟 1 與步驟 4 的策略排序與篩選邏輯。</div>
-        <div id="globalSearchResult" style="margin-top: 15px; display: none;"></div>
+    <!-- 做多策略區塊 -->
+    <div class="section-title" style="color: var(--accent-purple); border-bottom-color: var(--accent-purple); margin-top: 30px; font-size: 1.4rem; font-weight: bold;">
+        🤖 AI 籌碼深度掃描與排名 (做多)
     </div>
 
-    <!-- 步驟 1：買進評估 -->
     <div class="search-card">
         <div class="search-header">
-            <div class="search-title">🤖 步驟 1：AI 籌碼深度掃描與排名 (做多)</div>
+            <div class="search-title" style="font-size: 1.1rem; color: var(--text-sub);">🎯 做多飆股篩選控制台</div>
             <div class="search-controls">
                 <div class="count-setting">
                     <label for="buyPriceRange">股價區間：</label>
@@ -74,18 +61,14 @@
 
     <div class="stocks-grid" id="stocksGrid"></div>
 
-
-
-    <!-- (舊版雷達掃描已移除，整合進步驟 1) -->
-
-    <!-- 步驟 3：賣出引擎 -->
-    <div class="section-title" style="color: var(--sell-border); border-bottom-color: var(--sell-border); margin-top: 50px;">
-        📉 步驟 3：AI 賣出與放空訊號推薦引擎 (做空)
+    <!-- 做空策略區塊 -->
+    <div class="section-title" style="color: var(--sell-border); border-bottom-color: var(--sell-border); margin-top: 50px; font-size: 1.4rem; font-weight: bold;">
+        📉 AI 賣出與放空訊號推薦引擎 (做空)
     </div>
     
     <div class="sell-section">
         <div class="search-header">
-            <div class="sell-title">🚨 趨勢轉弱與達標掃描 (3:4:3 出場判定)</div>
+            <div class="sell-title" style="font-size: 1.1rem; color: var(--text-sub);">🚨 趨勢轉弱與達標掃描 (3:4:3 出場判定)</div>
             <div class="search-controls">
                 <div class="count-setting">
                     <label for="sellPriceRange">股價區間：</label>
@@ -116,6 +99,24 @@
         <div class="stocks-grid" id="sellGrid" style="margin-top: 20px;">
             <div class="empty-msg">點擊上方按鈕，由 AI 掃描並載入符合放空/離場模型之標的。</div>
         </div>
+    </div>
+
+    <!-- 移至頁面最底部的個股快速查詢小框 -->
+    <div class="standalone-search-card" style="margin-top: 50px;">
+        <div class="search-header">
+            <div class="search-title" style="color: var(--accent-blue);">
+                🔍 個股股價與技術數據快速查詢 (支援動態任意代碼)
+            </div>
+            <div class="search-controls">
+                <div class="count-setting" style="border-color: var(--accent-blue);">
+                    <label for="globalSearchKeyword">股號/股票名稱：</label>
+                    <input type="text" id="globalSearchKeyword" placeholder="如 2330 或 台積電" style="width: 180px;">
+                </div>
+                <button class="btn-blue" id="btnGlobalSearch">⚡ 查詢即時股價</button>
+            </div>
+        </div>
+        <div class="sort-note">📌 提示：支援查詢任意台股代碼，此框為純股價查詢，不影響上方策略排序與篩選邏輯。</div>
+        <div id="globalSearchResult" style="margin-top: 15px; display: none;"></div>
     </div>
 
     <footer>
