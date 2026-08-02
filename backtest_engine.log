@@ -981,3 +981,7 @@ INFO:     127.0.0.1:61755 - "GET /api/backtest/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61754 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61947 - "GET /api/backtest/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61946 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62028 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62027 - "GET /api/analysis/experiments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62045 - "GET /api/backtest/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62044 - "GET /api/analysis/experiments HTTP/1.1" 200 OK

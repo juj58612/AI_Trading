@@ -170,6 +170,7 @@
                         <th>最大回撤 (MDD)</th>
                         <th>勝率</th>
                         <th>獲利因子</th>
+                        <th>2021 (爆發)</th>
                         <th>2022 (空頭)</th>
                         <th>2023 (主升)</th>
                         <th>2024 (狂飆)</th>
@@ -178,7 +179,7 @@
                     </tr>
                 </thead>
                 <tbody id="lbTableBody">
-                    <tr><td colspan="15">載入大數據排行榜中...</td></tr>
+                    <tr><td colspan="16">載入大數據排行榜中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -262,6 +263,7 @@ function renderTable(list) {
             <td style="color: #4ade80;">${row.mdd.toFixed(2)}%</td>
             <td>${row.win_rate.toFixed(1)}%</td>
             <td>${row.profit_factor.toFixed(2)}</td>
+            <td>${(row.return_2021 || 0).toFixed(1)}%</td>
             <td>${(row.return_2022 || 0).toFixed(1)}%</td>
             <td>${(row.return_2023 || 0).toFixed(1)}%</td>
             <td>${(row.return_2024 || 0).toFixed(1)}%</td>
