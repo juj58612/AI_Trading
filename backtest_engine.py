@@ -826,6 +826,31 @@ def get_trades(experiment_id: int):
     
     return {"data": [dict(r) for r in rows]}
 
+@app.get("/api/analysis/trades_all_top")
+def get_all_top_trades():
+    if not os.path.exists(SQLITE_PATH):
+        return {"data": []}
+        
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments ORDER BY total_return DESC LIMIT 10")
+    top_exps = c.fetchall()
+    
+    all_trades = []
+    for rank_idx, exp in enumerate(top_exps):
+        exp_id = exp['id']
+        c.execute("SELECT * FROM trades WHERE experiment_id = ? ORDER BY buy_date ASC", (exp_id,))
+        t_rows = c.fetchall()
+        for t in t_rows:
+            td = dict(t)
+            td['rank'] = rank_idx + 1
+            td['strategy_label'] = f"方案 {exp['exit_strategy']}"
+            all_trades.append(td)
+            
+    conn.close()
+    return {"data": all_trades}
+
 # Mega Grid Search background task definitions
 mega_grid_status = {
     "running": False,
