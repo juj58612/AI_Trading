@@ -10,8 +10,8 @@
         body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 15px; margin-bottom: 25px; }
-        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; cursor: pointer; }
-        .btn-nav:hover { background: #30363d; }
+        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9 !important; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; cursor: pointer; display: inline-block; margin-left: 5px; }
+        .btn-nav:hover { background: #30363d; color: #ffffff !important; }
         
         .grid-layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
         
@@ -20,17 +20,18 @@
         
         /* Experiment List */
         .exp-list { max-height: 800px; overflow-y: auto; }
-        .exp-card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .exp-card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; position: relative; }
         .exp-card:hover { border-color: #58a6ff; }
         .exp-card.active { border-color: #238636; box-shadow: 0 0 8px rgba(35,134,54,0.4); }
         .exp-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #f0f6fc; }
+        .badge-oos { position: absolute; top: 12px; right: 12px; background: #8957e5; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
         .exp-meta { font-size: 12px; color: #8b949e; display: flex; justify-content: space-between; margin-bottom: 8px; }
         .exp-stats { display: flex; gap: 10px; font-size: 13px; }
         .stat-box { background: #21262d; padding: 4px 8px; border-radius: 4px; flex: 1; text-align: center; }
         .stat-box span { display: block; font-size: 11px; color: #8b949e; }
         .stat-box strong { color: #f0f6fc; }
-        .profit-pos { color: #3fb950 !important; }
-        .profit-neg { color: #f85149 !important; }
+        .profit-pos { color: #f85149 !important; }
+        .profit-neg { color: #3fb950 !important; }
         
         /* Chart Area */
         .chart-container { height: 400px; margin-bottom: 20px; position: relative; }
@@ -54,6 +55,16 @@
             <!-- Left: Experiment List -->
             <div class="panel">
                 <h3>📜 歷史回測紀錄庫</h3>
+                <div style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; color:#8b949e;">排序方式：</span>
+                    <select id="sortExperiments" style="background:#21262d; border:1px solid #30363d; color:#c9d1d9; border-radius:4px; padding:3px 6px; font-size:12px; cursor:pointer;" onchange="renderExperimentsList()">
+                        <option value="id">預設 (新到舊)</option>
+                        <option value="total_return">總報酬率 (由高到低)</option>
+                        <option value="return_2022">2022年空頭防守力 (由高到低)</option>
+                        <option value="return_2023">2023年多頭爆發力 (由高到低)</option>
+                        <option value="return_2024">2024年AI狂飆力 (由高到低)</option>
+                    </select>
+                </div>
                 <div id="experimentList" class="exp-list">
                     <div style="text-align:center; padding:20px; color:#8b949e;">載入中...</div>
                 </div>
@@ -61,6 +72,29 @@
 
             <!-- Right: Analysis Center -->
             <div>
+                <!-- AI Attribution & Decision Report Panel -->
+                <div class="panel" style="margin-bottom: 20px; border-color: #8957e5;">
+                    <h3 style="color: #c084fc;">🤖 AI 智能歸因與操作模型決策報告 (Attribution & Decisions)</h3>
+                    <div id="aiAttributionContent" style="margin-bottom: 20px; font-size: 14px; line-height: 1.6; background: rgba(137,87,229,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(137,87,229,0.2);">
+                        <div style="color: #8b949e; text-align: center;">正在載入大數據智能歸因結果...</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #58a6ff;">持倉期限敏感度 (Hold Days Sensitivity)</h4>
+                            <div style="height: 180px; position: relative;">
+                                <canvas id="holdSensChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #58a6ff;">分散投資防禦力 (Positions vs MDD)</h4>
+                            <div style="height: 180px; position: relative;">
+                                <canvas id="posSensChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="panel" style="margin-bottom: 20px;">
                     <h3>🎯 MFE / MAE 散佈圖 (停損停利最佳化)</h3>
                     <div class="chart-container">
@@ -82,6 +116,7 @@
                                     <th>買進日</th>
                                     <th>賣出日</th>
                                     <th>持倉天數</th>
+                                    <th>大盤狀態</th>
                                     <th>獲利(%)</th>
                                     <th>MFE(%)</th>
                                     <th>MAE(%)</th>
@@ -89,7 +124,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="8" style="text-align:center;">請先在左側點選一筆實驗紀錄</td></tr>
+                                <tr><td colspan="9" style="text-align:center;">請先在左側點選一筆實驗紀錄</td></tr>
                             </tbody>
                         </table>
                     </div>

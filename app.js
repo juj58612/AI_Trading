@@ -863,5 +863,4 @@ sellPriceRange.addEventListener('change', () => renderSellCards(sellCountInput.v
 
 window.addEventListener('DOMContentLoaded', () => {
     loadPortfolioFromStorage();
-    renderStockCards(15);
 });

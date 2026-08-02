@@ -1,9 +1,0 @@
-#!/bin/zsh -l
-cd ~/Desktop/AI_Trading
-(lsof -t -i:58888 | xargs kill -9 2>/dev/null; true)
-
-# 將錯誤日誌寫入專案目錄以便除錯
-nohup python3 -m uvicorn main:app --port 58888 --host 0.0.0.0 > server.log 2>&1 &
-sleep 2
-
-open -a "Google Chrome" http://127.0.0.1:58888 2>/dev/null || open -a "Microsoft Edge" http://127.0.0.1:58888 2>/dev/null || open http://localhost:58888

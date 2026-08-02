@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 AI 實戰掛單與下單執行中心</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .planner-header-panel {
+            background: linear-gradient(135deg, rgba(137, 87, 229, 0.15) 0%, rgba(15, 23, 42, 1) 100%);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(137, 87, 229, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .planner-title-block h2 {
+            font-size: 1.5rem;
+            color: #c084fc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .planner-title-block p {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .planner-settings {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .planner-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        @media (max-width: 900px) {
+            .planner-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        .planner-column {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        .planner-column.auto-column {
+            border-color: #8957e5;
+            box-shadow: 0 4px 12px rgba(137, 87, 229, 0.1);
+        }
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+        .column-header h3 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .order-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .order-card:hover {
+            border-color: var(--text-sub);
+        }
+        .order-card.buy-card {
+            border-left: 4px solid var(--accent-green); /* TW buy: Red */
+        }
+        .order-card.sell-card {
+            border-left: 4px solid var(--accent-red); /* TW sell: Green */
+        }
+        .order-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .order-ticker {
+            font-weight: bold;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+        .order-details {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+        .order-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-edit-order {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-edit-order:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+        .btn-manual-add {
+            background: rgba(192, 132, 252, 0.1);
+            color: #c084fc;
+            border: 1px solid #c084fc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-manual-add:hover {
+            background: #8957e5;
+            color: white;
+        }
+        .budget-warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px dashed var(--accent-yellow);
+            color: var(--accent-yellow);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        /* Modal Style */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .modal-card {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 400px;
+            padding: 25px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-gray { background: #334155; color: white; border: none; padding: 6px 15px; border-radius: 6px; cursor: pointer; }
+        .btn-gray:hover { background: #475569; }
+        .btn-purple { background: #8957e5; color: white; border: none; padding: 6px 15px; border-radius: 6px; cursor: pointer; }
+        .btn-purple:hover { background: #7c3aed; }
+        
+        .commit-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .btn-commit-all {
+            background: var(--accent-green); /* TW OK: Red */
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-commit-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Top Title Panel -->
+        <div class="planner-header-panel">
+            <div class="planner-title-block">
+                <h2>📅 AI 實戰掛單與下單執行中心</h2>
+                <p>本系統將自動根據大戶籌碼掃描，為您計算出明日開盤最佳的買進與賣出股數，並依可用預算自動控管風險。</p>
+            </div>
+            <div class="planner-settings">
+                <div class="count-setting" style="border-color: #8957e5;">
+                    <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
+                    <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:90px;" onchange="loadPlannerData()">
+                    <span style="color:#c084fc; font-weight:bold; margin-left:4px;">萬元</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Weather Banner -->
+        <div id="marketWeatherBanner" style="display: none; padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; font-size: 1.1rem; margin-bottom: 20px; border-width: 2px; border-style: solid;"></div>
+
+        <!-- Target Trading Day Banner -->
+        <div style="background: rgba(137, 87, 229, 0.05); border: 1px solid rgba(137, 87, 229, 0.2); padding: 12px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.95rem;">🎯 目標交易日：<strong id="targetTradingDay" style="color:#c084fc;">載入中...</strong></span>
+            <span style="font-size: 0.85rem; color: var(--text-sub);">請在此視窗開盤前執行完畢，交易完成後一鍵同步至我的操盤室。</span>
+        </div>
+
+        <!-- Planner Layout Columns -->
+        <div class="planner-layout">
+            <!-- Left: Auto Planner -->
+            <div class="planner-column auto-column">
+                <div class="column-header">
+                    <h3 style="color:#c084fc;">🤖 系統自動推薦掛單 (Auto Recommendation)</h3>
+                    <span id="autoTotalCost" style="font-size:0.9rem; color:var(--text-sub);">預估所需資金：0 萬元</span>
+                </div>
+                <div id="autoOrderList">
+                    <div style="text-align:center; padding:30px; color:var(--text-sub);">載入中...</div>
+                </div>
+                <div id="budgetWarningContainer" style="display:none;"></div>
+            </div>
+
+            <!-- Right: Manual Draft Planner -->
+            <div class="planner-column">
+                <div class="column-header">
+                    <h3 style="color:var(--accent-blue);">✍️ 交易員手動自訂掛單 (Manual Override)</h3>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-manual-add" onclick="openManualAddModal()">➕ 新增自訂交易</button>
+                        <span id="manualTotalCost" style="font-size:0.9rem; color:var(--text-sub);">預估所需資金：0 萬元</span>
+                    </div>
+                </div>
+                <div id="manualOrderList">
+                    <!-- Manual list content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Commit execution -->
+        <div class="commit-section">
+            <button class="btn-commit-all" onclick="commitExecutedOrders()">💾 確認下單並一鍵寫入實戰庫存</button>
+            <p style="font-size:0.8rem; color:var(--text-sub); margin-top:8px;">※ 點擊後將自動扣款/增加庫存，並將成交明細同步至「我的操盤室」與歷史交易日誌中。</p>
+        </div>
+    </div>
+
+    <!-- Edit/Adjust Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-card">
+            <div class="modal-title" id="modalTitle">✏️ 調整實際成交資料</div>
+            
+            <div class="form-group">
+                <label for="modalPrice">實際成交價格 (元)：</label>
+                <input type="number" id="modalPrice" step="0.1" min="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="modalShares">實際成交股數 (股)：</label>
+                <input type="number" id="modalShares" step="1" min="1">
+                <p style="font-size:0.75rem; color:var(--text-sub); margin-top:4px;" id="modalSharesNotice">1,000 股 = 1 張。支援碎股與零股成交。</p>
+            </div>
+            
+            <div class="form-group" id="reasonGroup" style="display:none;">
+                <label for="modalReason">賣出原因 (出場記帳)：</label>
+                <select id="modalReason">
+                    <option value="時間到期">時間到期</option>
+                    <option value="觸發停損">觸發停損</option>
+                    <option value="動態停損">動態停損</option>
+                    <option value="15%停利">15%停利</option>
+                    <option value="籌碼轉弱">籌碼轉弱</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-gray" onclick="closeEditModal()">取消</button>
+                <button class="btn-purple" onclick="saveOrderEdits()">儲存修正</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Add Modal -->
+    <div class="modal-overlay" id="manualAddModal">
+        <div class="modal-card">
+            <div class="modal-title">➕ 新增自訂交易掛單</div>
+            
+            <div class="form-group">
+                <label for="addTicker">股票代碼 (4碼)：</label>
+                <input type="text" id="addTicker" placeholder="例如 2330" onchange="autoFillTickerName()">
+            </div>
+            
+            <div class="form-group">
+                <label for="addName">股票名稱：</label>
+                <input type="text" id="addName" placeholder="例如 台積電">
+            </div>
+
+            <div class="form-group">
+                <label for="addType">交易方向：</label>
+                <select id="addType">
+                    <option value="buy">買進做多</option>
+                    <option value="sell">賣出平倉</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="addPrice">預估價格 (元)：</label>
+                <input type="number" id="addPrice" step="0.1">
+            </div>
+            
+            <div class="form-group">
+                <label for="addShares">預估股數 (股)：</label>
+                <input type="number" id="addShares" step="1">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-gray" onclick="closeManualAddModal()">取消</button>
+                <button class="btn-purple" onclick="addManualOrderToList()">新增至名單</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL config
+        const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
+            ? "http://127.0.0.1:58888"
+            : window.location.origin;
+    </script>
+    <script src="order_planner.js"></script>
+</body>
+</html>

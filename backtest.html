@@ -153,9 +153,9 @@
             font-size: 0.9rem;
             color: var(--text-sub);
         }
-        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; margin-right: 10px; transition: all 0.2s; }
-        .btn-nav:hover { background: #30363d; border-color: #8b949e; }
-        .btn-nav-primary { background: #238636; color: white; border: 1px solid rgba(240,246,252,0.1); }
+        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9 !important; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; margin-right: 10px; transition: all 0.2s; display: inline-block; }
+        .btn-nav:hover { background: #30363d; border-color: #8b949e; color: #ffffff !important; }
+        .btn-nav-primary { background: #238636; color: #ffffff !important; border: 1px solid rgba(240,246,252,0.1); }
         .btn-nav-primary:hover { background: #2ea043; border-color: rgba(240,246,252,0.1); }
     </style>
 </head>
@@ -254,6 +254,59 @@
             </div>
         </div>
         
+        <div class="config-panel" style="border-color: #8957e5; margin-top: 20px;">
+            <h2 style="color: #c084fc; margin-bottom: 10px; font-size: 1.1rem;">🌌 巨型大數據生成設定面板 (Mega Grid Permutation)</h2>
+            <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">
+                系統將會為您交叉比對多維參數的所有排列組合，並在後端背景執行。跑完後，您可以在大數據分析中心將獲利率切片拆解成「2022 空頭年」與「2023 多頭年」進行防禦力排名。
+            </p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; color: #f0f6fc; display: block; margin-bottom: 8px;">1. 勾選要測試的最大持倉數 (Max Positions)</label>
+                <div style="display: flex; gap: 15px;">
+                    <label><input type="checkbox" name="megaPos" value="1"> 1 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="2"> 2 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="3" checked> 3 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="4" checked> 4 檔</label>
+                    <label><input type="checkbox" name="megaPos" value="5" checked> 5 檔</label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; color: #f0f6fc; display: block; margin-bottom: 8px;">2. 勾選要測試的出場方案 (Exit Strategies)</label>
+                <div style="display: flex; gap: 15px;">
+                    <label><input type="checkbox" name="megaStrat" value="D" checked> 方案 D (專家級順勢)</label>
+                    <label><input type="checkbox" name="megaStrat" value="C" checked> 方案 C (動態收縮防線)</label>
+                    <label><input type="checkbox" name="megaStrat" value="A"> 方案 A (積分反轉)</label>
+                    <label><input type="checkbox" name="megaStrat" value="B"> 方案 B (土洋倒貨)</label>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="font-weight: bold; color: #f0f6fc;">3. 勾選要測試的持倉天數限制 (Hold Days - 共 36 種間隔)</label>
+                    <div>
+                        <button class="btn-blue" style="padding: 2px 8px; font-size: 0.75rem; background: #30363d;" onclick="toggleAllMegaDays(true)">全選</button>
+                        <button class="btn-blue" style="padding: 2px 8px; font-size: 0.75rem; background: #30363d;" onclick="toggleAllMegaDays(false)">全不選</button>
+                    </div>
+                </div>
+                <div id="megaDaysContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid #30363d;">
+                    <!-- Javascript will render checkboxes here -->
+                </div>
+            </div>
+
+            <div id="megaProgressPanel" style="display: none; margin-top: 15px; padding: 12px; background: rgba(137,87,229,0.1); border: 1px solid #8957e5; border-radius: 6px; text-align: center;">
+                <div style="font-weight: bold; color: #c084fc; margin-bottom: 5px;" id="megaProgressMsg">正在啟動背景佇列...</div>
+                <div style="width: 100%; background: #21262d; border-radius: 4px; height: 10px; overflow: hidden; margin: 10px 0;">
+                    <div id="megaProgressBar" style="width: 0%; height: 100%; background: #8957e5; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-sub);" id="megaProgressSub">運算在後端伺服器進行。您可以切換分頁或前往大數據分析中心，完全不影響運算。</div>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-top: 15px;">
+                <button id="btnStartMegaGrid" class="btn-search" style="width: 380px; background: linear-gradient(135deg, #8957e5 0%, #a855f7 100%);">🌌 啟動巨量大數據排列組合回測</button>
+            </div>
+        </div>
+
         <div class="leaderboard-panel" id="chartContainer" style="display: none; margin-bottom: 20px;">
             <div class="leaderboard-header">
                 <div class="leaderboard-title">📈 資金成長與回撤曲線 (Equity & Drawdown)</div>

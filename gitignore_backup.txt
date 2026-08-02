@@ -1,0 +1,14 @@
+# Personal Portfolio Data
+portfolio.json
+history.json
+
+# Local Backups & Logs
+backup_v1/
+*.log
+
+# Large Datasets & DBs
+backtest_logs.db
+backtest_database.json
+
+# System Files
+.DS_Store
