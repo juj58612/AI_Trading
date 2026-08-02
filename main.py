@@ -1,7 +1,7 @@
 import secrets
 from fastapi import FastAPI, HTTPException, Request, Depends, status
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -15,7 +15,7 @@ import json
 import time
 import concurrent.futures
 
-security = HTTPBasic()
+security = HTTPBasic(auto_error=False)
 
 USERS_FILE = "registered_users.json"
 def load_registered_users():
@@ -31,7 +31,12 @@ def save_registered_users(users):
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
 
-def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
+def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized"
+        )
     user = credentials.username
     pwd = credentials.password
     if secrets.compare_digest(user, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
@@ -41,8 +46,7 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
         return user
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password",
-        headers={"WWW-Authenticate": "Basic"},
+        detail="Incorrect username or password"
     )
 
 app = FastAPI()
