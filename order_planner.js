@@ -96,8 +96,10 @@ async function loadPlannerData() {
                     });
                 });
                 
-                // 2. Clone Auto Orders into Manual Orders as starting defaults
-                manualOrders = JSON.parse(JSON.stringify(autoOrders));
+                // 2. Manual Orders start empty by default (no cloning left column)
+                if (!manualOrders || manualOrders.length === 0) {
+                    manualOrders = [];
+                }
                 
                 // 3. Process filtered backups
                 filteredBuys = data.filtered_buys.map(fb => ({
