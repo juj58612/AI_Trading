@@ -15,8 +15,6 @@ import json
 import time
 import concurrent.futures
 
-security = HTTPBasic(auto_error=False)
-
 USERS_FILE = "registered_users.json"
 def load_registered_users():
     if os.path.exists(USERS_FILE):
@@ -31,23 +29,25 @@ def save_registered_users(users):
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
 
-def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Unauthenticated"
-        )
-    user = credentials.username
-    pwd = credentials.password
-    if secrets.compare_digest(user, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
-        return "cyc58612"
-    users = load_registered_users()
-    if user in users and secrets.compare_digest(users[user], pwd):
-        return user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Incorrect username or password"
-    )
+def authenticate(request: Request):
+    auth = request.headers.get("Authorization")
+    if not auth:
+        raise HTTPException(status_code=403, detail="Unauthenticated")
+    if auth.startswith("Basic "):
+        try:
+            import base64
+            encoded = auth[6:].strip()
+            decoded = base64.b64decode(encoded).decode("utf-8")
+            user, pwd = decoded.split(":", 1)
+            
+            if secrets.compare_digest(user, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
+                return "cyc58612"
+            users = load_registered_users()
+            if user in users and secrets.compare_digest(users[user], pwd):
+                return user
+        except Exception:
+            pass
+    raise HTTPException(status_code=403, detail="Incorrect username or password")
 
 app = FastAPI()
 
