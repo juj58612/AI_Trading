@@ -501,35 +501,35 @@ function updateMarketWeather(ratio) {
     if (!container) {
         container = document.createElement('div');
         container.id = 'market-weather-container';
-        container.style.cssText = 'margin: 0px 0 20px 0; padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; font-size: 1.1rem; grid-column: 1/-1; border-width: 2px; border-style: solid;';
+        container.style.cssText = 'margin: 0px 0 20px 0; padding: 16px 20px; border-radius: 12px; font-weight: bold; text-align: center; font-size: 1.15rem; grid-column: 1/-1; border-width: 2px; border-style: solid; box-shadow: 0 4px 16px rgba(0,0,0,0.3);';
         stocksGrid.parentNode.insertBefore(container, stocksGrid);
     }
     
     if (ratio > 75) {
-        container.style.background = 'rgba(249, 115, 22, 0.15)';
-        container.style.borderColor = '#f97316';
-        container.style.color = '#f97316';
-        container.innerHTML = `🟠 當前市況：高檔震盪 / 末升段 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-sub);">建議：市場過熱，隨時拉回，嚴格鎖利，當心拉積盤出貨。</span>`;
+        container.style.background = '#ea580c'; // 橘色實心底
+        container.style.borderColor = '#c2410c';
+        container.style.color = '#ffffff';
+        container.innerHTML = `🟠 當前市況：高檔震盪 / 末升段 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：市場過熱，隨時拉回，嚴格鎖利，當心拉積盤出貨。</span>`;
     } else if (ratio >= 45 && ratio <= 75) {
-        container.style.background = 'rgba(239, 68, 68, 0.15)';
-        container.style.borderColor = '#ef4444';
-        container.style.color = '#ef4444';
-        container.innerHTML = `🔴 當前市況：穩定多頭 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-sub);">建議：全面進攻，採等權重分配買滿排名前三標的。</span>`;
+        container.style.background = '#dc2626'; // 紅色實心底 (多頭)
+        container.style.borderColor = '#b91c1c';
+        container.style.color = '#ffffff';
+        container.innerHTML = `🔴 當前市況：穩定多頭 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：全面進攻，採等權重分配買滿排名前三標的。</span>`;
     } else if (ratio >= 25 && ratio < 45) {
-        container.style.background = 'rgba(245, 158, 11, 0.15)';
-        container.style.borderColor = '#f59e0b';
-        container.style.color = '#f59e0b';
-        container.innerHTML = `🟡 當前市況：破底翻 / 築底期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-sub);">建議：多頭初醒，可小額試單前三名黑馬，分批佈局。</span>`;
+        container.style.background = '#d97706'; // 琥珀黃實心底
+        container.style.borderColor = '#b45309';
+        container.style.color = '#ffffff';
+        container.innerHTML = `🟡 當前市況：破底翻 / 築底期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：多頭初醒，可小額試單前三名黑馬，分批佈局。</span>`;
     } else if (ratio >= 10 && ratio < 25) {
-        container.style.background = 'rgba(16, 185, 129, 0.15)';
-        container.style.borderColor = '#10b981';
-        container.style.color = '#10b981';
-        container.innerHTML = `🟢 當前市況：無差別股災 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-sub);">建議：覆巢之下無完卵，空手觀望，保留現金。</span>`;
+        container.style.background = '#16a34a'; // 綠色實心底 (台股股災色)
+        container.style.borderColor = '#15803d';
+        container.style.color = '#ffffff';
+        container.innerHTML = `🟢 當前市況：無差別股災 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：覆巢之下無完卵，空手觀望，保留現金。</span>`;
     } else {
-        container.style.background = 'rgba(5, 150, 105, 0.15)';
-        container.style.borderColor = '#059669';
-        container.style.color = '#059669';
-        container.innerHTML = `🟢 當前市況：極度恐慌 / 融資斷頭期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.9rem; font-weight:normal; color:var(--text-sub);">建議：乖離過大，隨時有暴力反彈 (V轉)，準備搶短。</span>`;
+        container.style.background = '#059669'; // 深綠實心底 (極度恐慌)
+        container.style.borderColor = '#047857';
+        container.style.color = '#ffffff';
+        container.innerHTML = `🟢 當前市況：極度恐慌 / 融資斷頭期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：乖離過大，隨時有暴力反彈 (V轉)，準備搶短。</span>`;
     }
 }
 

@@ -134,3 +134,20 @@ header p { color: var(--text-sub); font-size: 0.95rem; }
 .rank-title-purple { color: #8b5cf6 !important; }
 
 footer { text-align: center; margin-top: 40px; color: var(--text-sub); font-size: 0.85rem; }
+
+/* 跨瀏覽器捲軸優化 (Safari & Chrome 專用) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
