@@ -8,9 +8,14 @@ def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
     
-    # 均線計算
+    # 均線計算 (包含傳統 MA 與華爾街 VWMA 成交量加權均線)
     df['MA5'] = df['close'].rolling(window=5).mean().round(2)
     df['MA20'] = df['close'].rolling(window=20).mean().round(2)
+    
+    # VWMA 成交量加權均線
+    pv = df['close'] * df['volume']
+    df['VWMA5'] = (pv.rolling(window=5).sum() / df['volume'].rolling(window=5).sum()).round(2)
+    df['VWMA20'] = (pv.rolling(window=20).sum() / df['volume'].rolling(window=20).sum()).round(2)
     
     # ATR 計算 (14日真實波動率)
     high_low = df['high'] - df['low']
@@ -63,7 +68,7 @@ def calculate_chip_score(latest_close: float, ma5: float, inst_last2_days: list)
             
     return chip_score, signal_text
 
-def evaluate_entry(today_price: pd.Series, inst_last2_days: list, strategy: str) -> dict:
+def evaluate_entry(today_price: pd.Series, inst_last2_days: list, strategy: str, max_hold_days: int = 30) -> dict:
     """
     統一進場濾網與邏輯
     回傳字典: 包含 score, momentum, atr 或是 None(不買)
@@ -75,7 +80,12 @@ def evaluate_entry(today_price: pd.Series, inst_last2_days: list, strategy: str)
     
     score, signal = calculate_chip_score(close, ma5, inst_last2_days)
     
-    if score >= 1:
+    # 摩擦成本過濾器 (Friction Filter)
+    min_score = 1
+    if max_hold_days < 12:
+        min_score = 3  # 短天數交易，極度嚴格過濾，僅限最強籌碼進場
+        
+    if score >= min_score:
         # 大趨勢濾網 (方案 D 專屬)
         if strategy == 'D':
             if pd.isna(ma20) or close <= ma20:
@@ -103,12 +113,18 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
     close = today_price['close']
     sell_reason = None
     
-    # 更新最高最低價
+    # 華爾街升級：吊燈停損法進階版 (Adaptive Chandelier Exit)
+    # 當持倉獲利超過 12% 進主升段時，自動將 ATR 乘數收緊至 1.25x，緊貼價格鎖死獲利
+    unrealized_pnl_pct = (close - p['buy_price']) / p['buy_price']
+    current_mult = p['atr_multiplier']
+    if unrealized_pnl_pct >= 0.12:
+        current_mult = min(current_mult, 1.25)
+        
     if close > p['highest_price']:
         p['highest_price'] = close
         atr_val = today_price['ATR']
         atr_val = atr_val if not pd.isna(atr_val) else 0.0
-        p['trailing_stop'] = close - (p['atr_multiplier'] * atr_val)
+        p['trailing_stop'] = close - (current_mult * atr_val)
     if close < p['lowest_price']:
         p['lowest_price'] = close
         

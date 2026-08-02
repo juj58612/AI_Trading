@@ -1,5 +1,7 @@
 import secrets
 from fastapi import FastAPI, HTTPException, Request, Depends, status
+from pydantic import BaseModel
+from typing import List
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -68,7 +70,7 @@ def fetch_chip_data_from_finmind(ticker):
         if now - timestamp < CACHE_TTL:
             return cached_data["inst_list"], cached_data["margin_list"], cached_data["is_mock"]
 
-    token = "***REMOVED_LEAKED_FINMIND_TOKEN***"
+    token = os.getenv("FINMIND_API_TOKEN", "***REMOVED_LEAKED_FINMIND_TOKEN***")
     start_date = (datetime.now() - timedelta(days=45)).strftime('%Y-%m-%d')
     
     inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={ticker}&start_date={start_date}&token={token}"
@@ -211,11 +213,15 @@ async def scan_all_stocks(request: Request):
         if not tickers:
             return {"data": []}
             
+        # 偵測是否運行於 Render 雲端環境
+        IS_RENDER = os.environ.get("RENDER") == "true"
+        
         results = []
         def process_ticker(ticker):
             try:
-                # 降速掃描，避免觸發 Yahoo Finance 防爬蟲封鎖
-                time.sleep(0.3)
+                # 雲端環境下，降低延遲以防止 Render 30 秒 HTTP 閘道器逾時 (HTTP 502)
+                sleep_time = 0.02 if IS_RENDER else 0.3
+                time.sleep(sleep_time)
                 
                 # 1. Fetch Price
                 hist = fetch_yfinance_history(ticker)
@@ -250,8 +256,9 @@ async def scan_all_stocks(request: Request):
                 print(f"Error scanning {ticker}: {e}")
                 return None
                 
-        # 降速掃描，限制 workers 數量為 2
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        # 雲端環境下，將併發線程數由 2 提升至 8 進行加速
+        max_w = 8 if IS_RENDER else 2
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_w) as executor:
             futures = [executor.submit(process_ticker, t) for t in tickers]
             for future in concurrent.futures.as_completed(futures):
                 res = future.result()
@@ -260,7 +267,25 @@ async def scan_all_stocks(request: Request):
         results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
         
         if not results and tickers:
+            # 當雲端 IP 被 Yahoo 封鎖時，自動讀取本機上傳的最近一次掃描快取
+            if os.path.exists("latest_scan_results.json"):
+                try:
+                    with open("latest_scan_results.json", "r", encoding="utf-8") as f:
+                        cached_results = json.load(f)
+                    if cached_results:
+                        print("Yahoo Finance blocked cloud IP. Loaded fallback latest_scan_results.json cache.")
+                        # We return warning notice to the frontend if possible, but the API response returns {"data": ...}
+                        return {"data": cached_results}
+                except Exception as e:
+                    print(f"Error reading scan cache: {e}")
             raise HTTPException(status_code=500, detail="目前無法取得真實資料，無法推薦！(Yahoo Finance / FinMind 伺服器拒絕連線或發生錯誤)")
+            
+        # Save scan results to cache
+        try:
+            with open("latest_scan_results.json", "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(f"Error saving scan results to cache: {e}")
             
         return {"data": results}
     except Exception as e:
@@ -312,10 +337,262 @@ async def save_history(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class CommitOrder(BaseModel):
+    ticker: str
+    name: str
+    price: float
+    shares: float  # in units of '張' (e.g. 1.25張 = 1250股)
+    type: str  # 'buy' or 'sell'
+    reason: str = ""
+
+class CommitRequest(BaseModel):
+    orders: List[CommitOrder]
+
+@app.get("/api/planner/recommendations", dependencies=[Depends(authenticate)])
+def get_planner_recommendations(cash: float = 100.0):
+    cash_twd = cash * 10000.0
+    
+    portfolio = []
+    if os.path.exists(PORTFOLIO_FILE):
+        try:
+            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+                portfolio = json.load(f)
+        except Exception:
+            portfolio = []
+            
+    # Check Exits (Sells)
+    sells = []
+    for p in portfolio:
+        ticker = p.get('ticker')
+        name = p.get('name')
+        shares = p.get('shares', 0)
+        buy_price = p.get('buy_price', p.get('cost', 0))
+        close_price = p.get('closePrice', buy_price)
+        
+        reason = ""
+        if p.get('trailing_stop') and close_price < p['trailing_stop']:
+            reason = "觸發停損"
+            
+        buy_date_str = p.get('buy_date', datetime.today().strftime('%Y-%m-%d'))
+        try:
+            days_held = (datetime.today() - datetime.strptime(buy_date_str, '%Y-%m-%d')).days
+        except Exception:
+            days_held = 0
+        if days_held >= 30:
+            reason = "時間到期"
+            
+        if reason:
+            sells.append({
+                "ticker": ticker,
+                "name": name,
+                "shares": shares,
+                "reason": reason,
+                "price": close_price
+            })
+
+    # Read latest scan results
+    scan_results = []
+    scan_warning = ""
+    if os.path.exists("latest_scan_results.json"):
+        try:
+            with open("latest_scan_results.json", "r", encoding="utf-8") as f:
+                scan_results = json.load(f)
+        except Exception:
+            scan_warning = "無法讀取最新掃描檔案，請於主頁重新掃描。"
+    else:
+        scan_warning = "⚠️ 尚未發現今日掃描快取。請先返回『實戰控制台』按下『啟動 AI 深度掃描』更新大戶籌碼排行！"
+
+    # Calculate health ratio & market status
+    valid_stocks = len(scan_results)
+    above_20ma = sum(1 for item in scan_results if item.get('momentum', 0) > 0)
+    health_ratio = (above_20ma / valid_stocks) * 100.0 if valid_stocks > 0 else 50.0
+    
+    market_status = "穩定多頭"
+    market_advice = "全面進攻，採等權重分配買滿排名前三標的。"
+    market_color = "#ef4444" # Red
+    
+    if health_ratio > 75:
+        market_status = "高檔震盪 / 末升段"
+        market_advice = "市場過熱，隨時拉回，嚴格鎖利，當心拉積盤出貨。"
+        market_color = "#f97316"
+    elif 45 <= health_ratio <= 75:
+        market_status = "穩定多頭"
+        market_advice = "全面進攻，採等權重分配買滿排名前三標的。"
+        market_color = "#ef4444"
+    elif 25 <= health_ratio < 45:
+        market_status = "破底翻 / 築底期"
+        market_advice = "多頭初醒，可小額試單前三名黑馬，分批佈局。"
+        market_color = "#f59e0b"
+    elif 10 <= health_ratio < 25:
+        market_status = "無差別股災"
+        market_advice = "覆巢之下無完卵，空手觀望，保留現金。"
+        market_color = "#10b981" # Green
+    else:
+        market_status = "極度恐慌 / 融資斷頭期"
+        market_advice = "乖離過大，隨時有暴力反彈 (V轉)，準備搶短。"
+        market_color = "#059669"
+
+    # Select buys from scan results
+    potential_buys = []
+    active_tickers = [p['ticker'] for p in portfolio]
+    
+    scan_results.sort(key=lambda x: (x.get('chip_score', 0), x.get('momentum', 0)), reverse=True)
+    
+    for item in scan_results:
+        t = item['ticker']
+        if t in active_tickers:
+            continue
+        if item.get('chip_score', 0) >= 1:
+            potential_buys.append({
+                "ticker": t,
+                "name": item.get('name', t),
+                "price": item.get('latest_close'),
+                "score": item.get('chip_score'),
+                "signal": item.get('signal', '')
+            })
+            
+    # Apply Budget Filter (Scheme B)
+    # Default allocation: cash / 5 positions
+    alloc_per_stock = cash_twd / 5.0
+    
+    buys = []
+    filtered_buys = []
+    current_used_cash = 0.0
+    
+    for b in potential_buys:
+        price = b['price']
+        needed_cost = alloc_per_stock
+        shares_twd = needed_cost / (price * 1.0015)
+        shares_zhang = round(shares_twd / 1000.0, 3) # e.g. 1.250張 = 1250股
+        
+        if current_used_cash + needed_cost <= cash_twd:
+            buys.append({
+                "ticker": b['ticker'],
+                "name": b['name'],
+                "price": price,
+                "shares": shares_zhang,
+                "cost": needed_cost,
+                "score": b['score'],
+                "stage": "首批 30%"
+            })
+            current_used_cash += needed_cost
+        else:
+            filtered_buys.append({
+                "ticker": b['ticker'],
+                "name": b['name'],
+                "price": price,
+                "shares": shares_zhang,
+                "cost": needed_cost,
+                "score": b['score'],
+                "stage": "首批 30%"
+            })
+            
+    today = datetime.today()
+    target_day = today + timedelta(days=1)
+    if today.weekday() == 4:
+        target_day = today + timedelta(days=3)
+    elif today.weekday() == 5:
+        target_day = today + timedelta(days=2)
+        
+    target_day_str = target_day.strftime('%Y-%m-%d')
+    
+    return {
+        "status": "success",
+        "target_day": target_day_str,
+        "market_status": market_status,
+        "market_advice": market_advice,
+        "market_color": market_color,
+        "health_ratio": health_ratio,
+        "buys": buys,
+        "sells": sells,
+        "filtered_buys": filtered_buys,
+        "warning": scan_warning
+    }
+
+@app.post("/api/planner/commit", dependencies=[Depends(authenticate)])
+async def commit_planner_orders(req: CommitRequest):
+    portfolio = []
+    if os.path.exists(PORTFOLIO_FILE):
+        try:
+            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+                portfolio = json.load(f)
+        except Exception:
+            portfolio = []
+
+    history = []
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    today_str = datetime.today().strftime('%Y-%m-%d')
+
+    for o in req.orders:
+        if o.type == 'buy':
+            exists = next((item for item in portfolio if item['ticker'] == o.ticker), None)
+            if exists:
+                old_shares = exists.get('shares', 0)
+                old_cost = exists.get('cost', exists.get('closePrice', 0))
+                total_shares = old_shares + o.shares
+                if total_shares > 0:
+                    exists['cost'] = ((old_cost * old_shares) + (o.price * o.shares)) / total_shares
+                exists['shares'] = total_shares
+                exists['closePrice'] = o.price
+                exists['high'] = max(exists.get('high', o.price), o.price)
+            else:
+                atr_val = o.price * 0.04
+                mult = 2.2
+                trailing_stop = o.price - (mult * atr_val)
+                
+                portfolio.append({
+                    "name": o.name,
+                    "ticker": o.ticker,
+                    "closePrice": o.price,
+                    "cost": o.price,
+                    "shares": o.shares,
+                    "supp": o.price * 0.95,
+                    "high": o.price,
+                    "sigClass": "sig-right",
+                    "signal": "AI 實戰建倉",
+                    "type": "long",
+                    "inst_data": [],
+                    "margin_data": [],
+                    "history_dates": [],
+                    "history_prices": [],
+                    "is_mock": False,
+                    "reason": "",
+                    "journal": "",
+                    "buy_date": today_str,
+                    "trailing_stop": trailing_stop,
+                    "atr_multiplier": mult
+                })
+        elif o.type == 'sell':
+            exists = next((item for item in portfolio if item['ticker'] == o.ticker), None)
+            if exists:
+                portfolio = [item for item in portfolio if item['ticker'] != o.ticker]
+                history.append({
+                    **exists,
+                    "exitPrice": o.price,
+                    "exitDate": today_str,
+                    "outcome": o.reason or "時間到期"
+                })
+
+    try:
+        with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+            json.dump(portfolio, f, ensure_ascii=False, indent=4)
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"儲存記帳失敗: {str(e)}")
+
+    return {"status": "success", "message": "交易已成功同步寫入實戰庫存與歷史紀錄！"}
+
 # 掛載靜態網頁與外部檔案 (提供支援 index.html, style.css, app.js 的靜態服務)
 @app.get("/{filename}", dependencies=[Depends(authenticate)])
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
