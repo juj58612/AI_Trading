@@ -106,7 +106,7 @@ function openAuthModal(isLogin = false) {
         if (btnToggle) btnToggle.textContent = '輸入邀請碼開戶註冊';
     } else {
         if (title) title.textContent = '🔑 VIP 邀請碼開戶註冊';
-        if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼 (juj58612)，即可開立獨立帳戶！';
+        if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！';
         if (inviteContainer) inviteContainer.style.display = 'block';
         if (btnSubmit) btnSubmit.textContent = '✨ 立即註冊並開戶';
         if (toggleText) toggleText.textContent = '已有帳號？';
