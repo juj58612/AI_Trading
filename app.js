@@ -48,11 +48,156 @@ const sellPool = AI_STOCKS_CONFIG.map(s => ({
 let myPortfolio = [];
 window.chartInstances = {};
 
+function getAuthCredentials() {
+    const saved = localStorage.getItem('ai_trading_user');
+    if (saved) {
+        try { return JSON.parse(saved); } catch(e) {}
+    }
+    return { username: "cyc58612", authHeader: "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***") };
+}
+
+function getAuthHeader() {
+    return getAuthCredentials().authHeader;
+}
+
+function updateUserBadge() {
+    const creds = getAuthCredentials();
+    const badge = document.getElementById('userStatusBadge');
+    if (badge) {
+        if (creds.username === 'cyc58612') {
+            badge.innerHTML = `👤 管理者 (cyc58612) <a href="javascript:void(0)" onclick="openAuthModal(true)" style="color:#3b82f6; margin-left:6px; font-size:0.8rem; text-decoration:underline;">切換/開戶</a>`;
+        } else {
+            badge.innerHTML = `👤 用戶 (${creds.username}) <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
+        }
+    }
+}
+
+function logoutUser() {
+    localStorage.removeItem('ai_trading_user');
+    alert('已成功登出！系統將還原為管理員存取。');
+    location.reload();
+}
+
+let isAuthModeLogin = false;
+function openAuthModal(isLogin = false) {
+    const modal = document.getElementById('authModal');
+    if (!modal) return;
+    isAuthModeLogin = isLogin;
+    
+    const title = document.getElementById('authTitle');
+    const subtitle = document.getElementById('authSubtitle');
+    const inviteContainer = document.getElementById('inviteCodeContainer');
+    const btnSubmit = document.getElementById('btnAuthSubmit');
+    const toggleText = document.getElementById('authToggleText');
+    const btnToggle = document.getElementById('btnAuthToggle');
+    const errorMsg = document.getElementById('authErrorMsg');
+    
+    if (errorMsg) errorMsg.style.display = 'none';
+    
+    if (isAuthModeLogin) {
+        if (title) title.textContent = '🔒 VIP 用戶登入';
+        if (subtitle) subtitle.textContent = '請輸入您開戶時自訂的帳號與密碼！';
+        if (inviteContainer) inviteContainer.style.display = 'none';
+        if (btnSubmit) btnSubmit.textContent = '🔑 立即登入';
+        if (toggleText) toggleText.textContent = '還沒有帳號？';
+        if (btnToggle) btnToggle.textContent = '輸入邀請碼開戶註冊';
+    } else {
+        if (title) title.textContent = '🔑 VIP 邀請碼開戶註冊';
+        if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！';
+        if (inviteContainer) inviteContainer.style.display = 'block';
+        if (btnSubmit) btnSubmit.textContent = '✨ 立即註冊並開戶';
+        if (toggleText) toggleText.textContent = '已有帳號？';
+        if (btnToggle) btnToggle.textContent = '切換至登入';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateUserBadge();
+    
+    const btnToggle = document.getElementById('btnAuthToggle');
+    if (btnToggle) {
+        btnToggle.addEventListener('click', () => {
+            openAuthModal(!isAuthModeLogin);
+        });
+    }
+    
+    const btnSubmit = document.getElementById('btnAuthSubmit');
+    if (btnSubmit) {
+        btnSubmit.addEventListener('click', async () => {
+            const errorMsg = document.getElementById('authErrorMsg');
+            if (errorMsg) errorMsg.style.display = 'none';
+            
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            const inviteCode = document.getElementById('authInviteCode').value.trim();
+            
+            if (isAuthModeLogin) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        const authHeader = "Basic " + btoa(username + ":" + password);
+                        localStorage.setItem('ai_trading_user', JSON.stringify({ username: data.username, authHeader }));
+                        alert(`歡迎回來，${data.username}！已載入您的獨立庫存紀錄。`);
+                        document.getElementById('authModal').style.display = 'none';
+                        location.reload();
+                    } else {
+                        if (errorMsg) {
+                            errorMsg.textContent = data.detail || '登入失敗，請確認帳密！';
+                            errorMsg.style.display = 'block';
+                        }
+                    }
+                } catch(e) {
+                    if (errorMsg) {
+                        errorMsg.textContent = '連線失敗: ' + e.message;
+                        errorMsg.style.display = 'block';
+                    }
+                }
+            } else {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invite_code: inviteCode, username, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        const authHeader = "Basic " + btoa(username + ":" + password);
+                        localStorage.setItem('ai_trading_user', JSON.stringify({ username: data.username, authHeader }));
+                        alert(`🎉 開戶成功！歡迎您，${data.username}！您已擁有獨立的個人持庫紀錄。`);
+                        document.getElementById('authModal').style.display = 'none';
+                        location.reload();
+                    } else {
+                        if (errorMsg) {
+                            errorMsg.textContent = data.detail || '註冊失敗！';
+                            errorMsg.style.display = 'block';
+                        }
+                    }
+                } catch(e) {
+                    if (errorMsg) {
+                        errorMsg.textContent = '連線失敗: ' + e.message;
+                        errorMsg.style.display = 'block';
+                    }
+                }
+            }
+        });
+    }
+});
+
 async function savePortfolioToStorage() {
     try {
         await fetch(`${API_BASE_URL}/api/portfolio`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': getAuthHeader(),
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify(myPortfolio)
         });
     } catch(e) {
@@ -62,7 +207,9 @@ async function savePortfolioToStorage() {
 
 async function loadPortfolioFromStorage() {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/portfolio`);
+        const res = await fetch(`${API_BASE_URL}/api/portfolio`, {
+            headers: { 'Authorization': getAuthHeader() }
+        });
         if (res.ok) {
             const data = await res.json();
             myPortfolio = data.filter(item => item.ticker && item.ticker !== 'undefined');

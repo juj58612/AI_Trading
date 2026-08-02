@@ -12,10 +12,11 @@
     <header style="padding-bottom: 25px; border-bottom: 1px solid var(--border-color); text-align: center;">
         <h1>📈 AI 概念股通用交易策略控制台</h1>
         <p style="margin-bottom: 15px;">3:3:4 分批進場 | 3:4:3 分批出場 | 多空雙向即時追蹤機制 (雙端智慧連線版)</p>
-        <div style="display: flex; justify-content: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
             <a href="order_planner.html" target="_blank" style="background: rgba(137, 87, 229, 0.15); color: #c084fc; padding: 8px 18px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #8957e5; transition: all 0.2s; font-size: 0.95rem;">📅 明日實戰下單中心</a>
             <a href="history.html" target="_blank" style="background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); padding: 8px 18px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-blue); transition: all 0.2s; font-size: 0.95rem;">🏦 我的操盤室 (現役持倉與歷史紀錄)</a>
             <a href="backtest.html" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 8px 18px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #10b981; transition: all 0.2s; font-size: 0.95rem;">🧪 AI 獨立回測實驗室</a>
+            <span id="userStatusBadge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 8px 14px; border-radius: 8px; font-weight: bold; border: 1px solid #f59e0b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">👤 管理者 (cyc58612)</span>
         </div>
     </header>
 
@@ -120,6 +121,38 @@
     <footer>
         <p>系統狀態：雙端智慧連線已啟動。庫存資料自動保存至後端資料庫，交易記憶功能啟用。</p>
     </footer>
+</div>
+
+<!-- VIP 邀請碼與自助註冊/登入 Modal -->
+<div id="authModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; width: 90%; max-width: 420px; padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: #f8fafc; position: relative;">
+        <h2 id="authTitle" style="text-align: center; color: #f59e0b; margin-bottom: 8px; font-size: 1.4rem;">🔑 VIP 邀請碼開戶註冊</h2>
+        <p id="authSubtitle" style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！</p>
+        
+        <div id="authErrorMsg" style="display: none; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; text-align: center;"></div>
+        
+        <div id="inviteCodeContainer" class="input-box" style="margin-bottom: 12px;">
+            <label style="color: #cbd5e1; font-weight: bold;">🔑 專屬邀請碼 (Passcode)</label>
+            <input type="text" id="authInviteCode" placeholder="請輸入邀請碼 (預設 juj58612)" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+        </div>
+        
+        <div class="input-box" style="margin-bottom: 12px;">
+            <label style="color: #cbd5e1; font-weight: bold;">👤 自訂帳號名稱 (Username)</label>
+            <input type="text" id="authUsername" placeholder="至少包含 3 個字元" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+        </div>
+        
+        <div class="input-box" style="margin-bottom: 20px;">
+            <label style="color: #cbd5e1; font-weight: bold;">🔒 自訂密碼 (Password)</label>
+            <input type="password" id="authPassword" placeholder="至少包含 4 個字元" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+        </div>
+        
+        <button id="btnAuthSubmit" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">✨ 立即註冊並開戶</button>
+        
+        <div style="text-align: center; margin-top: 16px; font-size: 0.85rem;">
+            <span id="authToggleText" style="color: #94a3b8;">已有帳號？</span>
+            <a href="javascript:void(0)" id="btnAuthToggle" style="color: #3b82f6; text-decoration: none; font-weight: bold; margin-left: 6px;">切換至登入</a>
+        </div>
+    </div>
 </div>
 
 <script src="app.js"></script>

@@ -17,16 +17,33 @@ import concurrent.futures
 
 security = HTTPBasic()
 
+USERS_FILE = "registered_users.json"
+def load_registered_users():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_registered_users(users):
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(users, f, ensure_ascii=False, indent=4)
+
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "cyc58612")
-    correct_password = secrets.compare_digest(credentials.password, "***REMOVED_LEAKED_PASSWORD***")
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+    user = credentials.username
+    pwd = credentials.password
+    if secrets.compare_digest(user, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
+        return "cyc58612"
+    users = load_registered_users()
+    if user in users and secrets.compare_digest(users[user], pwd):
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Basic"},
+    )
 
 app = FastAPI()
 
@@ -291,47 +308,98 @@ async def scan_all_stocks(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 庫存持久化儲存 API
-PORTFOLIO_FILE = "portfolio.json"
+# 註冊與登入 API
+class RegisterRequest(BaseModel):
+    invite_code: str
+    username: str
+    password: str
 
-@app.get("/api/portfolio", dependencies=[Depends(authenticate)])
-def get_portfolio():
-    if os.path.exists(PORTFOLIO_FILE):
+@app.post("/api/register")
+def register_user(req: RegisterRequest):
+    valid_code = os.getenv("INVITATION_CODE", "juj58612")
+    if not req.invite_code or req.invite_code.strip() != valid_code:
+        raise HTTPException(status_code=400, detail="專屬邀請碼錯誤，請向管理者索取！")
+    uname = req.username.strip() if req.username else ""
+    pwd = req.password.strip() if req.password else ""
+    if len(uname) < 3:
+        raise HTTPException(status_code=400, detail="帳號名稱至少需要包含 3 個字元！")
+    if len(pwd) < 4:
+        raise HTTPException(status_code=400, detail="密碼至少需要包含 4 個字元！")
+        
+    users = load_registered_users()
+    if uname in users or uname == "cyc58612":
+        raise HTTPException(status_code=400, detail="此帳號名稱已被註冊，請換一個！")
+        
+    users[uname] = pwd
+    save_registered_users(users)
+    return {"status": "success", "message": "註冊成功！請使用新帳密登入。", "username": uname}
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/api/login")
+def login_user(req: LoginRequest):
+    uname = req.username.strip() if req.username else ""
+    pwd = req.password.strip() if req.password else ""
+    if secrets.compare_digest(uname, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
+        return {"status": "success", "username": "cyc58612"}
+    users = load_registered_users()
+    if uname in users and secrets.compare_digest(users[uname], pwd):
+        return {"status": "success", "username": uname}
+    raise HTTPException(status_code=401, detail="帳號或密碼錯誤！")
+
+def get_user_portfolio_file(username: str) -> str:
+    if username == "cyc58612":
+        return "portfolio.json"
+    return f"portfolio_{username}.json"
+
+def get_user_history_file(username: str) -> str:
+    if username == "cyc58612":
+        return "history.json"
+    return f"history_{username}.json"
+
+# 庫存持久化儲存 API (多用戶隔離)
+@app.get("/api/portfolio")
+def get_portfolio(user: str = Depends(authenticate)):
+    pfile = get_user_portfolio_file(user)
+    if os.path.exists(pfile):
         try:
-            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+            with open(pfile, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
     return []
 
-@app.post("/api/portfolio", dependencies=[Depends(authenticate)])
-async def save_portfolio(request: Request):
+@app.post("/api/portfolio")
+async def save_portfolio(request: Request, user: str = Depends(authenticate)):
     try:
+        pfile = get_user_portfolio_file(user)
         data = await request.json()
-        with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+        with open(pfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 歷史交易庫房 API
-HISTORY_FILE = "history.json"
-
-@app.get("/api/history", dependencies=[Depends(authenticate)])
-def get_history():
-    if os.path.exists(HISTORY_FILE):
+# 歷史交易庫房 API (多用戶隔離)
+@app.get("/api/history")
+def get_history(user: str = Depends(authenticate)):
+    hfile = get_user_history_file(user)
+    if os.path.exists(hfile):
         try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            with open(hfile, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
     return []
 
-@app.post("/api/history", dependencies=[Depends(authenticate)])
-async def save_history(request: Request):
+@app.post("/api/history")
+async def save_history(request: Request, user: str = Depends(authenticate)):
     try:
+        hfile = get_user_history_file(user)
         data = await request.json()
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        with open(hfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
