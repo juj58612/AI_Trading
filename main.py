@@ -34,8 +34,8 @@ def save_registered_users(users):
 def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
     if not credentials:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthenticated"
         )
     user = credentials.username
     pwd = credentials.password
@@ -45,7 +45,7 @@ def authenticate(credentials: Optional[HTTPBasicCredentials] = Depends(security)
     if user in users and secrets.compare_digest(users[user], pwd):
         return user
     raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=status.HTTP_403_FORBIDDEN,
         detail="Incorrect username or password"
     )
 
