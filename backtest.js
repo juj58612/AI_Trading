@@ -42,7 +42,7 @@ let leaderboardData = [];
 // Check DB Status on load
 async function checkDbStatus() {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/backtest/status`);
+        const res = await fetch(`${BACKTEST_API_URL}/api/backtest/status`);
         const data = await res.json();
         if (data.status === 'ok') {
             dbDateStatus.innerHTML = `<span style="color: #4ade80;">✅ 已就緒 (最後更新: ${data.last_updated})</span>`;
@@ -71,7 +71,7 @@ btnSyncDB.addEventListener('click', async () => {
         const start = getDateStr('Start');
         const end = getDateStr('End');
         
-        const res = await fetch(`${API_BASE_URL}/api/backtest/download`, {
+        const res = await fetch(`${BACKTEST_API_URL}/api/backtest/download`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ start_date: start, end_date: end })
@@ -109,7 +109,7 @@ btnRunBacktest.addEventListener('click', async () => {
     };
     
     try {
-        const res = await fetch(`${API_BASE_URL}/api/backtest/run`, {
+        const res = await fetch(`${BACKTEST_API_URL}/api/backtest/run`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -170,7 +170,7 @@ window.runGridSearch = async function() {
             end_date: `${document.getElementById('btEndYear').value}-${document.getElementById('btEndMonth').value}-${document.getElementById('btEndDay').value}`
         };
 
-        const res = await fetch(`${API_BASE_URL}/api/backtest/grid_search`, {
+        const res = await fetch(`${BACKTEST_API_URL}/api/backtest/grid_search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
