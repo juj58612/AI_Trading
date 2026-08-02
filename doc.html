@@ -311,7 +311,26 @@
             • <strong>戰術建議</strong>：盤後若觸發<strong>「三合一巨觀風控熔斷保險絲」</strong>（外資空單大增或匯率大貶），一票否決新建多單，避開洗盤。在洗牌年善用控制台的 <strong>「📉 AI 賣出與放空推薦引擎」</strong>，進行雙向避險，在拉回行情中創造對沖收益！</li>
         </ul>
 
-        <h3>5.4 未來擴充功能概念：【一鍵套用最佳參數】(Apply to Live Engine)</h3>
+        <h3>5.4 詳細解釋：「啟動 AI 網格最佳化 (Grid Search)」的意義與用法</h3>
+        
+        <h4>1. 什麼是 AI 網格最佳化？（核心意義）</h4>
+        <p>在傳統量化交易中，如果交易員「憑感覺」設定參數（例如：到底該持倉 20 天還是 60 天？該買 3 檔還是 5 檔？該用方案 A 還是方案 D？），很容易在實戰中遭受市場洗盤與過度擬合（Overfitting）。</p>
+        <p>「AI 網格最佳化 (Grid Search)」 採用了華爾街頂級機構的 Optuna 貝氏最佳化 (Bayesian Optimization) 演算法：</p>
+        <ul>
+            <li><strong>超級算力</strong>：系統會在背後自動進行 500 ~ 1,000 組以上的排列組合交叉模擬（四大策略方案 &times; 14 種持倉天數光譜 &times; 6 種持股檔數 &times; 5.5 年歷史每日真實 K 線）。</li>
+            <li><strong>客觀選優</strong>：利用電腦的高速演算法，自動過濾掉會導致大賠或風控失控的劣質參數，客觀找出<strong>「總報酬率最高、MDD 最大回撤最低、勝率最穩定」</strong>的冠軍黃金參數！</li>
+        </ul>
+
+        <h4>2. 如何使用？（實戰操作步驟）</h4>
+        <ol style="color: var(--text-sub); line-height: 1.8; margin-left: 20px;">
+            <li><strong>第一步：進入獨立回測實驗室</strong> ➔ 前往【回測實驗室 (backtest.html)】。</li>
+            <li><strong>第二步：選定測試區間（建議選全光譜）</strong> ➔ 在持倉天數設定區點擊 <code>[🌌 全光譜 (2-360天)]</code>（或自訂想測試的持股檔數與年份）。</li>
+            <li><strong>第三步：按下啟動按鈕</strong> ➔ 點擊紫藍色高亮的 <code>[🌌 啟動巨量大數據排列組合回測]</code> 按鈕。</li>
+            <li><strong>第四步：獲取最佳化結果</strong> ➔ 系統會在幾秒鐘內於背景完成數百組排列組合運算，並將最新的冠軍數據存入 SQLite 資料庫中。</li>
+            <li><strong>第五步：抄冠軍作業實戰</strong> ➔ 點擊 <code>[📊 最新回測結果表單]</code> 進入大數據分析中心，直接查看全光譜排行榜的第一名（例如 Optuna 幫您算出的最優解答：方案 D + 5 檔分散 + 30 天甜點），並將此參數應用在平日的『AI 實戰下單中心』中！</li>
+        </ol>
+
+        <h3>5.5 未來擴充功能概念：【一鍵套用最佳參數】(Apply to Live Engine)</h3>
         <p>為了讓「回測大腦」與「實戰控制台」完全無縫連動，未來可以在分析中心 (analysis.html) 中擴充設計：</p>
         <div class="quote-box">
             ⚡ 一鍵將大數據冠軍參數套用至實戰模型 (Apply to Live Engine)

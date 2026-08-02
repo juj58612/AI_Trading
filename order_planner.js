@@ -364,11 +364,27 @@ window.autoFillTickerNameAndPrice = function() {
         document.getElementById('addName').value = `${ticker} ${match.name}`;
     }
     
+    // Check local loaded recommendations first
+    const foundInAuto = autoOrders.find(o => o.ticker === ticker);
+    const foundInFiltered = filteredBuys.find(o => o.ticker === ticker);
+    
+    if (foundInAuto && foundInAuto.price > 0) {
+        document.getElementById('addPrice').value = foundInAuto.price;
+        calcManualShares();
+        return;
+    }
+    if (foundInFiltered && foundInFiltered.price > 0) {
+        document.getElementById('addPrice').value = foundInFiltered.price;
+        calcManualShares();
+        return;
+    }
+    
     fetch(`${API_BASE_URL}/api/stock/${ticker}`)
         .then(res => res.json())
         .then(data => {
-            if (data && data.closePrice) {
-                document.getElementById('addPrice').value = data.closePrice;
+            const px = data ? (data.latest_close || data.closePrice || data.price || 0) : 0;
+            if (px > 0) {
+                document.getElementById('addPrice').value = px;
                 if (data.name && !document.getElementById('addName').value) {
                     document.getElementById('addName').value = `${ticker} ${data.name}`;
                 }
