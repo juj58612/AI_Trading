@@ -1,4 +1,14 @@
-INFO:     Started server process [25815]
+INFO:     Started server process [25913]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:58888 (Press CTRL+C to quit)
+✅ 成功集成 backtest_engine 路由至主系統！遠端手機現已支援完整回測！
+INFO:     127.0.0.1:60911 - "GET /api/planner/recommendations?cash=97 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET /api/planner/recommendations?cash=96 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET /api/planner/recommendations?cash=95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET /api/planner/recommendations?cash=94 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET /api/planner/recommendations?cash=93 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60911 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60914 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60914 - "GET /api/portfolio HTTP/1.1" 200 OK

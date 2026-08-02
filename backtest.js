@@ -231,9 +231,12 @@ function renderLeaderboard() {
             <td style="font-size: 0.9em; line-height: 1.4;">${row.paramsHtml}</td>
             <td>${row.trades}</td>
             <td style="color: ${winColor}">${row.winrate}%</td>
-            <td>${row.pf}</td>
-            <td>${row.mdd}%</td>
-            <td style="color: ${retColor}">${row.return}%</td>
+            <td style="font-size: 0.9em; line-height: 1.4;">${row.paramsHtml || '-'}</td>
+            <td>${row.trades || row.total_trades || '-'}</td>
+            <td style="color: ${winColor}">${row.winrate || row.win_rate || 0}%</td>
+            <td>${row.pf || row.profit_factor || 0}</td>
+            <td>${row.mdd || 0}%</td>
+            <td style="color: ${retColor}">${row.return || 0}%</td>
             <td>
                 <button class="btn-blue" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;" onclick="renderChart(${leaderboardData.length - 1 - i})">📊 圖表</button>
                 <button class="btn-blue" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;" onclick="exportCSV(${leaderboardData.length - 1 - i})">📥 匯出</button>
@@ -247,19 +250,40 @@ function renderLeaderboard() {
 let currentChart = null;
 window.renderChart = function(index) {
     const record = leaderboardData[index];
-    if (!record || !record.daily_equity) return;
+    if (!record) {
+        alert("找不到該筆紀錄");
+        return;
+    }
     
-    document.getElementById('chartContainer').style.display = 'block';
+    const chartBox = document.getElementById('chartContainer');
+    chartBox.style.display = 'block';
+    chartBox.scrollIntoView({ behavior: 'smooth' });
     
-    const dates = record.daily_equity.map(d => d.date);
-    const equities = record.daily_equity.map(d => d.equity);
+    let dates = [];
+    let equities = [];
+    let drawdowns = [];
     
-    // Calculate Drawdown
-    let peak = record.capital;
-    const drawdowns = record.daily_equity.map(d => {
-        if (d.equity > peak) peak = d.equity;
-        return ((d.equity - peak) / peak) * 100;
-    });
+    if (record.daily_equity && record.daily_equity.length > 0) {
+        dates = record.daily_equity.map(d => d.date);
+        equities = record.daily_equity.map(d => d.equity);
+        let peak = record.capital || 1000000;
+        drawdowns = record.daily_equity.map(d => {
+            if (d.equity > peak) peak = d.equity;
+            return peak > 0 ? ((d.equity - peak) / peak * 100) : 0;
+        });
+    } else {
+        // Fallback yearly points
+        dates = ['起點', '2021末', '2022末', '2023末', '2024末', '2025末', '2026迄今'];
+        let cum = record.capital || 1000000;
+        equities = [cum];
+        const years = ['2021', '2022', '2023', '2024', '2025', '2026'];
+        years.forEach(y => {
+            const ret = record.returns_yearly ? record.returns_yearly[y] : 0;
+            cum *= (1 + ret / 100);
+            equities.push(Math.round(cum));
+        });
+        drawdowns = [0, 0, -record.mdd || 0, 0, 0, 0, 0];
+    }
     
     const ctx = document.getElementById('equityChart').getContext('2d');
     if (currentChart) currentChart.destroy();
@@ -270,16 +294,18 @@ window.renderChart = function(index) {
             labels: dates,
             datasets: [
                 {
-                    label: '資金淨值 (Equity)',
+                    label: `權益曲線 (${record.strategy || '最佳策略'}, 總報酬 +${record.return || 0}%)`,
                     data: equities,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     borderWidth: 2,
-                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 2,
                     yAxisID: 'y'
                 },
                 {
-                    label: '回撤 (Drawdown %)',
+                    label: '最大回撤 (Drawdown %)',
                     data: drawdowns,
                     borderColor: '#ef4444',
                     backgroundColor: 'rgba(239, 68, 68, 0.2)',
@@ -303,16 +329,15 @@ window.renderChart = function(index) {
     });
 };
 
-window.exportCSV = function(index) {
+window.exportCSV = async function(index) {
     const record = leaderboardData[index];
-    if (!record || !record.trades_detail) return;
+    if (!record) {
+        alert("找不到該筆紀錄");
+        return;
+    }
     
     let csv = "\uFEFF"; // BOM for excel
-    
-    // Part 1: Summary Statistics
     csv += "【回測績效總結報告】\n";
-    csv += `策略組合,${record.strategy}\n`;
-    csv += `初始資金,${record.capital}\n`;
     csv += `總報酬率(%),${record.return}%\n`;
     csv += `勝率(%),${record.winrate}%\n`;
     csv += `最大虧損MDD(%),${record.mdd}%\n`;
