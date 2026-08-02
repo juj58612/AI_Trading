@@ -459,7 +459,8 @@ function pollMegaGridStatus() {
                     btn.textContent = `🎉 運算完成！`;
                     btn.disabled = false;
                     
-                    }, 1500);
+                    // 重新載入最新榜單
+                    renderLeaderboard();
                 }
             }
         } catch (e) {
