@@ -355,13 +355,42 @@ const STOCKS_CONFIG = [
     { ticker: "2303", name: "聯電" }, { ticker: "6230", name: "尼得科超眾" }
 ];
 
-function autoFillTickerName() {
+window.autoFillTickerNameAndPrice = function() {
     const ticker = document.getElementById('addTicker').value.trim();
+    if (!ticker) return;
+    
     const match = STOCKS_CONFIG.find(s => s.ticker === ticker);
     if (match) {
         document.getElementById('addName').value = `${ticker} ${match.name}`;
     }
-}
+    
+    fetch(`${API_BASE_URL}/api/stock/${ticker}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.closePrice) {
+                document.getElementById('addPrice').value = data.closePrice;
+                if (data.name && !document.getElementById('addName').value) {
+                    document.getElementById('addName').value = `${ticker} ${data.name}`;
+                }
+                calcManualShares();
+            }
+        }).catch(e => {});
+};
+
+window.calcManualShares = function() {
+    const price = parseFloat(document.getElementById('addPrice').value) || 0;
+    const budgetWan = parseFloat(document.getElementById('addBudget').value) || 0;
+    
+    if (price > 0 && budgetWan > 0) {
+        const budgetTwd = budgetWan * 10000;
+        const sharesExact = budgetTwd / (price * 1.0015);
+        const sharesRounded = Math.max(1, Math.round(sharesExact));
+        document.getElementById('addShares').value = sharesRounded;
+        const zhang = (sharesRounded / 1000).toFixed(3);
+        const zhangElem = document.getElementById('addSharesZhangNotice');
+        if (zhangElem) zhangElem.textContent = `(約 ${zhang} 張 / ${sharesRounded.toLocaleString()} 股)`;
+    }
+};
 
 function addManualOrderToList() {
     const ticker = document.getElementById('addTicker').value.trim();

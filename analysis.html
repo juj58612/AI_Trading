@@ -382,8 +382,10 @@ async function exportTradeHistoryToCSV() {
         let csvContent = "\uFEFF排名,策略方案,股票代碼,股票名稱,買進進場日期,進場價格(元),賣出平倉日期,賣出價格(元),持倉天數(天),交易股數(股),平倉原因,交易損益(%),獲利金額(TWD)\n";
         
         trades.forEach(t => {
-            const sharesStr = (t.shares * 1000).toLocaleString();
-            csvContent += `${t.rank || 1},${t.strategy_label || '方案 D'},${t.ticker},"${t.name}",${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.hold_days || '-'},${sharesStr},"${t.reason || '平倉'}",${(t.pnl_pct || 0).toFixed(2)}%,${(t.pnl_amount || 0).toFixed(0)}\n`;
+            const sharesNum = t.shares ? (t.shares > 100 ? t.shares : t.shares * 1000) : 1000;
+            const sharesStr = sharesNum.toLocaleString();
+            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
+            csvContent += `${t.rank || 1},${t.strategy_label || '方案 D'},${t.ticker},"${t.name}",${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.hold_days || '-'},${sharesStr},"${t.reason || '平倉'}",${(t.pnl_pct || 0).toFixed(2)}%,${Math.round(pnlVal)}\n`;
         });
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

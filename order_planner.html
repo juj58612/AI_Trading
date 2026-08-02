@@ -336,12 +336,12 @@
             
             <div class="form-group">
                 <label for="addTicker">股票代碼 (4碼)：</label>
-                <input type="text" id="addTicker" placeholder="例如 2330" onchange="autoFillTickerName()">
+                <input type="text" id="addTicker" placeholder="例如 2330" oninput="autoFillTickerNameAndPrice()">
             </div>
             
             <div class="form-group">
                 <label for="addName">股票名稱：</label>
-                <input type="text" id="addName" placeholder="例如 台積電">
+                <input type="text" id="addName" placeholder="例如 2330 台積電">
             </div>
 
             <div class="form-group">
@@ -353,13 +353,21 @@
             </div>
             
             <div class="form-group">
-                <label for="addPrice">預估價格 (元)：</label>
-                <input type="number" id="addPrice" step="0.1">
+                <label for="addPrice">預估單價 (元)：</label>
+                <input type="number" id="addPrice" step="0.1" placeholder="輸入或自動帶出價格" oninput="calcManualShares()">
+            </div>
+
+            <div class="form-group">
+                <label for="addBudget">💰 擬分配預算 (萬元)：</label>
+                <input type="number" id="addBudget" value="20" step="1" placeholder="例如 20" oninput="calcManualShares()">
             </div>
             
             <div class="form-group">
-                <label for="addShares">預估股數 (股)：</label>
-                <input type="number" id="addShares" step="1">
+                <label for="addShares">預估股數 (股)： <span style="font-size:0.75rem; color:#38bdf8;" id="addSharesZhangNotice">(約 0 張)</span></label>
+                <input type="number" id="addShares" step="1" placeholder="系統自動推算股數">
+            </div>
+            <div style="font-size:0.75rem; color:#f59e0b; margin-top:4px; margin-bottom:12px;" id="calcNotice">
+                💡 提示：系統已為您根據『預估單價』與『分配預算』自動推算最適股數！您亦可直接手動覆寫。
             </div>
 
             <div class="modal-actions">
