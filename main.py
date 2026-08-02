@@ -51,6 +51,16 @@ def authenticate(request: Request):
 
 app = FastAPI()
 
+# 引入與集成 AI 獨立回測實驗室 (Backtest Engine Routes) 讓手機與遠端 Render 也能 100% 運算與查看報告
+try:
+    import backtest_engine
+    for route in backtest_engine.app.routes:
+        if hasattr(route, "path") and not any(getattr(r, "path", None) == route.path for r in app.routes):
+            app.routes.append(route)
+    print("✅ 成功集成 backtest_engine 路由至主系統！遠端手機現已支援完整回測！")
+except Exception as e:
+    print(f"⚠️ 無法集成 backtest_engine 路由: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

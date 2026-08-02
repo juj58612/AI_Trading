@@ -10,12 +10,14 @@ import math
 import sqlite3
 import optuna
 import strategy_core
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, APIRouter, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 
 app = FastAPI()
+router = APIRouter()
+app.include_router(router)
 
 app.add_middleware(
     CORSMiddleware,
