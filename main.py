@@ -657,8 +657,8 @@ async def commit_planner_orders(req: CommitRequest):
 
     return {"status": "success", "message": "交易已成功同步寫入實戰庫存與歷史紀錄！"}
 
-# 掛載靜態網頁與外部檔案 (提供支援 index.html, style.css, app.js 的靜態服務)
-@app.get("/{filename}", dependencies=[Depends(authenticate)])
+# 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
+@app.get("/{filename}")
 def serve_static(filename: str):
     if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js"]:
         headers = {
@@ -672,7 +672,7 @@ def serve_static(filename: str):
     # Default route for everything else that is not found
     raise HTTPException(status_code=404)
 
-@app.get("/", dependencies=[Depends(authenticate)])
+@app.get("/")
 def read_index():
     if os.path.exists("index.html"):
         headers = {
