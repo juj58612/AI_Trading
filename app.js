@@ -53,19 +53,22 @@ function getAuthCredentials() {
     if (saved) {
         try { return JSON.parse(saved); } catch(e) {}
     }
-    return { username: "cyc58612", authHeader: "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***") };
+    return null;
 }
 
 function getAuthHeader() {
-    return getAuthCredentials().authHeader;
+    const creds = getAuthCredentials();
+    return creds ? creds.authHeader : "";
 }
 
 function updateUserBadge() {
     const creds = getAuthCredentials();
     const badge = document.getElementById('userStatusBadge');
     if (badge) {
-        if (creds.username === 'cyc58612') {
-            badge.innerHTML = `👤 管理者 (cyc58612) <a href="javascript:void(0)" onclick="openAuthModal(true)" style="color:#3b82f6; margin-left:6px; font-size:0.8rem; text-decoration:underline;">切換/開戶</a>`;
+        if (!creds) {
+            badge.innerHTML = `👤 未登入 <a href="javascript:void(0)" onclick="openAuthModal(false)" style="color:#f59e0b; margin-left:6px; font-size:0.85rem; text-decoration:underline;">🔑 邀請碼開戶/登入</a>`;
+        } else if (creds.username === 'cyc58612') {
+            badge.innerHTML = `👤 管理者 (cyc58612) <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
         } else {
             badge.innerHTML = `👤 用戶 (${creds.username}) <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
         }
@@ -74,7 +77,7 @@ function updateUserBadge() {
 
 function logoutUser() {
     localStorage.removeItem('ai_trading_user');
-    alert('已成功登出！系統將還原為管理員存取。');
+    alert('已成功登出！');
     location.reload();
 }
 
@@ -103,7 +106,7 @@ function openAuthModal(isLogin = false) {
         if (btnToggle) btnToggle.textContent = '輸入邀請碼開戶註冊';
     } else {
         if (title) title.textContent = '🔑 VIP 邀請碼開戶註冊';
-        if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！';
+        if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼 (juj58612)，即可開立獨立帳戶！';
         if (inviteContainer) inviteContainer.style.display = 'block';
         if (btnSubmit) btnSubmit.textContent = '✨ 立即註冊並開戶';
         if (toggleText) toggleText.textContent = '已有帳號？';
@@ -115,6 +118,10 @@ function openAuthModal(isLogin = false) {
 
 document.addEventListener('DOMContentLoaded', () => {
     updateUserBadge();
+    const creds = getAuthCredentials();
+    if (!creds) {
+        openAuthModal(false);
+    }
     
     const btnToggle = document.getElementById('btnAuthToggle');
     if (btnToggle) {

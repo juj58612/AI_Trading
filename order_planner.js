@@ -6,8 +6,18 @@ let filteredBuys = []; // Scheme A backups
 let activeEditType = ''; // 'auto' or 'manual'
 let activeEditIndex = -1;
 
-// Authentication headers (matching main app)
-const authHeader = "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***");
+function getAuthCredentials() {
+    const saved = localStorage.getItem('ai_trading_user');
+    if (saved) {
+        try { return JSON.parse(saved); } catch(e) {}
+    }
+    return null;
+}
+
+function getAuthHeader() {
+    const creds = getAuthCredentials();
+    return creds ? creds.authHeader : "";
+}
 
 // Helper to look up and format stock Chinese names
 function formatStockName(ticker, currentName) {
@@ -27,7 +37,7 @@ async function loadPlannerData() {
     
     try {
         const res = await fetch(`${API_BASE_URL}/api/planner/recommendations?cash=${cashVal}`, {
-            headers: { 'Authorization': authHeader }
+            headers: { 'Authorization': getAuthHeader() }
         });
         
         if (res.ok) {
@@ -417,7 +427,7 @@ async function commitExecutedOrders() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': authHeader
+                'Authorization': getAuthHeader()
             },
             body: JSON.stringify(payload)
         });
