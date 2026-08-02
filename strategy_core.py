@@ -27,6 +27,54 @@ def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
+def evaluate_macro_3in1_status(foreign_spot_buy: float, twd_rate_change_5d: float, foreign_futures_short: int) -> dict:
+    """
+    華爾街三合一巨觀風控算子 (外資現貨 + 台幣匯率 + 外資期貨空單)
+    回傳: { 'level': 0|1|2, 'title': str, 'advice': str, 'veto_buy': bool, 'pos_scale': float }
+    """
+    alerts = 0
+    reasons = []
+    
+    # 警報 1: 外資期貨空單大於 30,000 口 (極端警戒)
+    if foreign_futures_short >= 30000:
+        alerts += 1
+        reasons.append(f"期貨空單偏高 ({foreign_futures_short:,}口)")
+        
+    # 警報 2: 台幣 5 日內貶值超過 1.5 角 (資金外流)
+    if twd_rate_change_5d >= 0.15:
+        alerts += 1
+        reasons.append(f"台幣快速貶值 (+{twd_rate_change_5d:.2f}角)")
+        
+    # 警報 3: 外資現貨單日大賣超過 100 億元
+    if foreign_spot_buy <= -100:
+        alerts += 1
+        reasons.append(f"外資現貨大賣 ({foreign_spot_buy:.0f}億)")
+        
+    if alerts >= 3:
+        return {
+            'level': 2, # 紅燈熔斷
+            'title': '🚨 三合一巨觀紅燈熔斷 (外資撤資+貶值+期空破3萬)',
+            'advice': f"⚠️ 觸發巨觀風控熔斷！原因: {', '.join(reasons)}。一票否決禁止新建多單，保留現金！",
+            'veto_buy': True,
+            'pos_scale': 0.0
+        }
+    elif alerts == 2:
+        return {
+            'level': 1, # 黃燈警戒
+            'title': '⚠️ 巨觀雙重警戒 (資金避險防禦期)',
+            'advice': f"⚠️ 風險升級！原因: {', '.join(reasons)}。建議總庫存上限降至 50%，防線收緊。",
+            'veto_buy': False,
+            'pos_scale': 0.5
+        }
+    else:
+        return {
+            'level': 0, # 綠燈安全
+            'title': '🟢 巨觀資金面安全',
+            'advice': "資金面無系統性風險，可按波段與 Risk Parity 正常分配建倉。",
+            'veto_buy': False,
+            'pos_scale': 1.0
+        }
+
 def calculate_chip_score(latest_close: float, ma5: float, inst_last2_days: list) -> tuple:
     """
     統一籌碼積分邏輯 (0~5分)
