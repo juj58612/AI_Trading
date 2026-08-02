@@ -1,37 +1,8 @@
-INFO:     Started server process [22260]
+INFO:     Started server process [22580]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:58888 (Press CTRL+C to quit)
-INFO:     127.0.0.1:56265 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56265 - "GET /style.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56266 - "GET /app.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56266 - "GET /api/portfolio HTTP/1.1" 200 OK
-HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: 3324.TW"}}}
-$3324.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: 3693.TW"}}}
-$3693.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$6274.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$6643.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$3529.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$8299.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$4966.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$3131.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$6187.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-$5443.TW: possibly delisted; no price data found  (period=1mo) (Yahoo error = "No data found, symbol may be delisted")
-INFO:     127.0.0.1:56280 - "POST /api/scan_all HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56280 - "GET /api/stock/3231 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56414 - "GET /api/stock/2357 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56415 - "GET /api/stock/2317 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56416 - "GET /api/stock/2330 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56417 - "GET /api/stock/2324 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56418 - "GET /api/stock/2356 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56280 - "GET /api/stock/2421 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56414 - "GET /api/stock/2360 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56416 - "GET /api/stock/6669 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56415 - "GET /api/stock/3034 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56417 - "GET /api/stock/3653 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56418 - "GET /api/stock/2395 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56280 - "GET /api/stock/3017 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56414 - "GET /api/stock/2376 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56416 - "GET /api/stock/3529 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56415 - "POST /api/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57319 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57319 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57320 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57320 - "GET /api/portfolio HTTP/1.1" 200 OK

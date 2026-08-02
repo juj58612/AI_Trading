@@ -11,7 +11,7 @@ function getAuthCredentials() {
     if (saved) {
         try { return JSON.parse(saved); } catch(e) {}
     }
-    return null;
+    return { username: "cyc58612", authHeader: "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***") };
 }
 
 function getAuthHeader() {

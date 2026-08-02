@@ -413,7 +413,7 @@ window.runMegaGrid = async function() {
     progressPanel.style.display = 'block';
     
     try {
-        const res = await fetch(`${API_BASE_URL}/api/backtest/mega_grid`, {
+        const res = await fetch(`${BACKTEST_API_URL}/api/backtest/mega_grid`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -443,7 +443,7 @@ function pollMegaGridStatus() {
     
     megaPollInterval = setInterval(async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/backtest/mega_grid/status`);
+            const res = await fetch(`${BACKTEST_API_URL}/api/backtest/mega_grid/status`);
             if (res.ok) {
                 const status = await res.json();
                 
@@ -454,12 +454,11 @@ function pollMegaGridStatus() {
                     btn.textContent = `⏳ 大數據運算中... (${pct}%)`;
                 } else {
                     clearInterval(megaPollInterval);
-                    progressMsg.innerHTML = `<span style="color:#4ade80; font-weight:bold;">🎉 大數據網格搜索完成！即將在 1.5 秒後為您導向至「大數據分析中心」...</span>`;
+                    progressMsg.innerHTML = `<span style="color:#4ade80; font-weight:bold;">🎉 大數據網格搜索完成！已自動刷新下方「綜合策略排行榜」與「AI 決策歸因看板」！</span>`;
                     progressBar.style.width = `100%`;
                     btn.textContent = `🎉 運算完成！`;
+                    btn.disabled = false;
                     
-                    setTimeout(() => {
-                        window.location.href = "analysis.html";
                     }, 1500);
                 }
             }
