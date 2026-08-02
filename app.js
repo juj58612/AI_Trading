@@ -197,6 +197,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 說明文本 Modal 控制邏輯
+const btnOpenDoc = document.getElementById('btnOpenDoc');
+const btnCloseDoc = document.getElementById('btnCloseDoc');
+const docModal = document.getElementById('docModal');
+const docContent = document.getElementById('docContent');
+
+if (btnOpenDoc) {
+    btnOpenDoc.addEventListener('click', async () => {
+        if (docModal) docModal.style.display = 'flex';
+        if (docContent) {
+            docContent.textContent = '🔄 正在載入最新策略白皮書與系統說明...';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/doc`);
+                if (res.ok) {
+                    const data = await res.json();
+                    docContent.textContent = data.content;
+                } else {
+                    docContent.textContent = '❌ 無法讀取說明文件。';
+                }
+            } catch(e) {
+                docContent.textContent = '❌ 連線失敗: ' + e.message;
+            }
+        }
+    });
+}
+
+if (btnCloseDoc && docModal) {
+    btnCloseDoc.addEventListener('click', () => {
+        docModal.style.display = 'none';
+    });
+}
+
 async function savePortfolioToStorage() {
     try {
         await fetch(`${API_BASE_URL}/api/portfolio`, {

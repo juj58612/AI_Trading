@@ -226,6 +226,14 @@ def get_stock_data(ticker: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+@app.get("/api/doc")
+def get_documentation():
+    doc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AI_Trading_Console_Whitepaper_and_Manual.md")
+    if os.path.exists(doc_path):
+        with open(doc_path, "r", encoding="utf-8") as f:
+            return {"status": "success", "content": f.read()}
+    return {"status": "error", "message": "白皮書文件未找到"}
+
 DAILY_CACHE_FILE = "daily_scan_cache.json"
 
 def get_daily_scan_cache():

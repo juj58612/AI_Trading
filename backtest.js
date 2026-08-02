@@ -1,6 +1,10 @@
-const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
+const BACKTEST_API_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
     ? "http://127.0.0.1:58889"
-    : "http://127.0.0.1:58889"; // For now assume backend is local on 58889
+    : window.location.origin;
+
+const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
+    ? "http://127.0.0.1:58888"
+    : window.location.origin;
 
 const btnSyncDB = document.getElementById('btnSyncDB');
 const dbDateStatus = document.getElementById('dbDateStatus');
