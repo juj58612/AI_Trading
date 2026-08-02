@@ -226,9 +226,25 @@ async function loadAnalysisData() {
     }
 }
 
+function calcCAGR(row) {
+    if (row.cagr && row.cagr !== 0) return row.cagr;
+    try {
+        const s = new Date(row.start_date || '2021-01-01');
+        const e = new Date(row.end_date || '2026-08-01');
+        const days = Math.max(1, (e - s) / (1000 * 60 * 60 * 24));
+        const years = Math.max(0.05, days / 365.25);
+        const ratio = Math.max(0.0001, 1 + (row.total_return / 100));
+        return (Math.pow(ratio, 1 / years) - 1) * 100;
+    } catch(err) {
+        return 0;
+    }
+}
+
 function renderTable(list) {
     const tbody = document.getElementById('lbTableBody');
-    tbody.innerHTML = list.slice(0, 30).map((row, idx) => `
+    tbody.innerHTML = list.slice(0, 30).map((row, idx) => {
+        const cagrVal = calcCAGR(row);
+        return `
         <tr class="${idx === 0 ? 'best-row' : ''}">
             <td>${idx === 0 ? '🏆 第 1 名' : `第 ${idx + 1} 名`}</td>
             <td style="font-size: 0.85rem; color: #94a3b8;">${row.start_date || '2021-01-01'} ~ ${row.end_date || '2026-08-01'}</td>
@@ -236,14 +252,15 @@ function renderTable(list) {
             <td>${row.max_positions} 檔</td>
             <td>${row.max_hold_days} 天</td>
             <td style="color: #f59e0b; font-weight: bold;">+${row.total_return.toFixed(2)}%</td>
-            <td style="color: #38bdf8; font-weight: bold;">+${(row.cagr || 0).toFixed(2)}%</td>
+            <td style="color: #38bdf8; font-weight: bold;">+${cagrVal.toFixed(2)}%</td>
             <td style="color: #4ade80;">${row.mdd.toFixed(2)}%</td>
             <td>${row.win_rate.toFixed(1)}%</td>
             <td>${row.profit_factor.toFixed(2)}</td>
             <td>${(row.return_2022 || 0).toFixed(1)}%</td>
             <td>${(row.return_2023 || 0).toFixed(1)}%</td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderChart(topList) {
@@ -308,7 +325,8 @@ function exportAnalysisToCSV() {
         const pos = row.max_positions;
         const hold = row.max_hold_days;
         const ret = row.total_return ? row.total_return.toFixed(2) : "0.00";
-        const cagr = row.cagr ? row.cagr.toFixed(2) : "0.00";
+        const cagrVal = calcCAGR(row);
+        const cagr = cagrVal ? cagrVal.toFixed(2) : "0.00";
         const mdd = row.mdd ? row.mdd.toFixed(2) : "0.00";
         const win = row.win_rate ? row.win_rate.toFixed(1) : "0.0";
         const pf = row.profit_factor ? row.profit_factor.toFixed(2) : "0.00";
