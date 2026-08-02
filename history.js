@@ -11,11 +11,24 @@ if (discountRateInput) {
     discountRateInput.addEventListener('change', () => renderActive(myPortfolio));
 }
 
+function getAuthCredentials() {
+    const saved = localStorage.getItem('ai_trading_user');
+    if (saved) {
+        try { return JSON.parse(saved); } catch(e) {}
+    }
+    return { username: "cyc58612", authHeader: "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***") };
+}
+
+function getAuthHeader() {
+    const creds = getAuthCredentials();
+    return creds ? creds.authHeader : "";
+}
+
 async function loadData() {
     try {
         const [portRes, histRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/portfolio`),
-            fetch(`${API_BASE_URL}/api/history`)
+            fetch(`${API_BASE_URL}/api/portfolio`, { headers: { 'Authorization': getAuthHeader() } }),
+            fetch(`${API_BASE_URL}/api/history`, { headers: { 'Authorization': getAuthHeader() } })
         ]);
         
         myPortfolio = await portRes.json();
@@ -182,7 +195,10 @@ async function savePortfolioToStorage() {
     try {
         await fetch(`${API_BASE_URL}/api/portfolio`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': getAuthHeader(),
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify(myPortfolio)
         });
     } catch(e) {
@@ -225,7 +241,10 @@ window.removeFromPortfolio = async function(index) {
         myHistory.push(historyRecord);
         await fetch(`${API_BASE_URL}/api/history`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': getAuthHeader(),
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify(myHistory)
         });
     } catch (e) {
@@ -617,7 +636,10 @@ window.deleteSelectedHistory = async function() {
     try {
         await fetch(`${API_BASE_URL}/api/history`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': getAuthHeader(),
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify(myHistory)
         });
         alert('✅ 紀錄已成功刪除');
