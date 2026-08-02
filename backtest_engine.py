@@ -787,7 +787,7 @@ def get_experiments():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute("SELECT * FROM experiments ORDER BY id DESC")
+    c.execute("SELECT * FROM experiments ORDER BY total_return DESC")
     rows = c.fetchall()
     conn.close()
     

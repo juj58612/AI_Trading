@@ -194,7 +194,8 @@ async function loadAnalysisData() {
 
         if (expRes.ok) {
             const expData = await expRes.json();
-            const list = expData.data || [];
+            let list = expData.data || [];
+            list.sort((a, b) => b.total_return - a.total_return);
             
             if (list.length > 0) {
                 document.getElementById('kpiTotalExp').textContent = `${list.length} 組`;
