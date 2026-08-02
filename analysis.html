@@ -182,21 +182,23 @@
 </div>
 
 <script>
-const BACKTEST_API_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
-    ? "http://127.0.0.1:58889"
-    : window.location.origin;
+const BACKTEST_API_URL = window.location.port === '58889' ? 'http://127.0.0.1:58889' : (window.location.origin === 'null' ? 'http://127.0.0.1:58888' : window.location.origin);
 
 let chartInstance = null;
 let currentAnalysisList = [];
 
 async function loadAnalysisData() {
     try {
-        const [expRes, attrRes] = await Promise.all([
-            fetch(`${BACKTEST_API_URL}/api/analysis/experiments`),
-            fetch(`${BACKTEST_API_URL}/api/analysis/attribution`)
-        ]);
+        let expRes = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+        if (!expRes.ok && BACKTEST_API_URL.includes('58889')) {
+            expRes = await fetch(`http://127.0.0.1:58888/api/analysis/experiments`);
+        }
+        let attrRes = await fetch(`${BACKTEST_API_URL}/api/analysis/attribution`);
+        if (!attrRes.ok && BACKTEST_API_URL.includes('58889')) {
+            attrRes = await fetch(`http://127.0.0.1:58888/api/analysis/attribution`);
+        }
 
-        if (expRes.ok) {
+        if (expRes && expRes.ok) {
             const expData = await expRes.json();
             let list = expData.data || [];
             list.sort((a, b) => b.total_return - a.total_return);
@@ -214,7 +216,7 @@ async function loadAnalysisData() {
             }
         }
 
-        if (attrRes.ok) {
+        if (attrRes && attrRes.ok) {
             const attrData = await attrRes.json();
             if (attrData.decisions && attrData.decisions.length > 0) {
                 const container = document.getElementById('aiAttributionContainer');
@@ -276,7 +278,7 @@ function renderChart(topList) {
         years.forEach(y => {
             const ret = row[`return_${y}`] || 0;
             cum *= (1 + ret / 100);
-            dataPoints.push(round(cum, 1));
+            dataPoints.push(parseFloat(cum.toFixed(1)));
         });
 
         return {
