@@ -37,14 +37,17 @@ async function loadData() {
         if (!Array.isArray(myPortfolio)) myPortfolio = [];
         if (!Array.isArray(myHistory)) myHistory = [];
         
-        // --- 啟動自動同步 (Sync Latest Data) ---
-        let portfolioChanged = false;
+        // Render immediately so user sees portfolio and history instantly
+        renderActive(myPortfolio);
+        renderHistory(myHistory);
+        renderStatsDashboard();
+        
+        // Background sync latest prices & chips without blocking page display
         if (myPortfolio.length > 0) {
-            document.getElementById('activeGrid').innerHTML = '<div class="empty-msg">🔄 正在自動同步最新籌碼與股價...</div>';
-            
-            await Promise.all(myPortfolio.map(async (item) => {
+            Promise.all(myPortfolio.map(async (item) => {
                 try {
                     const res = await fetch(`${API_BASE_URL}/api/stock/${item.ticker}`);
+                    if (!res.ok) return;
                     const freshData = await res.json();
                     
                     if (freshData.latest_close) {
@@ -56,7 +59,6 @@ async function loadData() {
                         item.history_prices = freshData.history_prices || [];
                         item.is_mock = freshData.is_mock;
                         
-                        // 智能籌碼與防線診斷 (Smart Alerts)
                         const sl_pct = freshData.stop_loss_pct || 0.08;
                         const tp_pct = freshData.take_profit_pct || 0.15;
                         const isShort = item.type === 'short';
@@ -74,7 +76,6 @@ async function loadData() {
                         }
                         
                         if (isShort) {
-                            // 空單邏輯
                             const stopLossPrice = item.cost * (1 + sl_pct);
                             const takeProfitPrice = item.cost * (1 - tp_pct);
                             
@@ -95,7 +96,6 @@ async function loadData() {
                                 newSigClass = "sig-neutral";
                             }
                         } else {
-                            // 多單邏輯
                             const stopLossPrice = item.cost * (1 - sl_pct);
                             const takeProfitPrice = item.cost * (1 + tp_pct);
                             
@@ -129,17 +129,15 @@ async function loadData() {
                 } catch (err) {
                     console.warn(`同步 ${item.ticker} 失敗:`, err);
                 }
-            }));
-            
-            if (portfolioChanged) {
-                savePortfolioToStorage();
-            }
+            })).then(() => {
+                if (portfolioChanged) {
+                    savePortfolioToStorage();
+                }
+                renderActive(myPortfolio);
+                renderHistory(myHistory);
+                renderStatsDashboard();
+            });
         }
-        // --- 同步結束 ---
-        
-        renderActive(myPortfolio);
-        renderHistory(myHistory);
-        renderStatsDashboard();
     } catch (e) {
         console.error("載入資料失敗", e);
         const errMsg = e.stack ? e.stack.replace(/\n/g, '<br>') : e.message;
