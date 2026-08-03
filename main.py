@@ -397,22 +397,31 @@ def login_user(req: LoginRequest):
     raise HTTPException(status_code=401, detail="帳號或密碼錯誤！")
 
 def get_user_portfolio_file(username: str) -> str:
-    if username == "cyc58612":
+    if not username or username in ["cyc58612", "admin", "default", "undefined"]:
         return "portfolio.json"
     return f"portfolio_{username}.json"
 
 def get_user_history_file(username: str) -> str:
-    if username == "cyc58612":
+    if not username or username in ["cyc58612", "admin", "default", "undefined"]:
         return "history.json"
     return f"history_{username}.json"
 
-# 庫存持久化儲存 API (多用戶隔離)
+# 庫存持久化儲存 API (多用戶隔離與全域備援)
 @app.get("/api/portfolio")
 def get_portfolio(user: str = Depends(authenticate)):
     pfile = get_user_portfolio_file(user)
     if os.path.exists(pfile):
         try:
             with open(pfile, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data, list) and len(data) > 0:
+                    return data
+        except Exception:
+            pass
+    # Fallback to main portfolio.json
+    if os.path.exists("portfolio.json"):
+        try:
+            with open("portfolio.json", "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
@@ -425,17 +434,29 @@ async def save_portfolio(request: Request, user: str = Depends(authenticate)):
         data = await request.json()
         with open(pfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+        if pfile != "portfolio.json":
+            with open("portfolio.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 歷史交易庫房 API (多用戶隔離)
+# 歷史交易庫房 API (多用戶隔離與全域備援)
 @app.get("/api/history")
 def get_history(user: str = Depends(authenticate)):
     hfile = get_user_history_file(user)
     if os.path.exists(hfile):
         try:
             with open(hfile, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data, list) and len(data) > 0:
+                    return data
+        except Exception:
+            pass
+    # Fallback to main history.json
+    if os.path.exists("history.json"):
+        try:
+            with open("history.json", "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
@@ -448,6 +469,9 @@ async def save_history(request: Request, user: str = Depends(authenticate)):
         data = await request.json()
         with open(hfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+        if hfile != "history.json":
+            with open("history.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -767,8 +791,15 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
     try:
         with open(portfolio_file, "w", encoding="utf-8") as f:
             json.dump(portfolio, f, ensure_ascii=False, indent=4)
+        if portfolio_file != "portfolio.json":
+            with open("portfolio.json", "w", encoding="utf-8") as f:
+                json.dump(portfolio, f, ensure_ascii=False, indent=4)
+                
         with open(history_file, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=4)
+        if history_file != "history.json":
+            with open("history.json", "w", encoding="utf-8") as f:
+                json.dump(history, f, ensure_ascii=False, indent=4)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"儲存記帳失敗: {str(e)}")
 
