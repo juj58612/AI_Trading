@@ -335,6 +335,11 @@ async def scan_all_stocks(request: Request):
         if results:
             cache_db[today_str] = results
             save_daily_scan_cache(cache_db)
+            try:
+                with open("latest_scan_results.json", "w", encoding="utf-8") as f:
+                    json.dump(results, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print("Error saving latest_scan_results.json:", e)
             return {"data": results, "cached": False, "cache_date": today_str}
 
         if not results and tickers:
@@ -531,10 +536,14 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "price": close_price
             })
 
-    # Read latest scan results
+    # Read latest scan results (check daily_scan_cache first for guaranteed sync with index.html)
     scan_results = []
     scan_warning = ""
-    if os.path.exists("latest_scan_results.json"):
+    cache_db = load_daily_scan_cache()
+    if cache_db:
+        latest_date = sorted(cache_db.keys())[-1]
+        scan_results = cache_db[latest_date]
+    elif os.path.exists("latest_scan_results.json"):
         try:
             with open("latest_scan_results.json", "r", encoding="utf-8") as f:
                 scan_results = json.load(f)
