@@ -490,9 +490,10 @@ async function commitExecutedOrders() {
         }
     } catch (e) {
         console.error("Commit 失敗", e);
-        alert(`❌ 連線失敗，無法寫入庫存檔案。`);
     }
 }
+
+window.commitAllOrders = commitExecutedOrders;
 
 // Initialize Page Data
 loadPlannerData();
