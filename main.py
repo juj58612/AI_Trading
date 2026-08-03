@@ -701,7 +701,7 @@ async def commit_planner_orders(req: CommitRequest, credentials: tuple = Depends
                 mult = 2.2
                 trailing_stop = o.price - (mult * atr_val)
                 
-                portfolio.append({
+                new_item = {
                     "name": o.name,
                     "ticker": o.ticker,
                     "closePrice": o.price,
@@ -722,7 +722,23 @@ async def commit_planner_orders(req: CommitRequest, credentials: tuple = Depends
                     "buy_date": today_str,
                     "trailing_stop": trailing_stop,
                     "atr_multiplier": mult
-                })
+                }
+                portfolio.append(new_item)
+            
+            # Log transaction in history journal for history.html
+            history.append({
+                "name": o.name,
+                "ticker": o.ticker,
+                "cost": o.price,
+                "closePrice": o.price,
+                "exitPrice": o.price,
+                "shares": o.shares,
+                "buy_date": today_str,
+                "exitDate": today_str,
+                "outcome": o.reason or "買進建倉",
+                "signal": "AI 實戰建倉",
+                "type": "buy"
+            })
         elif o.type == 'sell':
             exists = next((item for item in portfolio if item['ticker'] == o.ticker), None)
             if exists:
@@ -731,7 +747,21 @@ async def commit_planner_orders(req: CommitRequest, credentials: tuple = Depends
                     **exists,
                     "exitPrice": o.price,
                     "exitDate": today_str,
-                    "outcome": o.reason or "時間到期"
+                    "outcome": o.reason or "平倉賣出"
+                })
+            else:
+                history.append({
+                    "name": o.name,
+                    "ticker": o.ticker,
+                    "cost": o.price,
+                    "closePrice": o.price,
+                    "exitPrice": o.price,
+                    "shares": o.shares,
+                    "buy_date": today_str,
+                    "exitDate": today_str,
+                    "outcome": o.reason or "手動平倉賣出",
+                    "signal": "AI 實戰出場",
+                    "type": "sell"
                 })
 
     try:

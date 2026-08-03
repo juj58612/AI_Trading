@@ -442,19 +442,16 @@ function removeManualOrder(idx) {
 
 // Commit to portfolio.json and history.json
 async function commitExecutedOrders() {
-    // Prompt to verify which list to commit
-    const choice = confirm("請確認是否要將勾選的「✍️ 手動自訂掛單」成交明細寫入庫存？\n(取消則改為寫入「🤖 系統自動推薦掛單」成交明細)");
+    const checkedAuto = autoOrders.filter(o => o.checked);
+    const checkedManual = manualOrders.filter(o => o.checked);
+    const checkedOrders = [...checkedAuto, ...checkedManual];
     
-    const targetList = choice ? manualOrders : autoOrders;
-    const listLabel = choice ? "手動自訂" : "系統自動";
-    
-    const checkedOrders = targetList.filter(o => o.checked);
     if (checkedOrders.length === 0) {
-        alert(`❌ 您所選的 [${listLabel}] 清單中沒有勾選任何已成交項目！`);
+        alert("❌ 左右兩欄中沒有勾選任何已成交項目！\n(有下單才勾選，無下單勿勾選！)");
         return;
     }
     
-    const finalConfirm = confirm(`確定要將 [${listLabel}] 的 ${checkedOrders.length} 筆成交交易記入實戰帳本嗎？\n(此動作會扣減現金、更新庫存階段並結算歷史損益)`);
+    const finalConfirm = confirm(`確定要將已勾選的 ${checkedOrders.length} 筆成交交易記入庫存與歷史紀錄嗎？\n(包含系統推薦 ${checkedAuto.length} 筆，手動自訂 ${checkedManual.length} 筆)`);
     if (!finalConfirm) return;
     
     // Format payload
@@ -483,7 +480,7 @@ async function commitExecutedOrders() {
             const data = await res.json();
             if (data.status === 'success') {
                 alert(`🎉 恭喜！下單記帳成功！\n${data.message}`);
-                // Refresh
+                // Refresh planner
                 loadPlannerData();
             } else {
                 alert(`❌ 記帳失敗: ${data.message}`);
