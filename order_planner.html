@@ -235,10 +235,13 @@
                 <p>本系統將自動根據大戶籌碼掃描，為您計算出明日開盤最佳的買進與賣出股數，並依可用預算自動控管風險。</p>
             </div>
             <div class="planner-settings">
-                <div class="count-setting" style="border-color: #8957e5;">
+                <div class="count-setting" style="border-color: #8957e5; display: flex; align-items: center; gap: 8px;">
                     <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
-                    <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:90px;" onchange="loadPlannerData()">
-                    <span style="color:#c084fc; font-weight:bold; margin-left:4px;">萬元</span>
+                    <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:80px;" oninput="loadPlannerData()">
+                    <span style="color:#c084fc; font-weight:bold;">萬元</span>
+                    <button onclick="loadPlannerData()" style="background: linear-gradient(135deg, #8957e5 0%, #6366f1 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(137, 87, 229, 0.3);">
+                        ⚡ 重新計算推薦
+                    </button>
                 </div>
             </div>
         </div>

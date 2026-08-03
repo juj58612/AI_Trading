@@ -1,15 +1,1 @@
-[
-    {
-        "name": "台積電",
-        "ticker": "2330",
-        "cost": 950.0,
-        "closePrice": 950.0,
-        "exitPrice": 950.0,
-        "shares": 1.0,
-        "buy_date": "2026-08-03",
-        "exitDate": "2026-08-03",
-        "outcome": "測試買進建倉",
-        "signal": "AI 實戰建倉",
-        "type": "buy"
-    }
-]
+[]

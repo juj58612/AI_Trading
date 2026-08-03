@@ -600,9 +600,9 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "stage_num": 1
             })
             
-    # Apply Budget Filter (Scheme B)
-    # Default allocation: cash / 5 positions
-    alloc_per_stock = cash_twd / 5.0
+    # Apply Budget Filter: Divide cash dynamically among top recommendations (up to 5 stocks)
+    num_targets = max(1, min(len(potential_buys), 5))
+    alloc_per_stock = cash_twd / float(num_targets)
     
     buys = []
     filtered_buys = []

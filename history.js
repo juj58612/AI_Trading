@@ -438,9 +438,9 @@ function renderActive(data) {
             </div>
             <div class="pnl-panel">
                 <div class="pnl-col">
-                    <span>設定成本：<strong style="color:var(--text-main)">${item.cost}</strong> </span>
-                    <span>操作張數：<strong style="color:var(--text-main)">${item.shares} 張</strong></span>
-                    <span>最新收盤：<strong style="color:var(--text-main)">${item.closePrice > 0 ? item.closePrice : '計算中'}</strong></span>
+                    <span>設定成本：<strong style="color:var(--text-main)">${item.cost} 元</strong> </span>
+                    <span>操作數量：<strong style="color:var(--text-main)">${(item.shares >= 1 && Number.isInteger(item.shares)) ? item.shares + ' 張' : (item.shares * 1000).toLocaleString() + ' 股 (' + item.shares + ' 張)'}</strong></span>
+                    <span>最新收盤：<strong style="color:var(--text-main)">${item.closePrice > 0 ? item.closePrice + ' 元' : '計算中'}</strong></span>
                 </div>
                 <div class="pnl-col" style="text-align: right;">
                     <span style="color:var(--text-sub); font-size: 0.8rem;">投入本金：<strong style="color:var(--text-main); font-size:0.95rem;">${totalCostFormatted}</strong></span>
@@ -591,10 +591,10 @@ function renderHistory(data) {
                 </div>
                 
                 <div class="history-body">
-                    <div class="history-data-point">建倉成本：<strong>${item.cost}</strong></div>
-                    <div class="history-data-point">操作張數：<strong>${item.shares}</strong></div>
-                    <div class="history-data-point">波段極端收盤價：<strong>${item.high || 0}</strong></div>
-                    <div class="history-data-point">最後紀錄收盤：<strong>${item.closePrice || 0}</strong></div>
+                    <div class="history-data-point">建倉成本：<strong>${item.cost} 元</strong></div>
+                    <div class="history-data-point">操作數量：<strong>${(item.shares >= 1 && Number.isInteger(item.shares)) ? item.shares + ' 張' : (item.shares * 1000).toLocaleString() + ' 股 (' + item.shares + ' 張)'}</strong></div>
+                    <div class="history-data-point">波段極端收盤價：<strong>${item.high || 0} 元</strong></div>
+                    <div class="history-data-point">最後紀錄收盤：<strong>${item.closePrice || item.exitPrice || 0} 元</strong></div>
                 </div>
                 
                 ${(item.reason || item.journal) ? `
