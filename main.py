@@ -464,9 +464,9 @@ class CommitRequest(BaseModel):
     orders: List[CommitOrder]
 
 @app.get("/api/planner/recommendations")
-def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depends(authenticate)):
+def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authenticate)):
     cash_twd = cash * 10000.0
-    username = credentials[0]
+    username = user
     portfolio_file = get_user_portfolio_file(username)
     
     portfolio = []
@@ -661,8 +661,8 @@ def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depend
     }
 
 @app.post("/api/planner/commit")
-async def commit_planner_orders(req: CommitRequest, credentials: tuple = Depends(authenticate)):
-    username = credentials[0]
+async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenticate)):
+    username = user
     portfolio_file = get_user_portfolio_file(username)
     history_file = get_user_history_file(username)
 
