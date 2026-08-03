@@ -660,20 +660,24 @@ def get_planner_recommendations(cash: float = 100.0, credentials: tuple = Depend
         "warning": scan_warning
     }
 
-@app.post("/api/planner/commit", dependencies=[Depends(authenticate)])
-async def commit_planner_orders(req: CommitRequest):
+@app.post("/api/planner/commit")
+async def commit_planner_orders(req: CommitRequest, credentials: tuple = Depends(authenticate)):
+    username = credentials[0]
+    portfolio_file = get_user_portfolio_file(username)
+    history_file = get_user_history_file(username)
+
     portfolio = []
-    if os.path.exists(PORTFOLIO_FILE):
+    if os.path.exists(portfolio_file):
         try:
-            with open(PORTFOLIO_FILE, "r", encoding="utf-8") as f:
+            with open(portfolio_file, "r", encoding="utf-8") as f:
                 portfolio = json.load(f)
         except Exception:
             portfolio = []
 
     history = []
-    if os.path.exists(HISTORY_FILE):
+    if os.path.exists(history_file):
         try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            with open(history_file, "r", encoding="utf-8") as f:
                 history = json.load(f)
         except Exception:
             history = []
@@ -731,14 +735,14 @@ async def commit_planner_orders(req: CommitRequest):
                 })
 
     try:
-        with open(PORTFOLIO_FILE, "w", encoding="utf-8") as f:
+        with open(portfolio_file, "w", encoding="utf-8") as f:
             json.dump(portfolio, f, ensure_ascii=False, indent=4)
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        with open(history_file, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=4)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"儲存記帳失敗: {str(e)}")
 
-    return {"status": "success", "message": "交易已成功同步寫入實戰庫存與歷史紀錄！"}
+    return {"status": "success", "message": f"成功寫入 {len(req.orders)} 筆下單交易至【現役持倉】與【歷史庫房】！"}
 
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
