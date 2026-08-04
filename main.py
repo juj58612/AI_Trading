@@ -633,16 +633,35 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
         market_advice = "乖離過大，隨時有暴力反彈 (V轉)，準備搶短。"
         market_color = "#059669"
 
+    # 三合一巨觀風控熔斷保險絲：即時檢查最新一個交易日的訊號，否決/減碼新建倉
+    # (與 backtest_engine.py 共用 strategy_core.evaluate_macro_3in1_status，確保回測與實戰行為一致)
+    macro_status = {"veto_buy": False, "pos_scale": 1.0, "title": "", "advice": ""}
+    macro_warning = ""
+    try:
+        macro_lookback_start = (datetime.today() - timedelta(days=15)).strftime('%Y-%m-%d')
+        macro_series = backtest_engine.fetch_macro_3in1_series(macro_lookback_start, today_str)
+        if macro_series:
+            latest_macro_date = max(macro_series.keys())
+            macro_status = macro_series[latest_macro_date]
+    except Exception as e:
+        print(f"⚠️ 三合一巨觀風控即時檢查失敗，本次不套用風控 (fail-open): {e}")
+
+    if macro_status.get("veto_buy"):
+        macro_warning = f"{macro_status.get('title', '')}：{macro_status.get('advice', '')}"
+    elif macro_status.get("pos_scale", 1.0) < 1.0:
+        cash_twd = cash_twd * macro_status.get("pos_scale", 1.0)
+        macro_warning = f"{macro_status.get('title', '')}：{macro_status.get('advice', '')}"
+
     # 2-Stage Pyramiding & Risk Parity Protection Selection Logic
     potential_buys = []
     portfolio_dict = {p.get('ticker'): p for p in portfolio if p.get('ticker')}
     
     scan_results.sort(key=lambda x: (x.get('chip_score', 0), x.get('momentum', 0)), reverse=True)
-    
-    for item in scan_results:
+
+    for item in (scan_results if not macro_status.get("veto_buy") else []):
         t = item['ticker']
         chip_score = item.get('chip_score', 0)
-        
+
         if chip_score < 1:
             continue
             
@@ -741,7 +760,7 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
         "buys": buys,
         "sells": sells,
         "filtered_buys": filtered_buys,
-        "warning": scan_warning
+        "warning": (scan_warning + "<br>" + macro_warning) if (scan_warning and macro_warning) else (scan_warning or macro_warning)
     }
 
 @app.post("/api/planner/commit")

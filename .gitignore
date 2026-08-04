@@ -21,10 +21,13 @@ recovered_html.txt
 backup_v1/
 *.log
 
-# Large Datasets & DBs
+# Large Datasets & DBs (regenerated locally; git-tracking them just churns the repo)
 *.db
 backtest_logs.db
 backtest_database.json
+
+# Note: daily_scan_cache.json and latest_scan_results.json are intentionally
+# tracked as a Render-restart fallback snapshot — do not add them here.
 
 # System Files
 .DS_Store
