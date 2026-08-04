@@ -575,12 +575,37 @@ window.removeFromPortfolio = async function(index) {
     alert(`✅ 已將 ${item.name} 歸檔至歷史交易庫房！`);
 };
 
-function updateStaleDataBanner(scanResult) {
+function updateStaleDataBanner(scanResult, totalRequested) {
     const banner = document.getElementById('staleDataBanner');
     if (!banner) return;
+
+    const count = (scanResult && scanResult.data) ? scanResult.data.length : 0;
+    const total = totalRequested || count;
+
     if (scanResult && scanResult.fallback) {
         banner.style.display = 'block';
-        banner.textContent = `⚠️ Yahoo Finance 即時連線目前失敗，畫面顯示的是 ${scanResult.cache_date || '先前'} 保存的舊資料，非今日最新盤後資訊。`;
+        banner.style.background = 'rgba(239, 68, 68, 0.15)';
+        banner.style.borderColor = 'var(--accent-red)';
+        banner.style.color = 'var(--accent-red)';
+        banner.textContent = `⚠️ 掃描失敗，畫面顯示的是 ${scanResult.cache_date || '先前'} 保存的舊資料，非今日最新盤後資訊。建議稍後再按一次掃描重試。`;
+    } else if (scanResult && scanResult.cached) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(59, 130, 246, 0.12)';
+        banner.style.borderColor = 'var(--accent-blue)';
+        banner.style.color = 'var(--accent-blue)';
+        banner.textContent = `⚡ 已使用今日 (${scanResult.cache_date || ''}) 快取資料，共 ${count} 檔，無需重新連線。`;
+    } else if (total > 0 && count < total * 0.8) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(245, 158, 11, 0.15)';
+        banner.style.borderColor = 'var(--accent-yellow)';
+        banner.style.color = 'var(--accent-yellow)';
+        banner.textContent = `⚠️ 本次即時掃描（${scanResult.cache_date || ''}）僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
+    } else if (total > 0) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(16, 185, 129, 0.12)';
+        banner.style.borderColor = '#10b981';
+        banner.style.color = '#10b981';
+        banner.textContent = `✅ 掃描成功（${scanResult.cache_date || ''}），取得 ${count}/${total} 檔最新盤後資料。`;
     } else {
         banner.style.display = 'none';
         banner.textContent = '';
@@ -667,7 +692,7 @@ async function renderStockCards(count) {
         
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
-        updateStaleDataBanner(scanResult);
+        updateStaleDataBanner(scanResult, tickers.length);
 
         if (progressContainer) {
             progressBar.style.width = '100%';
@@ -798,7 +823,7 @@ async function renderSellCards(count) {
         });
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
-        updateStaleDataBanner(scanResult);
+        updateStaleDataBanner(scanResult, tickers.length);
 
         let filteredSellStocks = [];
         

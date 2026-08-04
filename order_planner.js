@@ -308,6 +308,13 @@ function updateTotalCosts() {
         budgetSummaryEl.style.color = overBudget ? 'var(--accent-red)' : 'var(--text-sub)';
         budgetSummaryEl.innerHTML = `總預算 ${totalWan.toFixed(2)} 萬元｜B 手動掛單已佔用 ${manualWan.toFixed(2)} 萬元｜A 可用預算 ${availableForAutoWan.toFixed(2)} 萬元｜目前 A+B 合計已勾選 ${combinedWan.toFixed(2)} 萬元` +
             (overBudget ? `　⚠️ 已超出總預算 ${(combinedWan - totalWan).toFixed(2)} 萬元！` : '');
+
+        // 步驟二按鈕旁邊也放一份合計，方便按下確認下單前最後確認
+        const commitTotalEl = document.getElementById('commitCombinedTotal');
+        if (commitTotalEl) {
+            commitTotalEl.style.color = overBudget ? 'var(--accent-red)' : 'var(--text-sub)';
+            commitTotalEl.textContent = `(A+B) = ${combinedWan.toFixed(2)} 萬元` + (overBudget ? ' ⚠️ 超支' : '');
+        }
     }
 }
 
