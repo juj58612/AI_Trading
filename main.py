@@ -249,6 +249,29 @@ def get_stock_data(ticker: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+@app.get("/api/_diag")
+def diag_check(user: str = Depends(authenticate)):
+    """臨時診斷端點：找出 Render 上抓不到資料到底卡在 yfinance 還是 FinMind。用完會移除。"""
+    result = {"curl_cffi_session_active": _yf_session is not None}
+    try:
+        stock = yf.Ticker("2330.TW", session=_yf_session)
+        hist = stock.history(period="5d")
+        result["yfinance_empty"] = bool(hist.empty)
+        result["yfinance_rows"] = len(hist)
+        if not hist.empty:
+            result["yfinance_last_close"] = float(hist['Close'].iloc[-1])
+    except Exception as e:
+        result["yfinance_error"] = f"{type(e).__name__}: {e}"
+
+    try:
+        inst_list, margin_list, is_mock = fetch_chip_data_from_finmind("2330")
+        result["finmind_is_mock"] = is_mock
+        result["finmind_inst_count"] = len(inst_list)
+    except Exception as e:
+        result["finmind_error"] = f"{type(e).__name__}: {e}"
+
+    return result
+
 @app.get("/api/doc")
 def get_documentation():
     doc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AI_Trading_Console_Whitepaper_and_Manual.md")
