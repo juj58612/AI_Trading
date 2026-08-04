@@ -125,8 +125,8 @@ def fetch_chip_data_from_finmind(ticker):
     is_mock = False
     
     try:
-        inst_res = requests.get(inst_url, timeout=5).json()
-        margin_res = requests.get(margin_url, timeout=5).json()
+        inst_res = requests.get(inst_url, timeout=12).json()
+        margin_res = requests.get(margin_url, timeout=12).json()
         
         if inst_res.get("msg") == "success":
             inst_dict = {}
@@ -248,43 +248,6 @@ def get_stock_data(ticker: str):
 
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-@app.get("/api/_diag")
-def diag_check(user: str = Depends(authenticate)):
-    """臨時診斷端點：找出 Render 上抓不到資料到底卡在 yfinance 還是 FinMind。用完會移除。"""
-    result = {"curl_cffi_session_active": _yf_session is not None}
-    try:
-        stock = yf.Ticker("2330.TW", session=_yf_session)
-        hist = stock.history(period="5d")
-        result["yfinance_empty"] = bool(hist.empty)
-        result["yfinance_rows"] = len(hist)
-        if not hist.empty:
-            result["yfinance_last_close"] = float(hist['Close'].iloc[-1])
-    except Exception as e:
-        result["yfinance_error"] = f"{type(e).__name__}: {e}"
-
-    try:
-        inst_list, margin_list, is_mock = fetch_chip_data_from_finmind("2330")
-        result["finmind_is_mock"] = is_mock
-        result["finmind_inst_count"] = len(inst_list)
-    except Exception as e:
-        result["finmind_error"] = f"{type(e).__name__}: {e}"
-
-    # 直接呼叫 FinMind，看原始回應到底是什麼（timeout? 401? 429? 資料是空的?）
-    try:
-        token = os.getenv("FINMIND_API_TOKEN", "")
-        result["finmind_token_len"] = len(token)
-        start_date = (datetime.now() - timedelta(days=45)).strftime('%Y-%m-%d')
-        url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=2330&start_date={start_date}&token={token}"
-        raw_res = requests.get(url, timeout=10)
-        result["finmind_raw_status_code"] = raw_res.status_code
-        raw_json = raw_res.json()
-        result["finmind_raw_msg"] = raw_json.get("msg")
-        result["finmind_raw_data_len"] = len(raw_json.get("data", []))
-    except Exception as e:
-        result["finmind_raw_error"] = f"{type(e).__name__}: {e}"
-
-    return result
 
 @app.get("/api/doc")
 def get_documentation():
