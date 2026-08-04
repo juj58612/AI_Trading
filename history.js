@@ -656,6 +656,37 @@ window.deleteSelectedHistory = async function() {
     }
 }
 
+window.clearAllHistory = async function() {
+    if (!myHistory || myHistory.length === 0) {
+        alert('目前沒有歷史紀錄可清除。');
+        return;
+    }
+
+    if (!confirm(`確定要一鍵清除全部 ${myHistory.length} 筆歷史紀錄嗎？此動作無法復原！`)) {
+        return;
+    }
+
+    myHistory = [];
+
+    try {
+        await fetch(`${API_BASE_URL}/api/history`, {
+            method: 'POST',
+            headers: {
+                'Authorization': getAuthHeader(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(myHistory)
+        });
+        alert('✅ 所有歷史紀錄已清除');
+        renderHistory(myHistory);
+        renderStatsDashboard();
+        toggleDeleteButton();
+    } catch (e) {
+        console.error("清除全部失敗", e);
+        alert('❌ 清除失敗');
+    }
+}
+
 window.exportHistoryToCSV = function() {
     if (!myHistory || myHistory.length === 0) {
         alert('目前無歷史紀錄可供匯出。');
