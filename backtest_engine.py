@@ -252,8 +252,10 @@ def fetch_macro_3in1_series(start_date, end_date):
         print(f"⚠️ 三合一巨觀風控資料抓取失敗，本次回測不套用風控 (fail-open): {e}")
     return result
 
+OTC_TICKERS = {"3131", "3324", "3529", "3693", "4966", "5443", "6187", "6274", "6643", "8299"}
+
 def get_tw_ticker(t):
-    return f"{t}.TW" if t not in ["5269", "6531", "3529", "8299", "3131", "6274", "3583", "8046", "6643", "6187", "6414", "5443", "3324", "3693"] else f"{t}.TWO"
+    return f"{t}.TWO" if t in OTC_TICKERS else f"{t}.TW"
 
 @app.get("/api/backtest/status")
 async def get_db_status():

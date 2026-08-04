@@ -93,11 +93,18 @@ def fetch_yfinance_history(ticker: str):
         if now - timestamp < CACHE_TTL:
             return cached_hist
 
-    stock = yf.Ticker(f"{ticker}.TW", session=_yf_session)
-    hist = stock.history(period="1mo")
-    if hist.empty:
-        stock = yf.Ticker(f"{ticker}.TWO", session=_yf_session)
+    # 上櫃股先試 .TWO，上市股先試 .TW，避免併發掃描時每檔上櫃股都要先浪費一次注定失敗的
+    # 請求，在高併發下容易連帶拖垮整批請求的成功率 (見 CHANGELOG 2026-08-04)。
+    otc_tickers = globals().get("backtest_engine") and getattr(backtest_engine, "OTC_TICKERS", None)
+    is_known_otc = bool(otc_tickers) and ticker in otc_tickers
+    suffixes = [".TWO", ".TW"] if is_known_otc else [".TW", ".TWO"]
+
+    hist = None
+    for suffix in suffixes:
+        stock = yf.Ticker(f"{ticker}{suffix}", session=_yf_session)
         hist = stock.history(period="1mo")
+        if not hist.empty:
+            break
 
     if not hist.empty:
         yf_cache[cache_key] = (hist, now)
