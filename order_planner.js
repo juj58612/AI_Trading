@@ -122,6 +122,8 @@ async function loadPlannerData() {
                         type: 'sell',
                         stage: '',
                         reason: s.reason,
+                        buy_price: s.buy_price,
+                        pnl_pct: s.pnl_pct,
                         checked: prev ? prev.checked : true,
                         userEdited: useEditedValues
                     });
@@ -202,22 +204,64 @@ function renderWarnings(apiWarning) {
 
 // Render Lists
 function renderOrders() {
-    // 1. Render Auto List
+    // 0. Render Urgent Sell Signals (觸發停損/時間到期) — 獨立醒目區塊，跟一般加碼建議分開
+    const urgentContainer = document.getElementById('urgentSellContainer');
+    const urgentList = document.getElementById('urgentSellList');
+    const urgentIndexes = [];
+    if (urgentList) {
+        urgentList.innerHTML = '';
+        autoOrders.forEach((o, idx) => {
+            if (o.type !== 'sell') return;
+            urgentIndexes.push(idx);
+            // 台股慣例：賺=紅、賠=綠，整個標題列直接反色塊，一眼看出是賺是賠
+            const pnlPct = typeof o.pnl_pct === 'number' ? o.pnl_pct : null;
+            const isProfit = pnlPct !== null ? pnlPct >= 0 : null;
+            const headerBg = isProfit === null ? '#64748b' : (isProfit ? '#dc2626' : '#16a34a');
+            const pnlText = pnlPct !== null ? `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%` : '';
+
+            const div = document.createElement('div');
+            div.className = 'order-card sell-card';
+            div.style.cssText = 'display:block; padding:0; overflow:hidden; border:2px solid ' + headerBg + ';';
+            div.innerHTML = `
+                <div style="background:${headerBg}; color:#fff; padding:10px 15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                    <span style="font-weight:bold; font-size:1.05rem;">
+                        <input type="checkbox" id="autoCheck-${idx}" ${o.checked ? 'checked' : ''} onchange="toggleOrderCheck('auto', ${idx})" style="margin-right:6px;">
+                        <label for="autoCheck-${idx}" style="cursor:pointer;">${o.name}</label>
+                    </span>
+                    <span style="font-weight:bold;">${pnlText}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; gap:10px; flex-wrap:wrap;">
+                    <div class="order-info">
+                        <div class="order-details">
+                            動作: <b>賣出平倉 (原因: ${o.reason})</b> | 數量: <b>${(o.shares * 1000).toLocaleString()} 股</b> | 目前價: <b>${o.price} 元</b>${o.buy_price ? ` | 買進成本: <b>${o.buy_price} 元</b>` : ''}
+                        </div>
+                    </div>
+                    <div class="order-actions">
+                        <button class="btn-edit-order" onclick="openEditModal('auto', ${idx})">✏️ 調整成交</button>
+                    </div>
+                </div>
+            `;
+            urgentList.appendChild(div);
+        });
+        if (urgentContainer) urgentContainer.style.display = urgentIndexes.length > 0 ? 'block' : 'none';
+    }
+
+    // 1. Render Auto List (只留買進/加碼建議，急迫性賣出已經拉到上面獨立區塊)
     const autoList = document.getElementById('autoOrderList');
     autoList.innerHTML = '';
-    
-    if (autoOrders.length === 0) {
+
+    const buyOnlyOrders = autoOrders.map((o, idx) => ({ o, idx })).filter(({ o }) => o.type === 'buy');
+
+    if (buyOnlyOrders.length === 0) {
         autoList.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-sub);">明日大盤或個股籌碼無做多/做空訊號，建議觀望。</div>';
     } else {
-        autoOrders.forEach((o, idx) => {
-            const isBuy = o.type === 'buy';
+        buyOnlyOrders.forEach(({ o, idx }) => {
             const costTwd = o.price * o.shares * 1000;
             const costWan = (costTwd / 10000).toFixed(2);
-            const cardClass = isBuy ? 'buy-card' : 'sell-card';
-            const actionText = isBuy ? `<span style="color:var(--accent-green)">買進做多 (${o.stage})</span>` : `<span style="color:var(--accent-red)">賣出平倉 (原因: ${o.reason})</span>`;
-            
+            const actionText = `<span style="color:var(--accent-green)">買進做多 (${o.stage})</span>`;
+
             const div = document.createElement('div');
-            div.className = `order-card ${cardClass}`;
+            div.className = 'order-card buy-card';
             div.innerHTML = `
                 <div class="order-info">
                     <div class="order-ticker">

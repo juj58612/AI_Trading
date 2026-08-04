@@ -240,6 +240,12 @@
         <!-- Market Weather Banner -->
         <div id="marketWeatherBanner" style="display: none; padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; font-size: 1.1rem; margin-bottom: 20px; border-width: 2px; border-style: solid;"></div>
 
+        <!-- Urgent Sell Signals: 觸發停損/時間到期，跟一般買進建議分開、獨立醒目呈現 -->
+        <div id="urgentSellContainer" style="display:none; margin-bottom: 25px;">
+            <div style="font-weight:bold; font-size:1.15rem; color:var(--accent-red); margin-bottom:10px;">🚨 急迫性賣出訊號 — 請優先處理</div>
+            <div id="urgentSellList" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
         <!-- Target Trading Day Banner -->
         <div style="background: rgba(137, 87, 229, 0.05); border: 1px solid rgba(137, 87, 229, 0.2); padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.95rem;">🎯 目標交易日：<strong id="targetTradingDay" style="color:#c084fc;">載入中...</strong></span>

@@ -682,12 +682,15 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
             reason = "時間到期"
             
         if reason:
+            pnl_pct = ((close_price - buy_price) / buy_price * 100) if buy_price else 0
             sells.append({
                 "ticker": ticker,
                 "name": name,
                 "shares": shares,
                 "reason": reason,
-                "price": close_price
+                "price": close_price,
+                "buy_price": buy_price,
+                "pnl_pct": round(pnl_pct, 2)
             })
 
     # Read latest scan results - must be TODAY's data so this page never silently disagrees
