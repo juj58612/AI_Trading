@@ -191,6 +191,31 @@ def calc_atr(hist):
     atr = sum(trs[-14:]) / 14
     return atr
 
+_macro_status_cache = {"date": None, "status": None}
+
+def get_latest_macro_status():
+    """
+    即時查詢「三合一巨觀風控熔斷保險絲」最新一個交易日的訊號。
+    與 backtest_engine.py 共用同一套 strategy_core.evaluate_macro_3in1_status，
+    確保回測、下單建議、首頁顯示三處的風控判斷完全一致。失敗時 fail-open。
+    同一天內重複呼叫直接吃記憶體快取，避免拖慢首頁「0ms 快取」路徑。
+    """
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    if _macro_status_cache["date"] == today_str and _macro_status_cache["status"] is not None:
+        return _macro_status_cache["status"]
+
+    macro_status = {"level": 0, "title": "", "advice": "", "veto_buy": False, "pos_scale": 1.0}
+    try:
+        lookback_start = (datetime.today() - timedelta(days=15)).strftime('%Y-%m-%d')
+        macro_series = backtest_engine.fetch_macro_3in1_series(lookback_start, today_str)
+        if macro_series:
+            macro_status = macro_series[max(macro_series.keys())]
+            _macro_status_cache["date"] = today_str
+            _macro_status_cache["status"] = macro_status
+    except Exception as e:
+        print(f"⚠️ 三合一巨觀風控即時檢查失敗，本次不套用風控 (fail-open): {e}")
+    return macro_status
+
 
 @app.get("/api/stock/{ticker}")
 def get_stock_data(ticker: str):
@@ -356,11 +381,12 @@ async def scan_all_stocks(request: Request):
 
         today_str = datetime.today().strftime('%Y-%m-%d')
         cache_db = get_daily_scan_cache()
+        macro_status = get_latest_macro_status()
 
         # 當日快取邏輯：若非強制重新刷洗且今日數據已存在，直接 0ms 超高速回傳！
         if not force_refresh and today_str in cache_db and cache_db[today_str]:
             print(f"⚡ [0ms 本地防護] 秒速載入當日 ({today_str}) 盤後保存數據，免除線上連線！")
-            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str}
+            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str, "macro_status": macro_status}
 
         results = run_scan(tickers)
 
@@ -372,23 +398,23 @@ async def scan_all_stocks(request: Request):
                     json.dump(results, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 print("Error saving latest_scan_results.json:", e)
-            return {"data": results, "cached": False, "cache_date": today_str}
+            return {"data": results, "cached": False, "cache_date": today_str, "macro_status": macro_status}
 
         if not results and tickers:
             # 當當日線上連線失敗，自動回溯最近一次可用的盤後快取
             if cache_db:
                 latest_date = sorted(cache_db.keys())[-1]
-                return {"data": cache_db[latest_date], "cached": True, "cache_date": latest_date, "fallback": True}
+                return {"data": cache_db[latest_date], "cached": True, "cache_date": latest_date, "fallback": True, "macro_status": macro_status}
             if os.path.exists("latest_scan_results.json"):
                 try:
                     with open("latest_scan_results.json", "r", encoding="utf-8") as f:
                         cached_results = json.load(f)
-                    return {"data": cached_results, "cached": True, "fallback": True}
+                    return {"data": cached_results, "cached": True, "fallback": True, "macro_status": macro_status}
                 except Exception:
                     pass
             raise HTTPException(status_code=500, detail="Yahoo Finance / FinMind 伺服器拒絕連線，且無本地備份資料。")
-            
-        return {"data": results, "cached": False}
+
+        return {"data": results, "cached": False, "macro_status": macro_status}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -634,17 +660,8 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
         market_color = "#059669"
 
     # 三合一巨觀風控熔斷保險絲：即時檢查最新一個交易日的訊號，否決/減碼新建倉
-    # (與 backtest_engine.py 共用 strategy_core.evaluate_macro_3in1_status，確保回測與實戰行為一致)
-    macro_status = {"veto_buy": False, "pos_scale": 1.0, "title": "", "advice": ""}
+    macro_status = get_latest_macro_status()
     macro_warning = ""
-    try:
-        macro_lookback_start = (datetime.today() - timedelta(days=15)).strftime('%Y-%m-%d')
-        macro_series = backtest_engine.fetch_macro_3in1_series(macro_lookback_start, today_str)
-        if macro_series:
-            latest_macro_date = max(macro_series.keys())
-            macro_status = macro_series[latest_macro_date]
-    except Exception as e:
-        print(f"⚠️ 三合一巨觀風控即時檢查失敗，本次不套用風控 (fail-open): {e}")
 
     if macro_status.get("veto_buy"):
         macro_warning = f"{macro_status.get('title', '')}：{macro_status.get('advice', '')}"

@@ -612,6 +612,30 @@ function updateStaleDataBanner(scanResult, totalRequested) {
     }
 }
 
+function updateMacroStatusBanner(scanResult) {
+    const banner = document.getElementById('macroStatusBanner');
+    if (!banner) return;
+
+    const macro = scanResult && scanResult.macro_status;
+    if (!macro || (!macro.veto_buy && !(macro.pos_scale < 1.0))) {
+        banner.style.display = 'none';
+        banner.textContent = '';
+        return;
+    }
+
+    banner.style.display = 'block';
+    if (macro.veto_buy) {
+        banner.style.background = 'rgba(5, 150, 105, 0.15)';
+        banner.style.border = '1px solid #059669';
+        banner.style.color = '#059669';
+    } else {
+        banner.style.background = 'rgba(245, 158, 11, 0.15)';
+        banner.style.border = '1px solid var(--accent-yellow)';
+        banner.style.color = 'var(--accent-yellow)';
+    }
+    banner.textContent = `${macro.title || ''}：${macro.advice || ''}`;
+}
+
 function updateMarketWeather(ratio) {
     let container = document.getElementById('market-weather-container');
     if (!container) {
@@ -693,6 +717,7 @@ async function renderStockCards(count) {
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
         updateStaleDataBanner(scanResult, tickers.length);
+        updateMacroStatusBanner(scanResult);
 
         if (progressContainer) {
             progressBar.style.width = '100%';
@@ -824,6 +849,7 @@ async function renderSellCards(count) {
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
         updateStaleDataBanner(scanResult, tickers.length);
+        updateMacroStatusBanner(scanResult);
 
         let filteredSellStocks = [];
         
