@@ -29,3 +29,13 @@ Commit：[`36ce91e`](https://github.com/juj58612/AI_Trading/commit/36ce91e)
 - 順便把 `backtest_logs.db`、`backtest_database.json` 從 git 追蹤移除（早於 `.gitignore` 規則的舊帳，每次跑回測都會被 git 偵測成幾十 MB 的異動）。
 
 Commit：[`418ead7`](https://github.com/juj58612/AI_Trading/commit/418ead7)（回測引擎接線）、[`ae457b7`](https://github.com/juj58612/AI_Trading/commit/ae457b7)（實戰下單建議接線 + DB 清理）
+
+---
+
+## 2026-08-04 — 修正市況文字跟三合一風控互相矛盾的問題
+
+**背景**：上面那次接線只讓「買進建議清單」聽三合一風控的話，但畫面上的「市況判斷」文字（穩定多頭/全面進攻…）是另一套獨立邏輯，只看大盤廣度。實測發現黃燈風控觸發時，畫面會同時出現「全面進攻，買滿排名前三」的文字，跟實際被砍半/清空的建議清單互相矛盾，容易誤導判斷。
+
+**處理**：`main.py` 的 `/api/planner/recommendations` 在風控觸發時，讓 `market_status`/`market_advice`/`market_color` 一併改口說明風控狀態，沿用系統既有的「觀望＝綠、築底＝黃橘」配色語意，不新增配色規則。
+
+Commit：[`1ab864f`](https://github.com/juj58612/AI_Trading/commit/1ab864f)
