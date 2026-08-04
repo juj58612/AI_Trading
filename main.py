@@ -125,8 +125,8 @@ def fetch_chip_data_from_finmind(ticker):
     is_mock = False
     
     try:
-        inst_res = requests.get(inst_url, timeout=12).json()
-        margin_res = requests.get(margin_url, timeout=12).json()
+        inst_res = requests.get(inst_url, timeout=8).json()
+        margin_res = requests.get(margin_url, timeout=8).json()
         
         if inst_res.get("msg") == "success":
             inst_dict = {}
@@ -307,8 +307,11 @@ def run_scan(tickers):
             vol_today = hist['Volume'].iloc[-1]
             vol_ma5 = hist['Volume'].tail(5).mean()
 
-            # 2. Fetch Chips
+            # 2. Fetch Chips (冷啟動/併發下偶爾逾時，失敗時重試一次再放棄)
             inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
+            if is_mock or not inst_data:
+                time.sleep(1.0)
+                inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
 
             # 如果無法取得真實籌碼 (被鎖或 API 壞掉)，直接丟棄該股票，拒絕給假資料
             if is_mock or not inst_data:
