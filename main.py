@@ -540,17 +540,19 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "price": close_price
             })
 
-    # Read latest scan results (check daily_scan_cache first for guaranteed sync with index.html)
+    # Read latest scan results (must be TODAY's cache - a stale older date would silently
+    # disagree with what index.html just showed the user, which is worse than no data)
     scan_results = []
     scan_warning = ""
+    today_str = datetime.today().strftime('%Y-%m-%d')
     cache_db = get_daily_scan_cache()
-    if cache_db:
-        latest_date = sorted(cache_db.keys())[-1]
-        scan_results = cache_db[latest_date]
+    if cache_db and today_str in cache_db and cache_db[today_str]:
+        scan_results = cache_db[today_str]
     elif os.path.exists("latest_scan_results.json"):
         try:
             with open("latest_scan_results.json", "r", encoding="utf-8") as f:
                 scan_results = json.load(f)
+            scan_warning = "⚠️ 目前顯示的是先前保存的掃描結果，非今日最新資料，建議先回『實戰控制台』重新掃描。"
         except Exception:
             scan_warning = "無法讀取最新掃描檔案，請於主頁重新掃描。"
     else:

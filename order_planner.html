@@ -229,21 +229,12 @@
 <body>
     <div class="container">
         <!-- Top Title Panel -->
-        <div class="planner-header-panel">
+        <div class="planner-header-panel" style="position: relative;">
             <div class="planner-title-block">
                 <h2>📅 AI 實戰掛單與下單執行中心</h2>
                 <p>本系統將自動根據大戶籌碼掃描，為您計算出明日開盤最佳的買進與賣出股數，並依可用預算自動控管風險。</p>
             </div>
-            <div class="planner-settings">
-                <div class="count-setting" style="border-color: #8957e5; display: flex; align-items: center; gap: 8px;">
-                    <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
-                    <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:80px;" oninput="loadPlannerData()">
-                    <span style="color:#c084fc; font-weight:bold;">萬元</span>
-                    <button onclick="loadPlannerData()" style="background: linear-gradient(135deg, #8957e5 0%, #6366f1 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(137, 87, 229, 0.3);">
-                        ⚡ 重新計算推薦
-                    </button>
-                </div>
-            </div>
+            <a href="index.html" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-purple);">🏠 返回主控制台</a>
         </div>
 
         <!-- Market Weather Banner -->
@@ -263,7 +254,15 @@
                 </div>
                 <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 2px;">有下單才勾選，無下單勿勾選！下單完成後，點擊右側按鈕，會自動將下單資料更新至『我的操盤室』現役持倉中喔！</div>
             </div>
-            <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單並一鍵寫入實戰庫存</button>
+            <div class="count-setting" style="border-color: #8957e5; display: flex; align-items: center; gap: 8px;">
+                <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
+                <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:80px;" oninput="loadPlannerData()">
+                <span style="color:#c084fc; font-weight:bold;">萬元</span>
+                <button onclick="loadPlannerData()" style="background: linear-gradient(135deg, #8957e5 0%, #6366f1 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(137, 87, 229, 0.3);">
+                    ⚡ 重新計算推薦
+                </button>
+            </div>
+            <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單並寫入我的操盤室</button>
         </div>
 
         <!-- Planner Layout Columns -->
