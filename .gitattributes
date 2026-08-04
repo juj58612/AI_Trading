@@ -1,0 +1,13 @@
+# Normalize all text files to LF so Mac/Windows editing never produces
+# whole-file diffs from line-ending conversion alone.
+* text=auto eol=lf
+
+*.command text eol=lf
+*.command filemode=755
+
+# Binary files — never touch line endings
+*.app/** -text
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary

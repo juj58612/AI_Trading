@@ -28,3 +28,6 @@ backtest_database.json
 
 # System Files
 .DS_Store
+
+# macOS re-signs .app bundles on first run, regenerating these each machine
+*.app/Contents/_CodeSignature/
