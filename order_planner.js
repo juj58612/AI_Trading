@@ -40,9 +40,25 @@ function formatStockName(ticker, currentName) {
 // Fetch data on load
 async function loadPlannerData() {
     const cashVal = parseFloat(document.getElementById('cashInput').value) || 100;
-    
+
+    // 總預算是 A（系統推薦）與 B（手動自訂）共用的一個池子：
+    // B 目前已勾選要買進的金額，要從總預算裡先扣掉，剩下的才是給 A 用的額度。
+    let manualBuyWan = 0;
+    (manualOrders || []).forEach(o => {
+        if (o.checked && o.type === 'buy') {
+            manualBuyWan += (o.price * o.shares * 1000) / 10000;
+        }
+    });
+    const cashForAuto = Math.max(0, cashVal - manualBuyWan);
+
+    // 記住目前 A 清單裡使用者手動調整過的勾選/成交價量，重新計算後盡量保留
+    const prevAutoByTicker = {};
+    (autoOrders || []).forEach(o => {
+        prevAutoByTicker[o.ticker] = { checked: o.checked, price: o.price, shares: o.shares };
+    });
+
     try {
-        const res = await fetch(`${API_BASE_URL}/api/planner/recommendations?cash=${cashVal}`, {
+        const res = await fetch(`${API_BASE_URL}/api/planner/recommendations?cash=${cashForAuto}`, {
             headers: { 'Authorization': getAuthHeader() }
         });
         
@@ -73,32 +89,34 @@ async function loadPlannerData() {
                     weatherBanner.style.display = 'block';
                 }
                 
-                // 1. Process Auto Orders
+                // 1. Process Auto Orders (保留使用者先前手動調整過的勾選/成交價量)
                 autoOrders = [];
                 // Add buy orders
                 data.buys.forEach(b => {
+                    const prev = prevAutoByTicker[b.ticker];
                     autoOrders.push({
                         ticker: b.ticker,
                         name: formatStockName(b.ticker, b.name),
-                        price: b.price,
-                        shares: b.shares, // in 張
+                        price: prev ? prev.price : b.price,
+                        shares: prev ? prev.shares : b.shares, // in 張
                         type: 'buy',
                         stage: b.stage,
                         reason: '',
-                        checked: true
+                        checked: prev ? prev.checked : true
                     });
                 });
                 // Add sell orders
                 data.sells.forEach(s => {
+                    const prev = prevAutoByTicker[s.ticker];
                     autoOrders.push({
                         ticker: s.ticker,
                         name: formatStockName(s.ticker, s.name),
-                        price: s.price,
-                        shares: s.shares, // in 張
+                        price: prev ? prev.price : s.price,
+                        shares: prev ? prev.shares : s.shares, // in 張
                         type: 'sell',
                         stage: '',
                         reason: s.reason,
-                        checked: true
+                        checked: prev ? prev.checked : true
                     });
                 });
                 
@@ -269,6 +287,21 @@ function updateTotalCosts() {
         }
     });
     document.getElementById('manualTotalCost').textContent = `預估所需資金：${(manualSum / 10000).toFixed(2)} 萬元`;
+
+    // 總預算是 A + B 共用的：顯示總預算、B 已佔用多少、A 剩餘可用多少，超支時標紅提醒
+    const budgetSummaryEl = document.getElementById('budgetSummary');
+    if (budgetSummaryEl) {
+        const totalWan = parseFloat(document.getElementById('cashInput').value) || 0;
+        const manualWan = manualSum / 10000;
+        const autoWan = autoSum / 10000;
+        const availableForAutoWan = Math.max(0, totalWan - manualWan);
+        const combinedWan = autoWan + manualWan;
+        const overBudget = combinedWan > totalWan + 0.005;
+
+        budgetSummaryEl.style.color = overBudget ? 'var(--accent-red)' : 'var(--text-sub)';
+        budgetSummaryEl.innerHTML = `總預算 ${totalWan.toFixed(2)} 萬元｜B 手動掛單已佔用 ${manualWan.toFixed(2)} 萬元｜A 可用預算 ${availableForAutoWan.toFixed(2)} 萬元｜目前 A+B 合計已勾選 ${combinedWan.toFixed(2)} 萬元` +
+            (overBudget ? `　⚠️ 已超出總預算 ${(combinedWan - totalWan).toFixed(2)} 萬元！` : '');
+    }
 }
 
 // Toggle checkbox state
@@ -324,9 +357,16 @@ function saveOrderEdits() {
     if (o.type === 'sell') {
         o.reason = document.getElementById('modalReason').value;
     }
-    
+
+    const editedManual = activeEditType === 'manual';
     closeEditModal();
-    renderOrders();
+
+    if (editedManual) {
+        // B 的金額變了，總預算裡留給 A 的額度也跟著變，重新跟後端算一次 A
+        loadPlannerData();
+    } else {
+        renderOrders();
+    }
 }
 
 // Manual Add Modal Control
@@ -451,14 +491,16 @@ function addManualOrderToList() {
         reason: type === 'sell' ? '手動出場' : '',
         checked: true
     });
-    
+
     closeManualAddModal();
-    renderOrders();
+    // B 多了一筆，留給 A 的預算變少了，重新跟後端算一次 A
+    loadPlannerData();
 }
 
 function removeManualOrder(idx) {
     manualOrders.splice(idx, 1);
-    renderOrders();
+    // B 少了一筆，留給 A 的預算變多了，重新跟後端算一次 A
+    loadPlannerData();
 }
 
 // Commit to portfolio.json and history.json

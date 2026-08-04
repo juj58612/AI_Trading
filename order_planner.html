@@ -265,6 +265,9 @@
                     </button>
                 </div>
             </div>
+            <div id="budgetSummary" style="font-size: 0.85rem; color: var(--text-sub); background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 8px;">
+                總預算 - 萬元｜B 手動掛單已佔用 - 萬元｜A 可用預算 - 萬元
+            </div>
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <span style="font-weight: bold; color: #f59e0b; white-space: nowrap;">步驟二</span>
                 <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單(A+B)並寫入我的操盤室</button>
@@ -287,7 +290,7 @@
             <!-- Right: Manual Draft Planner -->
             <div class="planner-column">
                 <div class="column-header">
-                    <h3 style="color:var(--accent-blue);">B 交易員手動自訂掛單 (自行加碼或下單不在左方推薦中的股票)</h3>
+                    <h3 style="color:var(--accent-blue); font-size:0.9rem;">B 手動掛單 (加碼或下單不在左方推薦中的股票)</h3>
                     <div style="display:flex; gap:8px;">
                         <button class="btn-manual-add" onclick="openManualAddModal()">➕ 新增自訂交易</button>
                         <span id="manualTotalCost" style="font-size:0.9rem; color:var(--text-sub);">預估所需資金：0 萬元</span>
