@@ -270,6 +270,20 @@ def diag_check(user: str = Depends(authenticate)):
     except Exception as e:
         result["finmind_error"] = f"{type(e).__name__}: {e}"
 
+    # 直接呼叫 FinMind，看原始回應到底是什麼（timeout? 401? 429? 資料是空的?）
+    try:
+        token = os.getenv("FINMIND_API_TOKEN", "")
+        result["finmind_token_len"] = len(token)
+        start_date = (datetime.now() - timedelta(days=45)).strftime('%Y-%m-%d')
+        url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=2330&start_date={start_date}&token={token}"
+        raw_res = requests.get(url, timeout=10)
+        result["finmind_raw_status_code"] = raw_res.status_code
+        raw_json = raw_res.json()
+        result["finmind_raw_msg"] = raw_json.get("msg")
+        result["finmind_raw_data_len"] = len(raw_json.get("data", []))
+    except Exception as e:
+        result["finmind_raw_error"] = f"{type(e).__name__}: {e}"
+
     return result
 
 @app.get("/api/doc")
