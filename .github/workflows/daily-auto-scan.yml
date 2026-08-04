@@ -1,0 +1,21 @@
+name: Daily Post-Market Auto Scan
+
+on:
+  schedule:
+    # 07:40 UTC = 台灣時間 15:40，三大法人籌碼公布後、留一點緩衝，週一至週五（台股交易日）
+    - cron: "40 7 * * 1-5"
+  workflow_dispatch: {}
+
+jobs:
+  trigger-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/admin/daily_auto_scan
+        env:
+          ADMIN_USERNAME: ${{ secrets.SITE_ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.SITE_ADMIN_PASSWORD }}
+        run: |
+          curl -sf -X POST "https://ai-trading-console-wf88.onrender.com/api/admin/daily_auto_scan" \
+            -u "${ADMIN_USERNAME}:${ADMIN_PASSWORD}" \
+            --max-time 180 \
+            -w "\nHTTP status: %{http_code}\n"
