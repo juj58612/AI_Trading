@@ -266,6 +266,73 @@ def save_daily_scan_cache(cache_data):
     except Exception as e:
         print(f"Error saving daily scan cache: {e}")
 
+AI_STOCK_LIST_FILE = "ai_stock_list.txt"
+
+def load_ai_stock_list():
+    if os.path.exists(AI_STOCK_LIST_FILE):
+        try:
+            with open(AI_STOCK_LIST_FILE, "r", encoding="utf-8") as f:
+                return [line.strip() for line in f if line.strip()]
+        except Exception:
+            return []
+    return []
+
+def run_scan(tickers):
+    """統一掃描核心：/api/scan_all 與下單規劃器都呼叫這裡，確保兩邊資料一致。"""
+    # 偵測是否運行於 Render 雲端環境
+    IS_RENDER = os.environ.get("RENDER") == "true"
+
+    results = []
+    def process_ticker(ticker):
+        try:
+            # 雲端環境下，降低延遲以防止 Render 30 秒 HTTP 閘道器逾時 (HTTP 502)
+            sleep_time = 0.02 if IS_RENDER else 0.3
+            time.sleep(sleep_time)
+
+            # 1. Fetch Price
+            hist = fetch_yfinance_history(ticker)
+            if hist.empty: return None
+            latest_close = round(hist['Close'].iloc[-1], 2)
+            ma5 = round(hist['Close'].tail(5).mean(), 2) if len(hist) >= 5 else latest_close
+            ma20 = round(hist['Close'].tail(20).mean(), 2) if len(hist) >= 20 else latest_close
+            vol_today = hist['Volume'].iloc[-1]
+            vol_ma5 = hist['Volume'].tail(5).mean()
+
+            # 2. Fetch Chips
+            inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
+
+            # 如果無法取得真實籌碼 (被鎖或 API 壞掉)，直接丟棄該股票，拒絕給假資料
+            if is_mock or not inst_data:
+                return None
+
+            # 3. Calculate Chip Score (using unified strategy_core)
+            chip_score, signal_text = strategy_core.calculate_chip_score(latest_close, ma5, inst_data)
+
+            momentum = round((latest_close - ma20) / ma20, 4) if ma20 > 0 else 0
+            vol_ratio = round(vol_today / vol_ma5, 2) if vol_ma5 > 0 else 0
+
+            return {
+                "ticker": ticker, "latest_close": latest_close, "ma20": ma20, "ma5": ma5,
+                "momentum": momentum, "vol_ratio": vol_ratio,
+                "chip_score": chip_score, "signal": signal_text,
+                "last_foreign": inst_data[-1]['foreign'] if inst_data else 0,
+                "last_trust": inst_data[-1]['trust'] if inst_data else 0,
+            }
+        except Exception as e:
+            print(f"Error scanning {ticker}: {e}")
+            return None
+
+    # 雲端環境下，將併發線程數由 2 提升至 8 進行加速
+    max_w = 8 if IS_RENDER else 2
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_w) as executor:
+        futures = [executor.submit(process_ticker, t) for t in tickers]
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res: results.append(res)
+
+    results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
+    return results
+
 @app.post("/api/scan_all")
 async def scan_all_stocks(request: Request):
     try:
@@ -274,68 +341,17 @@ async def scan_all_stocks(request: Request):
         force_refresh = payload.get("force_refresh", False)
         if not tickers:
             return {"data": []}
-            
+
         today_str = datetime.today().strftime('%Y-%m-%d')
         cache_db = get_daily_scan_cache()
-        
+
         # 當日快取邏輯：若非強制重新刷洗且今日數據已存在，直接 0ms 超高速回傳！
         if not force_refresh and today_str in cache_db and cache_db[today_str]:
             print(f"⚡ [0ms 本地防護] 秒速載入當日 ({today_str}) 盤後保存數據，免除線上連線！")
             return {"data": cache_db[today_str], "cached": True, "cache_date": today_str}
-            
-        # 偵測是否運行於 Render 雲端環境
-        IS_RENDER = os.environ.get("RENDER") == "true"
-        
-        results = []
-        def process_ticker(ticker):
-            try:
-                # 雲端環境下，降低延遲以防止 Render 30 秒 HTTP 閘道器逾時 (HTTP 502)
-                sleep_time = 0.02 if IS_RENDER else 0.3
-                time.sleep(sleep_time)
-                
-                # 1. Fetch Price
-                hist = fetch_yfinance_history(ticker)
-                if hist.empty: return None
-                latest_close = round(hist['Close'].iloc[-1], 2)
-                ma5 = round(hist['Close'].tail(5).mean(), 2) if len(hist) >= 5 else latest_close
-                ma20 = round(hist['Close'].tail(20).mean(), 2) if len(hist) >= 20 else latest_close
-                vol_today = hist['Volume'].iloc[-1]
-                vol_ma5 = hist['Volume'].tail(5).mean()
-                
-                # 2. Fetch Chips
-                inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
-                
-                # 如果無法取得真實籌碼 (被鎖或 API 壞掉)，直接丟棄該股票，拒絕給假資料
-                if is_mock or not inst_data:
-                    return None
-                
-                # 3. Calculate Chip Score (using unified strategy_core)
-                chip_score, signal_text = strategy_core.calculate_chip_score(latest_close, ma5, inst_data)
-                
-                momentum = round((latest_close - ma20) / ma20, 4) if ma20 > 0 else 0
-                vol_ratio = round(vol_today / vol_ma5, 2) if vol_ma5 > 0 else 0
-                
-                return {
-                    "ticker": ticker, "latest_close": latest_close, "ma20": ma20, "ma5": ma5,
-                    "momentum": momentum, "vol_ratio": vol_ratio,
-                    "chip_score": chip_score, "signal": signal_text,
-                    "last_foreign": inst_data[-1]['foreign'] if inst_data else 0,
-                    "last_trust": inst_data[-1]['trust'] if inst_data else 0,
-                }
-            except Exception as e:
-                print(f"Error scanning {ticker}: {e}")
-                return None
-                
-        # 雲端環境下，將併發線程數由 2 提升至 8 進行加速
-        max_w = 8 if IS_RENDER else 2
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_w) as executor:
-            futures = [executor.submit(process_ticker, t) for t in tickers]
-            for future in concurrent.futures.as_completed(futures):
-                res = future.result()
-                if res: results.append(res)
-                
-        results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
-        
+
+        results = run_scan(tickers)
+
         if results:
             cache_db[today_str] = results
             save_daily_scan_cache(cache_db)
@@ -540,23 +556,40 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "price": close_price
             })
 
-    # Read latest scan results (must be TODAY's cache - a stale older date would silently
-    # disagree with what index.html just showed the user, which is worse than no data)
+    # Read latest scan results - must be TODAY's data so this page never silently disagrees
+    # with what index.html shows. Render's free tier has no persistent disk, so daily_scan_cache.json
+    # can be reset to a stale git-committed snapshot on every restart; when that happens, run a
+    # fresh live scan ourselves instead of serving/mixing stale data.
     scan_results = []
     scan_warning = ""
     today_str = datetime.today().strftime('%Y-%m-%d')
     cache_db = get_daily_scan_cache()
     if cache_db and today_str in cache_db and cache_db[today_str]:
         scan_results = cache_db[today_str]
-    elif os.path.exists("latest_scan_results.json"):
-        try:
-            with open("latest_scan_results.json", "r", encoding="utf-8") as f:
-                scan_results = json.load(f)
-            scan_warning = "⚠️ 目前顯示的是先前保存的掃描結果，非今日最新資料，建議先回『實戰控制台』重新掃描。"
-        except Exception:
-            scan_warning = "無法讀取最新掃描檔案，請於主頁重新掃描。"
     else:
-        scan_warning = "⚠️ 尚未發現今日掃描快取。請先返回『實戰控制台』按下『啟動 AI 深度掃描』更新大戶籌碼排行！"
+        tickers = load_ai_stock_list()
+        if tickers:
+            scan_results = run_scan(tickers)
+            if scan_results:
+                cache_db[today_str] = scan_results
+                save_daily_scan_cache(cache_db)
+                try:
+                    with open("latest_scan_results.json", "w", encoding="utf-8") as f:
+                        json.dump(scan_results, f, ensure_ascii=False, indent=4)
+                except Exception as e:
+                    print("Error saving latest_scan_results.json:", e)
+        if not scan_results:
+            # Live scan failed too (e.g. network outage) - fall back to the last known-good
+            # results, but be explicit that it isn't current.
+            if os.path.exists("latest_scan_results.json"):
+                try:
+                    with open("latest_scan_results.json", "r", encoding="utf-8") as f:
+                        scan_results = json.load(f)
+                    scan_warning = "⚠️ 即時掃描失敗，目前顯示的是先前保存的掃描結果，非今日最新資料。"
+                except Exception:
+                    scan_warning = "無法讀取最新掃描檔案，請於主頁重新掃描。"
+            else:
+                scan_warning = "⚠️ 尚未發現今日掃描快取，且即時掃描失敗。請稍後再試，或先返回『實戰控制台』按下『啟動 AI 深度掃描』。"
 
     # Calculate health ratio & market status
     valid_stocks = len(scan_results)
