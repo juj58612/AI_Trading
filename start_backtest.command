@@ -1,6 +1,7 @@
 #!/bin/bash
-# 1. 進入專案資料夾
-cd ~/Desktop/AI_Trading
+# 1. 進入專案資料夾（用腳本自身的位置，不寫死路徑）
+cd "$(dirname "$0")"
+PROJECT_DIR="$(pwd)"
 
 # 2. 自動尋找並關閉舊的 Port 58889 背景程序
 OLD_PID=$(lsof -t -i:58889)
@@ -16,4 +17,4 @@ python3 backtest_engine.py > backtest_engine.log 2>&1 &
 sleep 2
 
 # 5. 自動以預設瀏覽器打開回測控制台 (本地 HTML 檔案)
-open -a "Google Chrome" "file://$HOME/Desktop/AI_Trading/backtest.html" 2>/dev/null || open -a "Microsoft Edge" "file://$HOME/Desktop/AI_Trading/backtest.html" 2>/dev/null || open "file://$HOME/Desktop/AI_Trading/backtest.html"
+open -a "Google Chrome" "file://$PROJECT_DIR/backtest.html" 2>/dev/null || open -a "Microsoft Edge" "file://$PROJECT_DIR/backtest.html" 2>/dev/null || open "file://$PROJECT_DIR/backtest.html"
