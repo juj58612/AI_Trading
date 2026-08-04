@@ -389,20 +389,29 @@ async def scan_all_stocks(request: Request):
         today_str = datetime.today().strftime('%Y-%m-%d')
         cache_db = get_daily_scan_cache()
         macro_status = get_latest_macro_status()
+        canonical_pool = set(load_ai_stock_list())
+        pool_size = len(canonical_pool) or len(tickers)
 
         # 當日快取邏輯：若非強制重新刷洗且今日數據已存在，直接 0ms 超高速回傳！
         if not force_refresh and today_str in cache_db and cache_db[today_str]:
             print(f"⚡ [0ms 本地防護] 秒速載入當日 ({today_str}) 盤後保存數據，免除線上連線！")
-            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str, "macro_status": macro_status}
+            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str, "macro_status": macro_status, "pool_size": pool_size}
 
         results = run_scan(tickers)
 
         # 只有涵蓋完整股池的正式掃描才准許覆寫「今日快取」，避免局部/測試用的少量
         # ticker 請求把全市場快取洗成只剩幾檔，害市況判斷（health_ratio）算出離譜結果。
-        canonical_pool = set(load_ai_stock_list())
         is_full_pool_scan = bool(canonical_pool) and len(set(tickers) & canonical_pool) >= len(canonical_pool) * 0.8
 
         if results and is_full_pool_scan:
+            # 跟今天既有的快取「合併」而不是整批覆蓋：同一檔以這次新結果為準，
+            # 但這次沒抓到、之前抓到過的檔位保留下來，讓使用者多按幾次掃描就能
+            # 逐漸把當天的完整度補滿，而不是每次都從零開始、隨機漏掉不同的股票。
+            merged = {s['ticker']: s for s in cache_db.get(today_str, [])}
+            for r in results:
+                merged[r['ticker']] = r
+            results = list(merged.values())
+
             cache_db[today_str] = results
             save_daily_scan_cache(cache_db)
             try:
@@ -410,23 +419,23 @@ async def scan_all_stocks(request: Request):
                     json.dump(results, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 print("Error saving latest_scan_results.json:", e)
-            return {"data": results, "cached": False, "cache_date": today_str, "macro_status": macro_status}
+            return {"data": results, "cached": False, "cache_date": today_str, "macro_status": macro_status, "pool_size": pool_size}
 
         if not results and tickers:
             # 當當日線上連線失敗，自動回溯最近一次可用的盤後快取
             if cache_db:
                 latest_date = sorted(cache_db.keys())[-1]
-                return {"data": cache_db[latest_date], "cached": True, "cache_date": latest_date, "fallback": True, "macro_status": macro_status}
+                return {"data": cache_db[latest_date], "cached": True, "cache_date": latest_date, "fallback": True, "macro_status": macro_status, "pool_size": pool_size}
             if os.path.exists("latest_scan_results.json"):
                 try:
                     with open("latest_scan_results.json", "r", encoding="utf-8") as f:
                         cached_results = json.load(f)
-                    return {"data": cached_results, "cached": True, "fallback": True, "macro_status": macro_status}
+                    return {"data": cached_results, "cached": True, "fallback": True, "macro_status": macro_status, "pool_size": pool_size}
                 except Exception:
                     pass
             raise HTTPException(status_code=500, detail="Yahoo Finance / FinMind 伺服器拒絕連線，且無本地備份資料。")
 
-        return {"data": results, "cached": False, "macro_status": macro_status}
+        return {"data": results, "cached": False, "macro_status": macro_status, "pool_size": pool_size}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

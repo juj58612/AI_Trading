@@ -580,7 +580,7 @@ function updateStaleDataBanner(scanResult, totalRequested) {
     if (!banner) return;
 
     const count = (scanResult && scanResult.data) ? scanResult.data.length : 0;
-    const total = totalRequested || count;
+    const total = (scanResult && scanResult.pool_size) || totalRequested || count;
 
     if (scanResult && scanResult.fallback) {
         banner.style.display = 'block';
@@ -588,6 +588,13 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.style.borderColor = 'var(--accent-red)';
         banner.style.color = 'var(--accent-red)';
         banner.textContent = `⚠️ 掃描失敗，畫面顯示的是 ${scanResult.cache_date || '先前'} 保存的舊資料，非今日最新盤後資訊。建議稍後再按一次掃描重試。`;
+    } else if (scanResult && scanResult.cached && total > 0 && count < total * 0.8) {
+        // 今日快取本身就不完整（例如第一次掃描只抓到部分檔數），不能用信心滿滿的藍色語氣帶過
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(245, 158, 11, 0.15)';
+        banner.style.borderColor = 'var(--accent-yellow)';
+        banner.style.color = 'var(--accent-yellow)';
+        banner.textContent = `⚠️ 今日 (${scanResult.cache_date || ''}) 快取只有 ${count}/${total} 檔，尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
     } else if (scanResult && scanResult.cached) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(59, 130, 246, 0.12)';
@@ -609,6 +616,11 @@ function updateStaleDataBanner(scanResult, totalRequested) {
     } else {
         banner.style.display = 'none';
         banner.textContent = '';
+    }
+
+    const rescanBtn = document.getElementById('btnForceRescan');
+    if (rescanBtn) {
+        rescanBtn.style.display = (total > 0 && count < total && !(scanResult && scanResult.fallback)) ? 'inline-block' : 'none';
     }
 }
 
@@ -673,7 +685,7 @@ function updateMarketWeather(ratio) {
     }
 }
 
-async function renderStockCards(count) {
+async function renderStockCards(count, forceRefresh = false) {
     let targetCount = parseInt(count) || 5;
     if (targetCount > 60) targetCount = 60;
     if (targetCount < 1) targetCount = 1;
@@ -700,9 +712,9 @@ async function renderStockCards(count) {
         const res = await fetch(`${API_BASE_URL}/api/scan_all`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tickers })
+            body: JSON.stringify({ tickers, force_refresh: forceRefresh })
         });
-        
+
         if (!res.ok) {
             let errMsg = `HTTP ${res.status}`;
             try {
@@ -943,6 +955,20 @@ btnScanAI.addEventListener('click', async () => {
     btnScanAI.textContent = "⚡ 載入並同步真實盤後數據";
     btnScanAI.disabled = false;
 });
+
+const btnForceRescan = document.getElementById('btnForceRescan');
+if (btnForceRescan) {
+    btnForceRescan.addEventListener('click', async () => {
+        const originalText = btnForceRescan.textContent;
+        btnForceRescan.textContent = '⌛ 正在補齊缺漏檔位...';
+        btnForceRescan.disabled = true;
+        try {
+            await renderStockCards(stockCountInput.value, true);
+        } catch (e) {}
+        btnForceRescan.textContent = originalText;
+        btnForceRescan.disabled = false;
+    });
+}
 
 document.getElementById('btnScanSell').addEventListener('click', async () => {
     const btnScanSell = document.getElementById('btnScanSell');
