@@ -16,12 +16,18 @@ function getAuthCredentials() {
     if (saved) {
         try { return JSON.parse(saved); } catch(e) {}
     }
-    return { username: "cyc58612", authHeader: "Basic " + btoa("cyc58612:***REMOVED_LEAKED_PASSWORD***") };
+    return null;
 }
 
 function getAuthHeader() {
     const creds = getAuthCredentials();
     return creds ? creds.authHeader : "";
+}
+
+if (!getAuthCredentials()) {
+    alert('請先登入後再查看我的操盤室！將帶您回首頁登入。');
+    location.href = 'index.html';
+    throw new Error('Unauthenticated: redirecting to index.html');
 }
 
 async function loadData() {

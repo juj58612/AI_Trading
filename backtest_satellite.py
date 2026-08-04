@@ -38,7 +38,7 @@ def calculate_rsi(data, period=2):
 def fetch_finmind_institutional(ticker, start_date):
     """抓取 FinMind 三大法人資料 (外資與投信)"""
     stock_id = ticker.replace('.TW', '').replace('.TWO', '')
-    token = os.getenv("FINMIND_API_TOKEN", "***REMOVED_LEAKED_FINMIND_TOKEN***")
+    token = os.getenv("FINMIND_API_TOKEN", "")  # 必須由環境變數提供，不在原始碼中寫死金鑰
     params = {
         "dataset": "TaiwanStockInstitutionalInvestorsBuySell",
         "data_id": stock_id,

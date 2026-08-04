@@ -9,6 +9,13 @@ __pycache__/
 # Personal Portfolio Data
 portfolio.json
 history.json
+registered_users.json
+
+# AI-assisted dev session dumps (may contain secrets pasted during development)
+recovered_html.txt
+
+# Claude Code local project config
+.claude/
 
 # Local Backups & Logs
 backup_v1/

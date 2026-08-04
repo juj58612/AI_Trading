@@ -15,6 +15,10 @@ import json
 import time
 import concurrent.futures
 
+# 管理者帳密與邀請碼一律從環境變數讀取，不在原始碼中寫死任何機密
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "cyc58612")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # 未設定則管理者登入路徑一律不通過（安全預設）
+
 USERS_FILE = "registered_users.json"
 def load_registered_users():
     if os.path.exists(USERS_FILE):
@@ -40,8 +44,8 @@ def authenticate(request: Request):
             decoded = base64.b64decode(encoded).decode("utf-8")
             user, pwd = decoded.split(":", 1)
             
-            if secrets.compare_digest(user, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
-                return "cyc58612"
+            if ADMIN_PASSWORD and secrets.compare_digest(user, ADMIN_USERNAME) and secrets.compare_digest(pwd, ADMIN_PASSWORD):
+                return ADMIN_USERNAME
             users = load_registered_users()
             if user in users and secrets.compare_digest(users[user], pwd):
                 return user
@@ -101,7 +105,7 @@ def fetch_chip_data_from_finmind(ticker):
         if now - timestamp < CACHE_TTL:
             return cached_data["inst_list"], cached_data["margin_list"], cached_data["is_mock"]
 
-    token = os.getenv("FINMIND_API_TOKEN", "***REMOVED_LEAKED_FINMIND_TOKEN***")
+    token = os.getenv("FINMIND_API_TOKEN", "")  # 必須由環境變數提供，不在原始碼中寫死金鑰
     start_date = (datetime.now() - timedelta(days=45)).strftime('%Y-%m-%d')
     
     inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={ticker}&start_date={start_date}&token={token}"
@@ -120,7 +124,7 @@ def fetch_chip_data_from_finmind(ticker):
             for row in inst_res.get("data", []):
                 date = row["date"]
                 name = row["name"]
-                net = (row.get("buy", 0) - row.get("sell", 0)) // 1000
+                net = int((row.get("buy", 0) - row.get("sell", 0)) / 1000)
                 if date not in inst_dict:
                     inst_dict[date] = {"date": date, "foreign": 0, "trust": 0, "dealer": 0, "total": 0}
                 
@@ -368,8 +372,8 @@ class RegisterRequest(BaseModel):
 
 @app.post("/api/register")
 def register_user(req: RegisterRequest):
-    valid_code = os.getenv("INVITATION_CODE", "juj58612")
-    if not req.invite_code or req.invite_code.strip() != valid_code:
+    valid_code = os.getenv("INVITATION_CODE")  # 必須由環境變數提供，不在原始碼中寫死邀請碼
+    if not valid_code or not req.invite_code or req.invite_code.strip() != valid_code:
         raise HTTPException(status_code=400, detail="專屬邀請碼錯誤，請向管理者索取！")
     uname = req.username.strip() if req.username else ""
     pwd = req.password.strip() if req.password else ""
@@ -379,7 +383,7 @@ def register_user(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="密碼至少需要包含 4 個字元！")
         
     users = load_registered_users()
-    if uname in users or uname == "cyc58612":
+    if uname in users or uname == ADMIN_USERNAME:
         raise HTTPException(status_code=400, detail="此帳號名稱已被註冊，請換一個！")
         
     users[uname] = pwd
@@ -394,20 +398,20 @@ class LoginRequest(BaseModel):
 def login_user(req: LoginRequest):
     uname = req.username.strip() if req.username else ""
     pwd = req.password.strip() if req.password else ""
-    if secrets.compare_digest(uname, "cyc58612") and secrets.compare_digest(pwd, "***REMOVED_LEAKED_PASSWORD***"):
-        return {"status": "success", "username": "cyc58612"}
+    if ADMIN_PASSWORD and secrets.compare_digest(uname, ADMIN_USERNAME) and secrets.compare_digest(pwd, ADMIN_PASSWORD):
+        return {"status": "success", "username": ADMIN_USERNAME}
     users = load_registered_users()
     if uname in users and secrets.compare_digest(users[uname], pwd):
         return {"status": "success", "username": uname}
     raise HTTPException(status_code=401, detail="帳號或密碼錯誤！")
 
 def get_user_portfolio_file(username: str) -> str:
-    if not username or username in ["cyc58612", "admin", "default", "undefined"]:
+    if not username or username in [ADMIN_USERNAME, "admin", "default", "undefined"]:
         return "portfolio.json"
     return f"portfolio_{username}.json"
 
 def get_user_history_file(username: str) -> str:
-    if not username or username in ["cyc58612", "admin", "default", "undefined"]:
+    if not username or username in [ADMIN_USERNAME, "admin", "default", "undefined"]:
         return "history.json"
     return f"history_{username}.json"
 
