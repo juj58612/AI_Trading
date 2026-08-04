@@ -200,6 +200,58 @@ def fetch_taiex_history(start="2022-01-01"):
         print(f"Error fetching TAIEX: {e}")
         return pd.DataFrame()
 
+def fetch_macro_3in1_series(start_date, end_date):
+    """
+    盤後計算歷史「三合一巨觀風控熔斷保險絲」逐日訊號 (strategy_core.evaluate_macro_3in1_status)，
+    供回測引擎套用進場否決/減碼，讓回測跟 doc.html 宣稱的風控行為一致。
+    回傳: {date_str: {'veto_buy': bool, 'pos_scale': float, ...}}
+    """
+    token = os.getenv("FINMIND_API_TOKEN", "")
+    result = {}
+    try:
+        # 1. 外資期貨淨空單 (TX 台指期未平倉)
+        fut_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanFuturesInstitutionalInvestors&data_id=TX&start_date={start_date}&end_date={end_date}&token={token}"
+        fut_data = requests.get(fut_url, timeout=20).json().get("data", [])
+        fut_by_date = {}
+        for row in fut_data:
+            if row.get("institutional_investors") == "外資":
+                net_short = row.get("short_open_interest_balance_volume", 0) - row.get("long_open_interest_balance_volume", 0)
+                fut_by_date[row["date"]] = net_short
+
+        # 2. 台幣匯率 (USD/TWD 即期買入)
+        fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={start_date}&end_date={end_date}&token={token}"
+        fx_data = requests.get(fx_url, timeout=20).json().get("data", [])
+        fx_dates = sorted([row["date"] for row in fx_data])
+        fx_rate_by_date = {row["date"]: row.get("spot_buy", 0) for row in fx_data}
+
+        # 3. 外資現貨全市場單日買賣超 (三大法人彙總)
+        inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockTotalInstitutionalInvestors&start_date={start_date}&end_date={end_date}&token={token}"
+        inst_data = requests.get(inst_url, timeout=20).json().get("data", [])
+        spot_by_date = {}
+        for row in inst_data:
+            if row.get("name") == "Foreign_Investor":
+                spot_by_date[row["date"]] = (row.get("buy", 0) - row.get("sell", 0)) / 1e8  # 換算億元
+
+        all_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
+        for d in all_dates:
+            twd_change_5d = 0.0
+            if d in fx_dates:
+                idx = fx_dates.index(d)
+                if idx >= 5:
+                    prev_rate = fx_rate_by_date.get(fx_dates[idx - 5])
+                    curr_rate = fx_rate_by_date.get(d)
+                    if prev_rate and curr_rate:
+                        twd_change_5d = (curr_rate - prev_rate) * 10  # 換算成「角」
+
+            result[d] = strategy_core.evaluate_macro_3in1_status(
+                foreign_spot_buy=spot_by_date.get(d, 0),
+                twd_rate_change_5d=twd_change_5d,
+                foreign_futures_short=fut_by_date.get(d, 0)
+            )
+    except Exception as e:
+        print(f"⚠️ 三合一巨觀風控資料抓取失敗，本次回測不套用風控 (fail-open): {e}")
+    return result
+
 def get_tw_ticker(t):
     return f"{t}.TW" if t not in ["5269", "6531", "3529", "8299", "3131", "6274", "3583", "8046", "6643", "6187", "6414", "5443", "3324", "3693"] else f"{t}.TWO"
 
@@ -340,7 +392,11 @@ async def run_backtest(req: BacktestRequest):
     if not taiex_df.empty:
         taiex_df.set_index("date", inplace=True)
         taiex_df.index = pd.to_datetime(taiex_df.index)
-        
+
+    # 三合一巨觀風控熔斷保險絲：逐日訊號，套用於進場否決/減碼
+    macro_series = fetch_macro_3in1_series(req.start_date, req.end_date)
+    macro_veto_weeks = 0
+
     # Prepare DataFrame for prices
     prices_df = {}
     chips_df = {}
@@ -455,10 +511,14 @@ async def run_backtest(req: BacktestRequest):
                 portfolio.remove(p)
 
         # 2. Entry logic (Only on Mondays)
-        if is_monday and len(portfolio) < req.max_positions:
-            slots_available = req.max_positions - len(portfolio)
+        macro_status = macro_series.get(day_str, {"veto_buy": False, "pos_scale": 1.0}) if is_monday else {}
+        if is_monday and macro_status.get("veto_buy"):
+            macro_veto_weeks += 1
+        if is_monday and len(portfolio) < req.max_positions and not macro_status.get("veto_buy"):
+            pos_scale = macro_status.get("pos_scale", 1.0)
+            slots_available = int((req.max_positions - len(portfolio)) * pos_scale)
             candidates = []
-            
+
             for t in TICKERS:
                 if any(p['ticker'] == t for p in portfolio): continue
                 df = prices_df.get(t)
@@ -703,7 +763,8 @@ async def run_backtest(req: BacktestRequest):
     return {
         "metrics": metrics_dict,
         "daily_equity": daily_equity,
-        "trades": trade_history
+        "trades": trade_history,
+        "macro_veto_weeks": macro_veto_weeks
     }
 
 class GridSearchRequest(BaseModel):
