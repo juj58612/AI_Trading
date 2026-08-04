@@ -259,10 +259,43 @@ def get_tw_ticker(t):
 
 @app.get("/api/backtest/status")
 async def get_db_status():
-    if os.path.exists(DB_PATH):
-        mod_time = os.path.getmtime(DB_PATH)
-        return {"status": "ok", "last_updated": datetime.datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')}
-    return {"status": "missing", "last_updated": "無資料"}
+    pool_size = len(TICKERS)
+    if not os.path.exists(DB_PATH):
+        return {"status": "missing", "last_updated": "無資料", "pool_size": pool_size, "covered": 0, "missing_tickers": TICKERS, "date_start": None, "date_end": None}
+
+    mod_time = os.path.getmtime(DB_PATH)
+    try:
+        with open(DB_PATH, 'r', encoding='utf-8') as f:
+            db = json.load(f)
+    except Exception:
+        return {"status": "missing", "last_updated": "資料庫檔案損毀", "pool_size": pool_size, "covered": 0, "missing_tickers": TICKERS, "date_start": None, "date_end": None}
+
+    prices = db.get("prices", {})
+    chips = db.get("chips", {})
+    # 「涵蓋」定義：這檔股票的股價跟法人籌碼都至少抓到一些資料，缺任一邊都算未完整
+    covered = [t for t in TICKERS if prices.get(t) and chips.get(t)]
+    missing = [t for t in TICKERS if t not in covered]
+
+    date_start, date_end = None, None
+    for t in covered:
+        dates = [row["date"] for row in prices[t]]
+        if not dates:
+            continue
+        t_min, t_max = min(dates), max(dates)
+        if date_start is None or t_min < date_start:
+            date_start = t_min
+        if date_end is None or t_max > date_end:
+            date_end = t_max
+
+    return {
+        "status": "ok",
+        "last_updated": datetime.datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S'),
+        "pool_size": pool_size,
+        "covered": len(covered),
+        "missing_tickers": missing,
+        "date_start": date_start,
+        "date_end": date_end
+    }
 
 @app.post("/api/backtest/download")
 async def download_data(request: Request):

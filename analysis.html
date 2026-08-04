@@ -187,7 +187,11 @@
 </div>
 
 <script>
-const BACKTEST_API_URL = window.location.port === '58889' ? 'http://127.0.0.1:58889' : (window.location.origin === 'null' ? 'http://127.0.0.1:58888' : window.location.origin);
+// 本機/離線開啟時，回測資料實際上是由 start_backtest.command 開的 58889 埠提供
+// （跟 backtest.html/backtest.js 用同一套判斷邏輯，避免兩個頁面各自猜錯埠號）
+const BACKTEST_API_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:")
+    ? "http://127.0.0.1:58889"
+    : window.location.origin;
 
 let chartInstance = null;
 let currentAnalysisList = [];

@@ -45,7 +45,18 @@ async function checkDbStatus() {
         const res = await fetch(`${BACKTEST_API_URL}/api/backtest/status`);
         const data = await res.json();
         if (data.status === 'ok') {
-            dbDateStatus.innerHTML = `<span style="color: #4ade80;">✅ 已就緒 (最後更新: ${data.last_updated})</span>`;
+            const covered = data.covered ?? 0;
+            const pool = data.pool_size ?? 60;
+            const isComplete = covered >= pool;
+            const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
+            const scoreHtml = `<span style="font-weight:bold; background:rgba(0,0,0,0.25); padding:1px 8px; border-radius:5px;">${covered}/${pool}</span>`;
+
+            if (isComplete) {
+                dbDateStatus.innerHTML = `<span style="color: #4ade80;">✅ 已就緒 ${scoreHtml}，資料期間 ${dateRange}（最後更新: ${data.last_updated}）</span>`;
+            } else {
+                const missingPreview = (data.missing_tickers || []).slice(0, 8).join('、') + ((data.missing_tickers || []).length > 8 ? ' 等' : '');
+                dbDateStatus.innerHTML = `<span style="color: #fbbf24;">⚠️ 資料不完整 ${scoreHtml}，資料期間 ${dateRange}（最後更新: ${data.last_updated}）<br><span style="font-size:0.85em;">缺：${missingPreview}，建議再次點擊「同步歷史資料庫」補齊（已抓到的檔位不會重抓，只會補缺）</span></span>`;
+            }
         } else {
             dbDateStatus.innerHTML = `<span style="color: #f87171;">❌ 找不到資料庫，請點擊同步</span>`;
         }
