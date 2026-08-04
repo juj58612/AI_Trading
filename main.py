@@ -390,7 +390,12 @@ async def scan_all_stocks(request: Request):
 
         results = run_scan(tickers)
 
-        if results:
+        # 只有涵蓋完整股池的正式掃描才准許覆寫「今日快取」，避免局部/測試用的少量
+        # ticker 請求把全市場快取洗成只剩幾檔，害市況判斷（health_ratio）算出離譜結果。
+        canonical_pool = set(load_ai_stock_list())
+        is_full_pool_scan = bool(canonical_pool) and len(set(tickers) & canonical_pool) >= len(canonical_pool) * 0.8
+
+        if results and is_full_pool_scan:
             cache_db[today_str] = results
             save_daily_scan_cache(cache_db)
             try:
