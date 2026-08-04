@@ -105,6 +105,9 @@
         </div>
     </header>
 
+    <!-- 資料新鮮度提示：這份報告是根據哪個期間、哪個時間點同步的資料算出來的 -->
+    <div id="dataFreshnessBanner" style="display:none; text-align:center; margin-bottom: 20px; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;"></div>
+
     <!-- KPI 總覽 -->
     <div class="kpi-grid">
         <div class="kpi-card">
@@ -195,6 +198,40 @@ const BACKTEST_API_URL = (window.location.hostname === "127.0.0.1" || window.loc
 
 let chartInstance = null;
 let currentAnalysisList = [];
+
+async function loadDataFreshness() {
+    const banner = document.getElementById('dataFreshnessBanner');
+    if (!banner) return;
+    try {
+        let res = await fetch(`${BACKTEST_API_URL}/api/backtest/status`);
+        if (!res.ok && BACKTEST_API_URL.includes('58889')) {
+            res = await fetch(`http://127.0.0.1:58888/api/backtest/status`);
+        }
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (data.status !== 'ok') return;
+
+        banner.style.display = 'block';
+        const covered = data.covered ?? 0;
+        const pool = data.pool_size ?? 60;
+        const isComplete = covered >= pool;
+        const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
+
+        if (isComplete) {
+            banner.style.background = 'rgba(16, 185, 129, 0.12)';
+            banner.style.border = '1px solid #10b981';
+            banner.style.color = '#4ade80';
+            banner.innerHTML = `📅 本報告基於 <b>${dateRange}</b> 期間內的完整資料（${covered}/${pool} 檔）算出，資料庫最後同步於 ${data.last_updated}`;
+        } else {
+            banner.style.background = 'rgba(245, 158, 11, 0.12)';
+            banner.style.border = '1px solid #fbbf24';
+            banner.style.color = '#fbbf24';
+            banner.innerHTML = `⚠️ 本報告基於 <b>${dateRange}</b> 期間內的資料算出，但只涵蓋 ${covered}/${pool} 檔（尚不完整），資料庫最後同步於 ${data.last_updated}，建議回獨立回測實驗室補齊同步後再參考`;
+        }
+    } catch (e) {
+        // 連不到本機回測引擎時，安靜跳過即可，不影響下面既有的排行榜/歸因報告顯示
+    }
+}
 
 async function loadAnalysisData() {
     try {
@@ -411,7 +448,10 @@ async function exportTradeHistoryToCSV() {
 
 function round(val, dec) { return Math.round(val * Math.pow(10, dec)) / Math.pow(10, dec); }
 
-document.addEventListener('DOMContentLoaded', loadAnalysisData);
+document.addEventListener('DOMContentLoaded', () => {
+    loadAnalysisData();
+    loadDataFreshness();
+});
 </script>
 
 </body>
