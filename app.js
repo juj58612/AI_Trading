@@ -575,6 +575,18 @@ window.removeFromPortfolio = async function(index) {
     alert(`✅ 已將 ${item.name} 歸檔至歷史交易庫房！`);
 };
 
+function updateStaleDataBanner(scanResult) {
+    const banner = document.getElementById('staleDataBanner');
+    if (!banner) return;
+    if (scanResult && scanResult.fallback) {
+        banner.style.display = 'block';
+        banner.textContent = `⚠️ Yahoo Finance 即時連線目前失敗，畫面顯示的是 ${scanResult.cache_date || '先前'} 保存的舊資料，非今日最新盤後資訊。`;
+    } else {
+        banner.style.display = 'none';
+        banner.textContent = '';
+    }
+}
+
 function updateMarketWeather(ratio) {
     let container = document.getElementById('market-weather-container');
     if (!container) {
@@ -655,7 +667,8 @@ async function renderStockCards(count) {
         
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
-        
+        updateStaleDataBanner(scanResult);
+
         if (progressContainer) {
             progressBar.style.width = '100%';
             statusText.textContent = "✅ 掃描完成！正在為您挑選最強勢標的...";
@@ -785,7 +798,8 @@ async function renderSellCards(count) {
         });
         const scanResult = await res.json();
         const scanData = scanResult.data || [];
-        
+        updateStaleDataBanner(scanResult);
+
         let filteredSellStocks = [];
         
         sellPool.forEach(stock => {

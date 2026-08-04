@@ -75,21 +75,30 @@ app.add_middleware(
 yf_cache = {}
 CACHE_TTL = 3600
 
+# Yahoo Finance 會針對雲端主機 (如 Render) 的 IP 做封鎖/限流，導致 yfinance 直接連線常常抓不到任何資料。
+# 用 curl_cffi 偽裝瀏覽器 TLS 指紋連線可大幅改善這個問題（yfinance 官方建議的作法）。
+try:
+    from curl_cffi import requests as cc_requests
+    _yf_session = cc_requests.Session(impersonate="chrome")
+except Exception as e:
+    print(f"⚠️ curl_cffi 不可用，改用預設連線: {e}")
+    _yf_session = None
+
 def fetch_yfinance_history(ticker: str):
     cache_key = ticker
     now = time.time()
-    
+
     if cache_key in yf_cache:
         cached_hist, timestamp = yf_cache[cache_key]
         if now - timestamp < CACHE_TTL:
             return cached_hist
 
-    stock = yf.Ticker(f"{ticker}.TW")
+    stock = yf.Ticker(f"{ticker}.TW", session=_yf_session)
     hist = stock.history(period="1mo")
     if hist.empty:
-        stock = yf.Ticker(f"{ticker}.TWO")
+        stock = yf.Ticker(f"{ticker}.TWO", session=_yf_session)
         hist = stock.history(period="1mo")
-        
+
     if not hist.empty:
         yf_cache[cache_key] = (hist, now)
         
