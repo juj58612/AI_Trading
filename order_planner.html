@@ -267,7 +267,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <span style="font-weight: bold; color: #f59e0b; white-space: nowrap;">步驟二</span>
-                <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單並寫入我的操盤室</button>
+                <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單(A+B)並寫入我的操盤室</button>
             </div>
         </div>
 
@@ -276,7 +276,7 @@
             <!-- Left: Auto Planner -->
             <div class="planner-column auto-column">
                 <div class="column-header">
-                    <h3 style="color:#c084fc;">🤖 系統自動推薦掛單 (AI 飆股買進與持倉賣出建議)</h3>
+                    <h3 style="color:#c084fc;">A 系統自動推薦掛單 (AI 飆股買進與持倉賣出建議)</h3>
                     <span id="autoTotalCost" style="font-size:0.9rem; color:var(--text-sub);">預估所需資金：0 萬元</span>
                 </div>
                 <div id="autoOrderList">
@@ -287,7 +287,7 @@
             <!-- Right: Manual Draft Planner -->
             <div class="planner-column">
                 <div class="column-header">
-                    <h3 style="color:var(--accent-blue);">✍️ 交易員手動自訂掛單 (自行加碼或下單不在左方推薦中的股票)</h3>
+                    <h3 style="color:var(--accent-blue);">B 交易員手動自訂掛單 (自行加碼或下單不在左方推薦中的股票)</h3>
                     <div style="display:flex; gap:8px;">
                         <button class="btn-manual-add" onclick="openManualAddModal()">➕ 新增自訂交易</button>
                         <span id="manualTotalCost" style="font-size:0.9rem; color:var(--text-sub);">預估所需資金：0 萬元</span>
