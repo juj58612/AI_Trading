@@ -228,15 +228,12 @@ function renderLeaderboard() {
         
         tr.innerHTML = `
             <td>${row.strategy} ${isBest ? '👑' : ''}</td>
-            <td style="font-size: 0.9em; line-height: 1.4;">${row.paramsHtml}</td>
-            <td>${row.trades}</td>
-            <td style="color: ${winColor}">${row.winrate}%</td>
             <td style="font-size: 0.9em; line-height: 1.4;">${row.paramsHtml || '-'}</td>
-            <td>${row.trades || row.total_trades || '-'}</td>
-            <td style="color: ${winColor}">${row.winrate || row.win_rate || 0}%</td>
-            <td>${row.pf || row.profit_factor || 0}</td>
-            <td>${row.mdd || 0}%</td>
-            <td style="color: ${retColor}">${row.return || 0}%</td>
+            <td>${row.trades ?? row.total_trades ?? '-'}</td>
+            <td style="color: ${winColor}">${row.winrate ?? row.win_rate ?? 0}%</td>
+            <td>${row.pf ?? row.profit_factor ?? 0}</td>
+            <td>${row.mdd ?? 0}%</td>
+            <td style="color: ${retColor}">${row.return ?? 0}%</td>
             <td>
                 <button class="btn-blue" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;" onclick="renderChart(${leaderboardData.length - 1 - i})">📊 圖表</button>
                 <button class="btn-blue" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;" onclick="exportCSV(${leaderboardData.length - 1 - i})">📥 匯出</button>
@@ -484,24 +481,30 @@ async function fetchLeaderboardFromDB() {
         if (res.ok) {
             const data = await res.json();
             if (data.data && Array.isArray(data.data)) {
-                leaderboardData = data.data.map(exp => ({
-                    strategy: exp.exit_strategy,
-                    positions: exp.max_positions,
-                    holdDays: exp.max_hold_days,
-                    return: exp.total_return,
-                    mdd: exp.mdd,
-                    winRate: exp.win_rate,
-                    profitFactor: exp.profit_factor,
-                    isOOS: exp.is_out_of_sample,
-                    returns_yearly: {
-                        '2021': exp.return_2021 || 0,
-                        '2022': exp.return_2022 || 0,
-                        '2023': exp.return_2023 || 0,
-                        '2024': exp.return_2024 || 0,
-                        '2025': exp.return_2025 || 0,
-                        '2026': exp.return_2026 || 0
-                    }
-                }));
+                leaderboardData = data.data.map(exp => {
+                    const capStr = (exp.capital / 10000).toFixed(0) + "萬";
+                    const holdStr = exp.max_hold_days === 999 ? "無限制" : exp.max_hold_days + "天";
+                    const oosTag = exp.is_out_of_sample ? ' <span style="color:#f59e0b;">[OOS]</span>' : '';
+                    return {
+                        strategy: `方案 ${exp.exit_strategy}`,
+                        paramsHtml: `${exp.start_date} ~ ${exp.end_date}${oosTag}<br><span style="color:#9ca3af; font-size:0.85em;">資金:${capStr} | 持倉:${exp.max_positions}檔 | 期限:${holdStr}</span>`,
+                        trades: exp.total_trades,
+                        winrate: exp.win_rate,
+                        pf: exp.profit_factor,
+                        mdd: exp.mdd,
+                        return: exp.total_return,
+                        capital: exp.capital,
+                        isOOS: exp.is_out_of_sample,
+                        returns_yearly: {
+                            '2021': exp.return_2021 || 0,
+                            '2022': exp.return_2022 || 0,
+                            '2023': exp.return_2023 || 0,
+                            '2024': exp.return_2024 || 0,
+                            '2025': exp.return_2025 || 0,
+                            '2026': exp.return_2026 || 0
+                        }
+                    };
+                });
                 renderLeaderboard();
             }
         }
