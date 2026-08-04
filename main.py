@@ -648,9 +648,16 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
 
     if macro_status.get("veto_buy"):
         macro_warning = f"{macro_status.get('title', '')}：{macro_status.get('advice', '')}"
+        # 巨觀風控熔斷時，市況文字必須跟著改口，避免「文字全面進攻、清單卻是空的」這種自相矛盾的畫面
+        market_status = f"🚨 巨觀風控熔斷中 (原廣度判斷：{market_status} {health_ratio:.1f}%)"
+        market_advice = f"{macro_status.get('advice', '')} 即使個股籌碼面偏多，本輪一律不建議新建倉，靜待風控解除。"
+        market_color = "#059669"  # 沿用系統「保留現金／觀望」的綠色語意，不是新配色
     elif macro_status.get("pos_scale", 1.0) < 1.0:
         cash_twd = cash_twd * macro_status.get("pos_scale", 1.0)
         macro_warning = f"{macro_status.get('title', '')}：{macro_status.get('advice', '')}"
+        market_status = f"⚠️ {market_status}（巨觀風控減碼中）"
+        market_advice = f"{macro_status.get('advice', '')} 原廣度判斷建議：「{market_advice}」，但本輪可用資金已依風控砍半。"
+        market_color = "#f59e0b"  # 沿用系統「築底觀望」的黃橘語意
 
     # 2-Stage Pyramiding & Risk Parity Protection Selection Logic
     potential_buys = []
