@@ -118,10 +118,25 @@ async function loadPlannerData() {
                 
                 // Render both columns
                 renderOrders();
+            } else {
+                document.getElementById('targetTradingDay').textContent = '-';
+                document.getElementById('autoOrderList').innerHTML = `<div style="color:var(--accent-green); text-align:center; padding:20px;">⚠️ ${data.message || '取得下單建議失敗。'}</div>`;
             }
+        } else {
+            let errMsg = `HTTP ${res.status}`;
+            try {
+                const errJson = await res.json();
+                errMsg = errJson.detail || errMsg;
+            } catch (je) {}
+            const hint = (res.status === 401 || res.status === 403)
+                ? '登入憑證可能已失效，請登出後重新登入一次。'
+                : '請檢查伺服器連線。';
+            document.getElementById('targetTradingDay').textContent = '-';
+            document.getElementById('autoOrderList').innerHTML = `<div style="color:var(--accent-green); text-align:center; padding:20px;">⚠️ 無法取得下單建議 (${errMsg})<br>${hint}</div>`;
         }
     } catch (e) {
         console.error("載入下單中心數據失敗", e);
+        document.getElementById('targetTradingDay').textContent = '-';
         document.getElementById('autoOrderList').innerHTML = '<div style="color:var(--accent-green); text-align:center; padding:20px;">無法取得推薦數據，請檢查伺服器連線。</div>';
     }
 }

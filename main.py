@@ -543,7 +543,7 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
     # Read latest scan results (check daily_scan_cache first for guaranteed sync with index.html)
     scan_results = []
     scan_warning = ""
-    cache_db = load_daily_scan_cache()
+    cache_db = get_daily_scan_cache()
     if cache_db:
         latest_date = sorted(cache_db.keys())[-1]
         scan_results = cache_db[latest_date]
