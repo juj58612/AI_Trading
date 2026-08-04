@@ -247,22 +247,28 @@
         </div>
 
         <!-- Top Prominent Commit Bar -->
-        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
             <div style="text-align: left;">
                 <div style="font-weight: bold; color: #ef4444; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;">
                     📌 實戰下單同步 (一鍵寫入庫存)
                 </div>
-                <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 2px;">有下單才勾選，無下單勿勾選！下單完成後，點擊右側按鈕，會自動將下單資料更新至『我的操盤室』現役持倉中喔！</div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 2px;">有下單才勾選，無下單勿勾選！下單完成後，點擊下方按鈕，會自動將下單資料更新至『我的操盤室』現役持倉中喔！</div>
             </div>
-            <div class="count-setting" style="border-color: #8957e5; display: flex; align-items: center; gap: 8px;">
-                <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
-                <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:80px;" oninput="loadPlannerData()">
-                <span style="color:#c084fc; font-weight:bold;">萬元</span>
-                <button onclick="loadPlannerData()" style="background: linear-gradient(135deg, #8957e5 0%, #6366f1 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(137, 87, 229, 0.3);">
-                    ⚡ 重新計算推薦
-                </button>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="font-weight: bold; color: #f59e0b; white-space: nowrap;">步驟一</span>
+                <div class="count-setting" style="border-color: #8957e5; display: flex; align-items: center; gap: 8px;">
+                    <label for="cashInput" style="color: #c084fc;">💰 可用實戰預算：</label>
+                    <input type="number" id="cashInput" value="100" min="5" style="color:#c084fc; width:80px;" oninput="loadPlannerData()">
+                    <span style="color:#c084fc; font-weight:bold;">萬元</span>
+                    <button onclick="loadPlannerData()" style="background: linear-gradient(135deg, #8957e5 0%, #6366f1 100%); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(137, 87, 229, 0.3);">
+                        ⚡ 重新計算推薦
+                    </button>
+                </div>
             </div>
-            <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單並寫入我的操盤室</button>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="font-weight: bold; color: #f59e0b; white-space: nowrap;">步驟二</span>
+                <button class="btn-commit-all" onclick="commitExecutedOrders()" style="margin:0;">確認下單並寫入我的操盤室</button>
+            </div>
         </div>
 
         <!-- Planner Layout Columns -->
