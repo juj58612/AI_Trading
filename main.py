@@ -439,6 +439,81 @@ async def scan_all_stocks(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/admin/daily_auto_scan")
+async def daily_auto_scan(user: str = Depends(authenticate)):
+    """
+    每日盤後自動巡邏：跑一次全股池掃描（沿用 /api/scan_all 同一套 run_scan +
+    當日快取合併邏輯），並順便把所有使用者庫存中「持有中」股票的最新收盤價
+    寫回去，這樣不管使用者什麼時候打開下單執行中心，看到的停損/加碼判斷都是
+    當天盤後的資料，不必依賴「使用者今天有沒有先手動開首頁掃描過」。
+    僅限管理者觸發（供外部排程如 GitHub Actions 呼叫），避免被公開濫用。
+    """
+    if user != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail="僅限管理者觸發每日自動巡邏")
+
+    tickers = load_ai_stock_list()
+    if not tickers:
+        raise HTTPException(status_code=500, detail="找不到 ai_stock_list.txt 股池清單")
+
+    results = run_scan(tickers)
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    cache_db = get_daily_scan_cache()
+    merged = {s['ticker']: s for s in cache_db.get(today_str, [])}
+    for r in results:
+        merged[r['ticker']] = r
+    final_results = list(merged.values())
+
+    cache_db[today_str] = final_results
+    save_daily_scan_cache(cache_db)
+    try:
+        with open("latest_scan_results.json", "w", encoding="utf-8") as f:
+            json.dump(final_results, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print("Error saving latest_scan_results.json:", e)
+
+    # 更新所有使用者（管理者 + 所有邀請碼註冊帳號）庫存裡持有中股票的最新價
+    scan_by_ticker = {s['ticker']: s for s in final_results}
+    all_usernames = [ADMIN_USERNAME] + list(load_registered_users().keys())
+    portfolios_updated = 0
+    for uname in all_usernames:
+        pf = get_user_portfolio_file(uname)
+        if not os.path.exists(pf):
+            continue
+        try:
+            with open(pf, "r", encoding="utf-8") as f:
+                portfolio = json.load(f)
+        except Exception:
+            continue
+
+        changed = False
+        for p in portfolio:
+            sd = scan_by_ticker.get(p.get('ticker'))
+            if not sd:
+                continue
+            latest_close = sd['latest_close']
+            p['closePrice'] = latest_close
+            if p.get('type') == 'short':
+                p['high'] = min(p.get('high') or latest_close, latest_close)
+            else:
+                p['high'] = max(p.get('high') or 0, latest_close)
+            changed = True
+
+        if changed:
+            try:
+                with open(pf, "w", encoding="utf-8") as f:
+                    json.dump(portfolio, f, ensure_ascii=False, indent=4)
+                portfolios_updated += 1
+            except Exception as e:
+                print(f"Error updating portfolio for {uname}:", e)
+
+    return {
+        "status": "success",
+        "scanned": len(final_results),
+        "pool_size": len(tickers),
+        "portfolios_updated": portfolios_updated,
+        "macro_status": get_latest_macro_status()
+    }
+
 # 註冊與登入 API
 class RegisterRequest(BaseModel):
     invite_code: str

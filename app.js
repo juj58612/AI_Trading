@@ -594,7 +594,7 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.textContent = `⚠️ 今日 (${scanResult.cache_date || ''}) 快取只有 ${count}/${total} 檔，尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
+        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日 (${scanResult.cache_date || ''}) 快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
     } else if (scanResult && scanResult.cached) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(59, 130, 246, 0.12)';
