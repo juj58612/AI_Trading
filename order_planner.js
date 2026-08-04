@@ -51,10 +51,12 @@ async function loadPlannerData() {
     });
     const cashForAuto = Math.max(0, cashVal - manualBuyWan);
 
-    // 記住目前 A 清單裡使用者手動調整過的勾選/成交價量，重新計算後盡量保留
+    // 記住目前 A 清單裡的勾選狀態，以及「使用者自己手動調整過」的成交價量
+    // （只保留真的被手動編輯過的價量，否則每次重新計算後，即使後端已經算出正確
+    // 的縮減股數，也會被舊的股數覆蓋掉，導致預算沒有真的平均分配）
     const prevAutoByTicker = {};
     (autoOrders || []).forEach(o => {
-        prevAutoByTicker[o.ticker] = { checked: o.checked, price: o.price, shares: o.shares };
+        prevAutoByTicker[o.ticker] = { checked: o.checked, price: o.price, shares: o.shares, userEdited: !!o.userEdited };
     });
 
     try {
@@ -89,34 +91,39 @@ async function loadPlannerData() {
                     weatherBanner.style.display = 'block';
                 }
                 
-                // 1. Process Auto Orders (保留使用者先前手動調整過的勾選/成交價量)
+                // 1. Process Auto Orders (保留勾選狀態；只有使用者手動編輯過的價量才保留舊值，
+                //    否則一律採用後端剛算好的新股數，確保 A 的預算縮減會真的反映出來)
                 autoOrders = [];
                 // Add buy orders
                 data.buys.forEach(b => {
                     const prev = prevAutoByTicker[b.ticker];
+                    const useEditedValues = prev && prev.userEdited;
                     autoOrders.push({
                         ticker: b.ticker,
                         name: formatStockName(b.ticker, b.name),
-                        price: prev ? prev.price : b.price,
-                        shares: prev ? prev.shares : b.shares, // in 張
+                        price: useEditedValues ? prev.price : b.price,
+                        shares: useEditedValues ? prev.shares : b.shares, // in 張
                         type: 'buy',
                         stage: b.stage,
                         reason: '',
-                        checked: prev ? prev.checked : true
+                        checked: prev ? prev.checked : true,
+                        userEdited: useEditedValues
                     });
                 });
                 // Add sell orders
                 data.sells.forEach(s => {
                     const prev = prevAutoByTicker[s.ticker];
+                    const useEditedValues = prev && prev.userEdited;
                     autoOrders.push({
                         ticker: s.ticker,
                         name: formatStockName(s.ticker, s.name),
-                        price: prev ? prev.price : s.price,
-                        shares: prev ? prev.shares : s.shares, // in 張
+                        price: useEditedValues ? prev.price : s.price,
+                        shares: useEditedValues ? prev.shares : s.shares, // in 張
                         type: 'sell',
                         stage: '',
                         reason: s.reason,
-                        checked: prev ? prev.checked : true
+                        checked: prev ? prev.checked : true,
+                        userEdited: useEditedValues
                     });
                 });
                 
@@ -356,6 +363,9 @@ function saveOrderEdits() {
     o.shares = sharesZhang;
     if (o.type === 'sell') {
         o.reason = document.getElementById('modalReason').value;
+    }
+    if (activeEditType === 'auto') {
+        o.userEdited = true; // 使用者手動改過，之後重新計算 A 時要保留這筆的價量
     }
 
     const editedManual = activeEditType === 'manual';
