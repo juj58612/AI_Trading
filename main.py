@@ -1022,7 +1022,7 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "doc.html", "analysis.html"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
