@@ -48,7 +48,7 @@ async function checkDbStatus() {
         const data = await res.json();
         if (data.status === 'ok') {
             const covered = data.covered ?? 0;
-            const pool = data.pool_size ?? 60;
+            const pool = data.pool_size ?? 70;
             const isComplete = covered >= pool;
             const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
             const scoreHtml = `<span style="font-weight:bold; background:rgba(0,0,0,0.25); padding:1px 8px; border-radius:5px;">${covered}/${pool}</span>`;
@@ -78,6 +78,9 @@ window.addEventListener('DOMContentLoaded', () => {
         // 清空是破壞性操作，非本機時也一併隱藏，避免正式站訪客誤觸清掉資料
         const clearBtn = document.getElementById('btnClearLeaderboard');
         if (clearBtn) clearBtn.style.display = 'none';
+        // 發布快照只有本機（有真實資料庫）才有意義，正式站上按了也沒東西可發布
+        const publishBtn = document.getElementById('btnPublishSnapshot');
+        if (publishBtn) publishBtn.style.display = 'none';
         const notice = document.getElementById('remoteOnlyNotice');
         if (notice) notice.style.display = 'block';
         return;
@@ -441,6 +444,28 @@ if (document.getElementById('btnClearLeaderboard')) {
     });
 }
 
+if (document.getElementById('btnPublishSnapshot')) {
+    document.getElementById('btnPublishSnapshot').addEventListener('click', async () => {
+        const btn = document.getElementById('btnPublishSnapshot');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ 產生快照中...';
+        try {
+            const res = await fetch(`${BACKTEST_API_URL}/api/backtest/publish_snapshot`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`✅ ${data.message}\n\n下一步：請自行在終端機執行 git add / commit / push（或請 Claude 幫忙），推上 GitHub 後 Render 才會真正顯示這份快照。`);
+            } else {
+                alert(`❌ 產生快照失敗：${data.message || '未知錯誤'}`);
+            }
+        } catch (e) {
+            alert(`❌ 無法連線至本機回測引擎：${e.message}`);
+        }
+        btn.disabled = false;
+        btn.textContent = originalText;
+    });
+}
+
 // Event listeners
 if (document.getElementById('btnRunGridSearch')) {
     document.getElementById('btnRunGridSearch').addEventListener('click', runGridSearch);
@@ -552,11 +577,25 @@ window.runMegaGrid = async function() {
 
 async function fetchLeaderboardFromDB() {
     try {
-        const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
-        if (res.ok) {
-            const data = await res.json();
-            if (data.data && Array.isArray(data.data)) {
-                leaderboardData = data.data.map(exp => {
+        // 正式站沒有永久硬碟，自己的即時資料庫每次重啟都會被清空；改讀本機發布的靜態快照
+        // （見 backtest.html「📤 發布快照到正式站」按鈕），本機開啟時則維持讀即時 API
+        let list;
+        if (IS_LOCAL) {
+            const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+            if (res.ok) {
+                const data = await res.json();
+                list = data.data;
+            }
+        } else {
+            const res = await fetch('published_snapshot.json');
+            if (res.ok) {
+                const snap = await res.json();
+                list = snap.experiments;
+            }
+        }
+
+        if (list && Array.isArray(list)) {
+            leaderboardData = list.map(exp => {
                     const capStr = (exp.capital / 10000).toFixed(0) + "萬";
                     const holdStr = exp.max_hold_days === 999 ? "無限制" : exp.max_hold_days + "天";
                     const oosTag = exp.is_out_of_sample ? ' <span style="color:#f59e0b;">[OOS]</span>' : '';
@@ -582,9 +621,8 @@ async function fetchLeaderboardFromDB() {
                         }
                     };
                 });
-                renderLeaderboard();
-                updateLeaderboardTimestampInfo();
-            }
+            renderLeaderboard();
+            updateLeaderboardTimestampInfo();
         }
     } catch (e) {
         console.error("Failed to fetch leaderboard from DB:", e);

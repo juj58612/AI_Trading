@@ -333,6 +333,12 @@ def run_scan(tickers):
             # 1. Fetch Price
             hist = fetch_yfinance_history(ticker)
             if hist.empty: return None
+            # 資料源常常會多一列「今天/昨天」的佔位資料，成交量已經有了但收盤價還沒回填
+            # 完成（NaN）。直接用 .iloc[-1] 會拿到這個 NaN，不但害後面算出來的 MA/動能全部
+            # 髒掉，NaN 更沒辦法被 JSON 序列化，會讓整個 /api/scan_all 回應直接 500 壞掉。
+            # 過濾掉收盤價還沒回填的列，一律以「最新一筆有完整收盤價」的交易日為準。
+            hist = hist[hist['Close'].notna()]
+            if hist.empty: return None
             latest_close = round(hist['Close'].iloc[-1], 2)
             ma5 = round(hist['Close'].tail(5).mean(), 2) if len(hist) >= 5 else latest_close
             ma20 = round(hist['Close'].tail(20).mean(), 2) if len(hist) >= 20 else latest_close

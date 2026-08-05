@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數據總匯 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .analysis-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            color: #f8fafc;
+        }
+        .report-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .report-section h2 {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .report-section p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+        }
+        .btn-action {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.2s;
+        }
+        .btn-action:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+<div class="analysis-container">
+    <header style="text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+        <h1 style="color: #f59e0b; font-size: 2rem;">📁 數據總匯</h1>
+        <p style="color: #94a3b8; font-size: 0.95rem;">匯出分析中心各項數據表單</p>
+        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 15px; flex-wrap: wrap;">
+            <a href="index.html" class="btn-action" style="background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue);">🏠 返回控制台首頁</a>
+            <a href="backtest.html" class="btn-action" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;">🧪 獨立回測實驗室</a>
+            <a href="analysis.html" class="btn-action" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;">📊 分析中心</a>
+            <a href="doc.html" target="_blank" class="btn-action" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;">📄 策略白皮書</a>
+        </div>
+    </header>
+
+    <!-- 資料新鮮度提示：這份報告是根據哪個期間、哪個時間點同步的資料算出來的 -->
+    <div id="dataFreshnessBanner" style="display:none; text-align:center; margin-bottom: 25px; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;"></div>
+
+    <div class="report-section">
+        <h2>1. 匯出排行榜總表 (CSV)</h2>
+        <p id="leaderboardExportDesc">匯出資料庫內全部回測實驗的完整排行榜（依總報酬率排序），包含策略方案、持倉設定、各年度報酬拆解等欄位。CSV 格式，Excel 與 Google 試算表皆可直接開啟。</p>
+        <button id="btnExportLeaderboard" onclick="exportAnalysisToCSV()" class="btn-action" style="background: #10b981;">📊 匯出排行榜總表 (CSV)</button>
+    </div>
+
+    <div class="report-section" id="tradeDetailSection">
+        <h2>2. 匯出回測個股買賣交易明細表 (CSV)</h2>
+        <p>匯出頂尖策略組合的逐筆個股買賣交易明細（進出場日期、價格、持倉天數、損益等）。CSV 格式，Excel 與 Google 試算表皆可直接開啟。</p>
+        <button onclick="exportTradeHistoryToCSV()" class="btn-action" style="background: #059669;">📑 匯出回測個股買賣交易明細表 (CSV)</button>
+    </div>
+</div>
+
+<script>
+// 本機/離線開啟時，回測資料實際上是由 start_backtest.command 開的 58889 埠提供
+// （跟 backtest.html/backtest.js 用同一套判斷邏輯，避免兩個頁面各自猜錯埠號）
+const IS_LOCAL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:");
+const BACKTEST_API_URL = IS_LOCAL
+    ? "http://127.0.0.1:58889"
+    : window.location.origin;
+
+let currentAnalysisList = [];
+
+// 正式站沒有永久硬碟，改讀本機用「📤 發布快照到正式站」按鈕產生、commit 進 git 的
+// 靜態快照；快照只抓一次快取起來，下面三個函式共用，不用各抓一次 2.5MB 的檔案
+let cachedSnapshot = null;
+async function getSnapshot() {
+    if (cachedSnapshot) return cachedSnapshot;
+    try {
+        const res = await fetch('published_snapshot.json');
+        if (res.ok) cachedSnapshot = await res.json();
+    } catch (e) {}
+    return cachedSnapshot;
+}
+
+async function loadDataFreshness() {
+    const banner = document.getElementById('dataFreshnessBanner');
+    if (!banner) return;
+    try {
+        let data;
+        if (IS_LOCAL) {
+            let res = await fetch(`${BACKTEST_API_URL}/api/backtest/status`);
+            if (!res.ok && BACKTEST_API_URL.includes('58889')) {
+                res = await fetch(`http://127.0.0.1:58888/api/backtest/status`);
+            }
+            if (!res || !res.ok) return;
+            data = await res.json();
+        } else {
+            const snap = await getSnapshot();
+            if (!snap) return;
+            data = snap.status;
+        }
+        if (!data || data.status !== 'ok') return;
+
+        banner.style.display = 'block';
+        const covered = data.covered ?? 0;
+        const pool = data.pool_size ?? 70;
+        const isComplete = covered >= pool;
+        const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
+
+        if (isComplete) {
+            banner.style.background = 'rgba(16, 185, 129, 0.12)';
+            banner.style.border = '1px solid #10b981';
+            banner.style.color = '#4ade80';
+            banner.innerHTML = `📅 本報告基於 <b>${dateRange}</b> 期間內的完整資料（${covered}/${pool} 檔）算出，資料庫最後同步於 ${data.last_updated}`;
+        } else {
+            banner.style.background = 'rgba(245, 158, 11, 0.12)';
+            banner.style.border = '1px solid #fbbf24';
+            banner.style.color = '#fbbf24';
+            banner.innerHTML = `⚠️ 本報告基於 <b>${dateRange}</b> 期間內的資料算出，但只涵蓋 ${covered}/${pool} 檔（尚不完整），資料庫最後同步於 ${data.last_updated}，建議回獨立回測實驗室補齊同步後再參考`;
+        }
+    } catch (e) {
+        // 連不到本機回測引擎時，安靜跳過即可，不影響下面的匯出功能
+    }
+}
+
+// 只負責把排行榜資料抓回來備用（給下面兩個 CSV 匯出按鈕用），不再做任何畫面呈現
+async function loadExperimentsForExport() {
+    try {
+        let list = [];
+        if (IS_LOCAL) {
+            let expRes = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+            if (!expRes.ok && BACKTEST_API_URL.includes('58889')) {
+                expRes = await fetch(`http://127.0.0.1:58888/api/analysis/experiments`);
+            }
+            if (expRes && expRes.ok) {
+                const expData = await expRes.json();
+                list = expData.data || [];
+            }
+        } else {
+            const snap = await getSnapshot();
+            if (snap) list = snap.experiments || [];
+        }
+        list.sort((a, b) => b.total_return - a.total_return);
+        currentAnalysisList = list;
+    } catch(e) {
+        console.error("載入排行榜資料失敗", e);
+    }
+}
+
+function calcCAGR(row) {
+    if (row.cagr && row.cagr !== 0) return row.cagr;
+    try {
+        const s = new Date(row.start_date || '2021-01-01');
+        const e = new Date(row.end_date || '2026-08-01');
+        const days = Math.max(1, (e - s) / (1000 * 60 * 60 * 24));
+        const years = Math.max(0.05, days / 365.25);
+        const ratio = Math.max(0.0001, 1 + (row.total_return / 100));
+        return (Math.pow(ratio, 1 / years) - 1) * 100;
+    } catch(err) {
+        return 0;
+    }
+}
+
+function exportAnalysisToCSV() {
+    // 正式站直接下載本機發布時已經產生好的試算表檔案，不用另外靠 JS 現組（見
+    // backtest_engine.py 的 /api/backtest/publish_snapshot 產生的 published_leaderboard.csv）
+    if (!IS_LOCAL) {
+        const link = document.createElement("a");
+        link.href = 'published_leaderboard.csv';
+        link.setAttribute("download", `AI_Backtest_Leaderboard_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+    }
+
+    if (!currentAnalysisList || currentAnalysisList.length === 0) {
+        alert("尚無回測數據可供匯出！");
+        return;
+    }
+
+    let csvContent = "\uFEFF排名,回測開始日期,回測結束日期,策略方案,持股檔數,持倉天數,累積總報酬率(%),年化報酬率CAGR(%),最大回撤MDD(%),勝率(%),獲利因子,總交易次數,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n";
+
+    currentAnalysisList.forEach((row, idx) => {
+        const rank = idx + 1;
+        const sDate = row.start_date || "2021-01-01";
+        const eDate = row.end_date || "2026-08-01";
+        const strategy = `方案 ${row.exit_strategy}`;
+        const pos = row.max_positions;
+        const hold = row.max_hold_days;
+        const ret = row.total_return ? row.total_return.toFixed(2) : "0.00";
+        const cagrVal = calcCAGR(row);
+        const cagr = cagrVal ? cagrVal.toFixed(2) : "0.00";
+        const mdd = row.mdd ? row.mdd.toFixed(2) : "0.00";
+        const win = row.win_rate ? row.win_rate.toFixed(1) : "0.0";
+        const pf = row.profit_factor ? row.profit_factor.toFixed(2) : "0.00";
+        const trades = row.total_trades || 0;
+        const r2021 = (row.return_2021 || 0).toFixed(2);
+        const r2022 = (row.return_2022 || 0).toFixed(2);
+        const r2023 = (row.return_2023 || 0).toFixed(2);
+        const r2024 = (row.return_2024 || 0).toFixed(2);
+        const r2025 = (row.return_2025 || 0).toFixed(2);
+        const r2026 = (row.return_2026 || 0).toFixed(2);
+
+        csvContent += `${rank},"${sDate}","${eDate}","${strategy}",${pos},${hold},${ret},${cagr},${mdd},${win},${pf},${trades},${r2021},${r2022},${r2023},${r2024},${r2025},${r2026}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const today = new Date().toISOString().split('T')[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `AI_Backtest_Institutional_Analysis_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+async function exportTradeHistoryToCSV() {
+    try {
+        let trades = [];
+        if (IS_LOCAL) {
+            let res = await fetch(`${BACKTEST_API_URL}/api/analysis/trades_all_top`);
+            if (!res.ok && BACKTEST_API_URL.includes('58889')) {
+                res = await fetch(`http://127.0.0.1:58888/api/analysis/trades_all_top`);
+            }
+            if (res && res.ok) {
+                const data = await res.json();
+                trades = data.data || [];
+            }
+        } else {
+            const snap = await getSnapshot();
+            if (snap) trades = snap.trades_all_top || [];
+        }
+
+        if (!trades || trades.length === 0) {
+            alert("目前尚無詳細個股交易明細數據，請先於【回測實驗室】點擊「啟動巨量大數據排列組合回測」！");
+            return;
+        }
+
+        let csvContent = "\uFEFF排名,策略方案,股票代碼,股票名稱,買進進場日期,進場價格(元),賣出平倉日期,賣出價格(元),持倉天數(天),交易股數(股),平倉原因,交易損益(%),獲利金額(TWD)\n";
+
+        trades.forEach(t => {
+            const sharesNum = t.shares ? (t.shares > 100 ? t.shares : t.shares * 1000) : 1000;
+            const sharesStr = sharesNum.toLocaleString();
+            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
+            csvContent += `${t.rank || 1},${t.strategy_label || '方案 D'},${t.ticker},"${t.name}",${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.hold_days || '-'},${sharesStr},"${t.reason || '平倉'}",${(t.pnl_pct || 0).toFixed(2)}%,${Math.round(pnlVal)}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute("href", url);
+        link.setAttribute("download", `AI_Backtest_Individual_Trades_Detail_${today}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch(e) {
+        console.error("匯出交易明細失敗", e);
+        alert("匯出交易明細失敗，請重試");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 正式站排行榜總表直接下載現成的 CSV 檔案（見 exportAnalysisToCSV），不需要
+    // 先把 published_snapshot.json 抓下來現組，本機才需要抓即時資料來現組 CSV
+    if (IS_LOCAL) loadExperimentsForExport();
+    loadDataFreshness();
+
+    if (!IS_LOCAL) {
+        // 正式站只發布排行榜結果，沒有逐筆交易明細（避免檔案又多又肥大），
+        // 交易明細匯出功能僅限本機端使用
+        const tradeSection = document.getElementById('tradeDetailSection');
+        if (tradeSection) {
+            tradeSection.innerHTML = `
+                <h2>2. 匯出回測個股買賣交易明細表 (CSV)</h2>
+                <p>此功能僅限本機端使用。正式站只發布排行榜的統計結果，不含每一筆交易的詳細紀錄，避免發布的檔案又多又肥大。</p>
+            `;
+        }
+        // 排行榜總表在正式站直接提供已經產生好的試算表檔案，不用另外靠 JS 現組
+        const desc = document.getElementById('leaderboardExportDesc');
+        if (desc) desc.textContent = '下載本機端已發布的完整排行榜（依總報酬率排序），包含策略方案、持倉設定、各年度報酬拆解等欄位。CSV 格式，Excel 與 Google 試算表皆可直接開啟。';
+    }
+});
+</script>
+
+</body>
+</html>

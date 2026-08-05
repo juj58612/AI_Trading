@@ -997,6 +997,64 @@ def get_all_top_trades():
     conn.close()
     return {"data": all_trades}
 
+SNAPSHOT_PATH = os.path.join(DIR_PATH, "published_snapshot.json")
+SNAPSHOT_CSV_PATH = os.path.join(DIR_PATH, "published_leaderboard.csv")
+
+def _build_leaderboard_csv(experiments: list) -> str:
+    """跟前端 exportAnalysisToCSV() 完全同一套欄位格式，只是改在後端組一次，
+    直接產生一份真正的試算表檔案，正式站不用另外靠 JS 從 JSON 現組 CSV。"""
+    header = "排名,回測開始日期,回測結束日期,策略方案,持股檔數,持倉天數,累積總報酬率(%),年化報酬率CAGR(%),最大回撤MDD(%),勝率(%),獲利因子,總交易次數,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n"
+    lines = ["﻿" + header]
+    for idx, row in enumerate(experiments):
+        lines.append(
+            f"{idx + 1},\"{row.get('start_date', '2021-01-01')}\",\"{row.get('end_date', '2026-08-01')}\","
+            f"\"方案 {row.get('exit_strategy', '')}\",{row.get('max_positions', 0)},{row.get('max_hold_days', 0)},"
+            f"{row.get('total_return', 0):.2f},{row.get('cagr', 0):.2f},{row.get('mdd', 0):.2f},"
+            f"{row.get('win_rate', 0):.1f},{row.get('profit_factor', 0):.2f},{row.get('total_trades', 0)},"
+            f"{row.get('return_2021', 0):.2f},{row.get('return_2022', 0):.2f},{row.get('return_2023', 0):.2f},"
+            f"{row.get('return_2024', 0):.2f},{row.get('return_2025', 0):.2f},{row.get('return_2026', 0):.2f}\n"
+        )
+    return "".join(lines)
+
+@app.post("/api/backtest/publish_snapshot")
+async def publish_snapshot():
+    """
+    把本機跑完的排行榜結果（不含完整交易資料庫、不含逐筆交易明細）打包成一份精簡的
+    靜態快照，寫到專案目錄下的 published_snapshot.json + published_leaderboard.csv。
+    使用者手動 git commit + push 之後，Render 正式站（沒有永久硬碟、跑不了長時間回測）
+    就能讀這些靜態檔案來顯示排行榜，而不必仰賴正式站自己那個每次重啟就會被清空的資料庫。
+    刻意只發布排行榜的統計結果，不含每一筆交易的詳細紀錄，檔案才不會又多又肥大。
+    """
+    status_data = await get_db_status()
+    experiments_data = get_experiments()
+    attribution_data = get_attribution()
+    experiments = experiments_data.get("data", [])
+
+    snapshot = {
+        "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": status_data,
+        "experiments": experiments,
+        "attribution": attribution_data,
+    }
+
+    with open(SNAPSHOT_PATH, 'w', encoding='utf-8') as f:
+        json.dump(snapshot, f, ensure_ascii=False)
+
+    csv_content = _build_leaderboard_csv(experiments)
+    with open(SNAPSHOT_CSV_PATH, 'w', encoding='utf-8') as f:
+        f.write(csv_content)
+
+    json_size_kb = os.path.getsize(SNAPSHOT_PATH) / 1024
+    csv_size_kb = os.path.getsize(SNAPSHOT_CSV_PATH) / 1024
+    return {
+        "status": "success",
+        "message": f"已產生快照（{len(experiments)} 筆排行榜結果，不含交易明細）：published_snapshot.json（{json_size_kb:.0f} KB）+ published_leaderboard.csv（{csv_size_kb:.0f} KB），請自行 git commit + push 才會真正發布到正式站",
+        "json_size_kb": round(json_size_kb, 1),
+        "csv_size_kb": round(csv_size_kb, 1),
+        "experiments_count": len(experiments),
+        "generated_at": snapshot["generated_at"],
+    }
+
 # Mega Grid Search background task definitions
 mega_grid_status = {
     "running": False,

@@ -143,10 +143,19 @@
             const tbody = document.getElementById('lbFullBody');
             const timestampEl = document.getElementById('lbFullTimestampInfo');
             try {
-                const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                const rows = Array.isArray(data.data) ? data.data : [];
+                // 正式站沒有永久硬碟，改讀本機發布的靜態快照（見 backtest.html「📤 發布快照到正式站」）
+                let rows;
+                if (IS_LOCAL) {
+                    const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    rows = Array.isArray(data.data) ? data.data : [];
+                } else {
+                    const res = await fetch('published_snapshot.json');
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const snap = await res.json();
+                    rows = Array.isArray(snap.experiments) ? snap.experiments : [];
+                }
 
                 if (rows.length === 0) {
                     timestampEl.textContent = '尚無任何回測紀錄';
