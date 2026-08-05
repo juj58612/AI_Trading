@@ -231,6 +231,12 @@ def get_stock_data(ticker: str):
         hist = fetch_yfinance_history(ticker)
         if hist.empty:
             raise ValueError(f"無法抓取 {ticker} 的股價資料")
+        # 資料源常常會多一列「今天/昨天」的佔位資料，成交量有了但收盤價還沒回填完成
+        # (NaN)。NaN 沒辦法被 JSON 序列化，會讓這支 API 直接 500 壞掉（同一個 bug 也發生
+        # 在 run_scan/process_ticker，那邊已經修過，這裡是同一個根因的第二個發生點）。
+        hist = hist[hist['Close'].notna()]
+        if hist.empty:
+            raise ValueError(f"無法抓取 {ticker} 的股價資料")
 
         latest_close = round(hist['Close'].iloc[-1], 2)
         ma5 = round(hist['Close'].tail(5).mean(), 2) if len(hist) >= 5 else latest_close
