@@ -32,7 +32,13 @@ const AI_STOCKS_CONFIG = [
     { ticker: "3533", name: "3533 嘉澤", price: 1500 }, { ticker: "2359", name: "2359 所羅門", price: 150 },
     { ticker: "6414", name: "6414 樺漢", price: 300 }, { ticker: "2395", name: "2395 研華", price: 350 },
     { ticker: "6139", name: "6139 亞翔", price: 220 }, { ticker: "5443", name: "5443 均豪", price: 130 },
-    { ticker: "2303", name: "2303 聯電", price: 55 }, { ticker: "6230", name: "6230 尼得科超眾", price: 150 }
+    { ticker: "2303", name: "2303 聯電", price: 55 }, { ticker: "6230", name: "6230 尼得科超眾", price: 150 },
+    // 2026-08-05 新增：矽光子/CPO 光通訊供應鏈補強（price 為粗略參考價，首次掃描後會被即時價覆蓋）
+    { ticker: "3081", name: "3081 聯亞", price: 1965 }, { ticker: "3105", name: "3105 穩懋", price: 541 },
+    { ticker: "2455", name: "2455 全新", price: 180 }, { ticker: "3163", name: "3163 波若威", price: 400 },
+    { ticker: "3363", name: "3363 上詮", price: 600 }, { ticker: "6442", name: "6442 光聖", price: 500 },
+    { ticker: "3380", name: "3380 明泰", price: 90 }, { ticker: "6830", name: "6830 汎銓", price: 700 },
+    { ticker: "3587", name: "3587 閎康", price: 300 }, { ticker: "3289", name: "3289 宜特", price: 150 }
 ];
 
 const stockPool = AI_STOCKS_CONFIG.map(s => ({

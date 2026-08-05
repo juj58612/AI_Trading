@@ -69,6 +69,9 @@ def init_db():
             c.execute("ALTER TABLE experiments ADD COLUMN is_out_of_sample BOOLEAN DEFAULT 0")
         if "cagr" not in cols:
             c.execute("ALTER TABLE experiments ADD COLUMN cagr REAL DEFAULT 0")
+        if "pool_size" not in cols:
+            # 舊資料都是在股票池擴充到 70 檔之前跑的，回填為當時的 60 檔
+            c.execute("ALTER TABLE experiments ADD COLUMN pool_size INTEGER DEFAULT 60")
         for yr in ["2021", "2022", "2023", "2024", "2025", "2026"]:
             col_name = f"return_{yr}"
             if col_name not in cols:
@@ -174,9 +177,21 @@ STOCK_NAMES = {
     "5443": "均豪",
     "2303": "聯電",
     "6230": "尼得科超眾",
+    "3081": "聯亞",
+    "3105": "穩懋",
+    "2455": "全新",
+    "3163": "波若威",
+    "3363": "上詮",
+    "6442": "光聖",
+    "3380": "明泰",
+    "6830": "汎銓",
+    "3587": "閎康",
+    "3289": "宜特",
 }
 
-TICKERS = ["2330", "2317", "2382", "3231", "6669", "2376", "2356", "2324", "3706", "2357", "2353", "3017", "3324", "2421", "3653", "3338", "8996", "3013", "6117", "3693", "8210", "2059", "2308", "6282", "2345", "2368", "3044", "2313", "3037", "8046", "3189", "2383", "6274", "6213", "3661", "3443", "3035", "6643", "3529", "6531", "2454", "3034", "8299", "5269", "4966", "3711", "2449", "3131", "3583", "6187", "6515", "2360", "3533", "2359", "6414", "2395", "6139", "5443", "2303", "6230"]
+TICKERS = ["2330", "2317", "2382", "3231", "6669", "2376", "2356", "2324", "3706", "2357", "2353", "3017", "3324", "2421", "3653", "3338", "8996", "3013", "6117", "3693", "8210", "2059", "2308", "6282", "2345", "2368", "3044", "2313", "3037", "8046", "3189", "2383", "6274", "6213", "3661", "3443", "3035", "6643", "3529", "6531", "2454", "3034", "8299", "5269", "4966", "3711", "2449", "3131", "3583", "6187", "6515", "2360", "3533", "2359", "6414", "2395", "6139", "5443", "2303", "6230",
+           # 2026-08-05 新增：矽光子/CPO 光通訊供應鏈補強
+           "3081", "3105", "2455", "3163", "3363", "6442", "3380", "6830", "3587", "3289"]
 
 def fetch_taiex_history(start="2022-01-01"):
     try:
@@ -252,7 +267,9 @@ def fetch_macro_3in1_series(start_date, end_date):
         print(f"⚠️ 三合一巨觀風控資料抓取失敗，本次回測不套用風控 (fail-open): {e}")
     return result
 
-OTC_TICKERS = {"3131", "3324", "3529", "3693", "4966", "5443", "6187", "6274", "6643", "8299"}
+OTC_TICKERS = {"3131", "3324", "3529", "3693", "4966", "5443", "6187", "6274", "6643", "8299",
+               # 2026-08-05 新增矽光子/CPO 標的中，實測確認為上櫃者
+               "3081", "3105", "3163", "3363", "3587", "3289"}
 
 def get_tw_ticker(t):
     return f"{t}.TWO" if t in OTC_TICKERS else f"{t}.TW"
@@ -302,7 +319,8 @@ async def download_data(request: Request):
     payload = await request.json()
     start_date = payload.get("start_date", "2025-01-01")
     end_date = payload.get("end_date", "2026-12-31")
-    
+    force = payload.get("force", False)
+
     # Load existing DB to support incremental download (斷點續傳)
     db = {"prices": {}, "chips": {}}
     if os.path.exists(DB_PATH):
@@ -311,41 +329,68 @@ async def download_data(request: Request):
                 db = json.load(f)
         except:
             pass
-            
+
+    # 一天最多完整同步一次：籌碼資料是前一天的盤後資料，同一天內不管重點幾次「同步」，
+    # 當天不會再有新資料可抓，直接略過整批網路請求，不用每次都花時間逐檔重新確認
+    today_str = datetime.date.today().isoformat()
+    if not force and db.get("last_full_sync_date") == today_str:
+        return {
+            "message": f"今天（{today_str}）已經完整同步過一次，資料已是最新的前一天盤後資料，不需要再重新抓取",
+            "skipped": True
+        }
+
     try:
         # 1. Bulk Download Yahoo Finance (Adjusted Close)
-        # We always refresh prices because Yahoo is fast and rarely blocks
+        # 斷點續傳：只要每一檔都已經有資料涵蓋到接近 end_date，就只補抓「尚未涵蓋的尾端」，
+        # 不用每次都把 5 年多的完整歷史全部重抓一遍。只有全新股票（完全沒有快取）才會整段全抓。
         yf_tickers = [get_tw_ticker(t) for t in TICKERS]
-        data = yf.download(yf_tickers, start=start_date, end=end_date, group_by='ticker', auto_adjust=True, progress=False)
-        
-        for i, t in enumerate(TICKERS):
-            yf_t = yf_tickers[i]
-            if len(TICKERS) > 1:
-                hist = data[yf_t].dropna()
-            else:
-                hist = data.dropna()
-                
-            if not hist.empty:
-                if t not in db["prices"]:
-                    db["prices"][t] = []
-                
-                # Merge logic
-                existing_data = {row["date"]: row for row in db["prices"][t]}
-                for date, row in hist.iterrows():
-                    d_str = date.strftime('%Y-%m-%d')
-                    existing_data[d_str] = {
-                        "date": d_str,
-                        "open": float(row['Open']),
-                        "high": float(row['High']),
-                        "low": float(row['Low']),
-                        "close": float(row['Close']),
-                        "volume": int(row['Volume'])
-                    }
-                db["prices"][t] = [existing_data[k] for k in sorted(existing_data.keys())]
-        
-        # Save after Yahoo fetch
-        with open(DB_PATH, 'w', encoding='utf-8') as f:
-            json.dump(db, f, ensure_ascii=False)
+
+        tickers_missing_data = [t for t in TICKERS if not db["prices"].get(t)]
+        existing_last_dates = [
+            db["prices"][t][-1]["date"] for t in TICKERS
+            if db["prices"].get(t) and db["prices"][t][-1]["date"] < end_date
+        ]
+
+        if tickers_missing_data:
+            # 有股票完全沒有快取（例如新加入的股票），只能整段全抓才安全
+            fetch_start = start_date
+        elif existing_last_dates:
+            # 全部股票都已有資料，只需要補抓「最早落後的那檔」之後的區間即可
+            fetch_start = min(existing_last_dates)
+        else:
+            fetch_start = None  # 全部都已經涵蓋到 end_date，價格資料不用重抓
+
+        if fetch_start and fetch_start <= end_date:
+            data = yf.download(yf_tickers, start=fetch_start, end=end_date, group_by='ticker', auto_adjust=True, progress=False)
+
+            for i, t in enumerate(TICKERS):
+                yf_t = yf_tickers[i]
+                if len(TICKERS) > 1:
+                    hist = data[yf_t].dropna()
+                else:
+                    hist = data.dropna()
+
+                if not hist.empty:
+                    if t not in db["prices"]:
+                        db["prices"][t] = []
+
+                    # Merge logic
+                    existing_data = {row["date"]: row for row in db["prices"][t]}
+                    for date, row in hist.iterrows():
+                        d_str = date.strftime('%Y-%m-%d')
+                        existing_data[d_str] = {
+                            "date": d_str,
+                            "open": float(row['Open']),
+                            "high": float(row['High']),
+                            "low": float(row['Low']),
+                            "close": float(row['Close']),
+                            "volume": int(row['Volume'])
+                        }
+                    db["prices"][t] = [existing_data[k] for k in sorted(existing_data.keys())]
+
+            # Save after Yahoo fetch
+            with open(DB_PATH, 'w', encoding='utf-8') as f:
+                json.dump(db, f, ensure_ascii=False)
             
         # 2. Download FinMind Chips incrementally
         for i, t in enumerate(TICKERS):
@@ -401,7 +446,12 @@ async def download_data(request: Request):
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
+
+    # 標記今天已經完整跑過一次同步，同一天內再次點擊會直接略過（見函式開頭的每日上限檢查）
+    db["last_full_sync_date"] = today_str
+    with open(DB_PATH, 'w', encoding='utf-8') as f:
+        json.dump(db, f, ensure_ascii=False)
+
     return {"message": "Data downloaded successfully"}
 
 class BacktestRequest(BaseModel):
@@ -769,9 +819,9 @@ async def run_backtest(req: BacktestRequest):
         conn = sqlite3.connect(SQLITE_PATH)
         c = conn.cursor()
         c.execute('''
-            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
+            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, pool_size, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, len(TICKERS), yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
         
         experiment_id = c.lastrowid
         
@@ -965,22 +1015,31 @@ class MegaGridRequest(BaseModel):
     hold_days: List[int]
     strategies: List[str]
 
-async def run_mega_grid_task(req: MegaGridRequest):
+def get_existing_combos(req: MegaGridRequest) -> set:
+    """回傳資料庫中已經跑過、且共用條件（資金/手續費/日期區間/股票池大小）完全相同的 (策略, 持倉, 天數) 組合集合。
+    股票池大小也要比對，否則股票池擴充後重跑會被誤判成「已測試過」而略過，導致新股票永遠沒被納入計算。"""
+    if not os.path.exists(SQLITE_PATH):
+        return set()
+    conn = sqlite3.connect(SQLITE_PATH)
+    c = conn.cursor()
+    c.execute('''
+        SELECT exit_strategy, max_positions, max_hold_days FROM experiments
+        WHERE capital = ? AND fee_rate = ? AND start_date = ? AND end_date = ? AND is_out_of_sample = 0 AND pool_size = ?
+    ''', (req.capital, req.fee_rate, req.start_date, req.end_date, len(TICKERS)))
+    rows = c.fetchall()
+    conn.close()
+    return {(strategy, pos, hd) for strategy, pos, hd in rows}
+
+async def run_mega_grid_task(req: MegaGridRequest, combos: list, skipped_count: int = 0):
     global mega_grid_status
     mega_grid_status["running"] = True
     mega_grid_status["current"] = 0
     mega_grid_status["errors"] = []
-    
-    # Calculate combinations
-    combos = []
-    for s in req.strategies:
-        for p in req.positions:
-            for hd in req.hold_days:
-                combos.append((s, p, hd))
-                
+
     mega_grid_status["total"] = len(combos)
-    mega_grid_status["message"] = f"開始運算 {len(combos)} 組組合..."
-    
+    skip_note = f"（另有 {skipped_count} 組條件相同的組合已有資料，自動略過）" if skipped_count > 0 else ""
+    mega_grid_status["message"] = f"開始運算 {len(combos)} 組組合...{skip_note}"
+
     for idx, (strategy, pos, hd) in enumerate(combos):
         sub_req = BacktestRequest(
             capital=req.capital,
@@ -1001,16 +1060,38 @@ async def run_mega_grid_task(req: MegaGridRequest):
         mega_grid_status["current"] = idx + 1
         
     mega_grid_status["running"] = False
-    mega_grid_status["message"] = f"大數據網格運算完成！共成功跑完 {mega_grid_status['current']} 組組合。"
+    skip_suffix = f"（另有 {skipped_count} 組條件相同的組合已有資料，自動略過）" if skipped_count > 0 else ""
+    mega_grid_status["message"] = f"大數據網格運算完成！共成功跑完 {mega_grid_status['current']} 組組合。{skip_suffix}"
 
 @app.post("/api/backtest/mega_grid")
 async def start_mega_grid(req: MegaGridRequest, background_tasks: BackgroundTasks):
     global mega_grid_status
     if mega_grid_status["running"]:
         raise HTTPException(status_code=400, detail="已有大數據運算正在進行中")
-        
-    background_tasks.add_task(run_mega_grid_task, req)
-    return {"status": "started", "message": "已在背景啟動巨量大數據網格搜索"}
+
+    # 計算本次請求的完整組合，並比對資料庫裡條件完全相同（資金/手續費/日期區間）
+    # 且已經跑過的組合，跳過重複測試——除非使用者確實新增了條件（新的持倉數/方案/天數）
+    all_combos = []
+    for s in req.strategies:
+        for p in req.positions:
+            for hd in req.hold_days:
+                all_combos.append((s, p, hd))
+
+    existing = get_existing_combos(req)
+    new_combos = [c for c in all_combos if c not in existing]
+    skipped_count = len(all_combos) - len(new_combos)
+
+    if not new_combos:
+        return {
+            "status": "already_up_to_date",
+            "message": f"✅ 這 {len(all_combos)} 組條件（資金/手續費/日期區間/持倉檔數/方案/持倉天數）都已經測試過且結果都在排行榜裡，資料庫已是最新，無需重新執行！"
+        }
+
+    background_tasks.add_task(run_mega_grid_task, req, new_combos, skipped_count)
+    started_msg = "已在背景啟動巨量大數據網格搜索"
+    if skipped_count > 0:
+        started_msg += f"（{skipped_count} 組條件相同的組合已有資料自動略過，只新增測試 {len(new_combos)} 組）"
+    return {"status": "started", "message": started_msg}
 
 @app.get("/api/backtest/mega_grid/status")
 async def get_mega_grid_status():

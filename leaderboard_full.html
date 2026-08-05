@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綜合策略排行榜 (Strategy Leaderboard)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .backtest-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .leaderboard-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .leaderboard-header {
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .leaderboard-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+        table.lb-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.lb-table th {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+        table.lb-table th:first-child, table.lb-table th:nth-child(2) { text-align: left; }
+        table.lb-table th[data-tip] {
+            cursor: help;
+            position: relative;
+        }
+        table.lb-table th[data-tip]:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 8px;
+            background: #fff9db;
+            color: #1a1a1a;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.15);
+            font-size: 0.78rem;
+            font-weight: normal;
+            white-space: normal;
+            width: max-content;
+            max-width: 260px;
+            text-align: left;
+            line-height: 1.5;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 100;
+            pointer-events: none;
+        }
+        table.lb-table th:last-child[data-tip]:hover::after {
+            left: auto;
+            right: 0;
+            transform: none;
+        }
+        table.lb-table th:nth-child(2)[data-tip]:hover::after {
+            left: 0;
+            transform: none;
+        }
+        table.lb-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-main);
+        }
+        table.lb-table td:first-child, table.lb-table td:nth-child(2) { text-align: left; }
+        tr.best-row {
+            background: rgba(251, 191, 36, 0.1) !important;
+        }
+        tr.best-row td {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .btn-nav { background: #21262d; border: 1px solid #30363d; color: #c9d1d9 !important; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; margin-right: 10px; transition: all 0.2s; display: inline-block; }
+        .btn-nav:hover { background: #30363d; border-color: #8b949e; color: #ffffff !important; }
+    </style>
+</head>
+<body>
+    <div class="backtest-container">
+        <div class="nav-links">
+            <a href="backtest.html" class="btn-nav" style="background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #3b82f6 !important;">← 返回回測實驗室</a>
+        </div>
+
+        <h1 style="color: #fff; margin-bottom: 5px;">🏆 綜合策略排行榜 (Strategy Leaderboard)</h1>
+        <p style="color: var(--text-sub); margin-bottom: 20px;">對應實戰下單執行中心的 3:3:4 分批進場｜3:4:3 分批出場機制。此頁面顯示資料庫內全部回測紀錄，依總報酬率由高到低排序。</p>
+
+        <div class="leaderboard-panel">
+            <div class="leaderboard-header">
+                <div class="leaderboard-title" id="lbFullTitle">🏆 全部排行榜名單</div>
+                <div style="font-size: 0.8rem; color: var(--text-sub); margin-top: 6px;" id="lbFullTimestampInfo">載入中...</div>
+            </div>
+            <table class="lb-table" id="lbFullTable">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th data-tip="這組回測用的「出場邏輯」方案（A/B/C/D）。四種方案的進場規則相同（籌碼多頭排列選股），差異只在賣出的判斷邏輯">策略組合 (出場法)</th>
+                        <th data-tip="這組回測使用的資金、持倉檔數上限、持倉天數上限、日期區間與股票池大小等設定">回測條件參數</th>
+                        <th data-tip="這段回測期間總共完成的買進+賣出配對次數">交易次數</th>
+                        <th data-tip="賺錢的交易筆數，占總交易次數的比例">勝率</th>
+                        <th data-tip="獲利因子 = 總獲利金額 ÷ 總虧損金額。大於 1 代表整體是賺錢的，數字越高代表賺的比虧的多越多倍">獲利因子</th>
+                        <th data-tip="最大回撤（Max Drawdown）：資金從最高點回落到最低點的最大跌幅百分比，數字越小代表這個策略波動風險越低">MDD (最大虧損)</th>
+                        <th data-tip="從回測開始到結束，總資金成長的百分比（未年化）">總報酬率</th>
+                    </tr>
+                </thead>
+                <tbody id="lbFullBody">
+                    <tr id="lbFullEmptyRow">
+                        <td colspan="8" style="text-align: center; color: var(--text-sub);">載入中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const IS_LOCAL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" || window.location.protocol === "file:");
+        const BACKTEST_API_URL = IS_LOCAL ? "http://127.0.0.1:58889" : window.location.origin;
+
+        async function loadFullLeaderboard() {
+            const tbody = document.getElementById('lbFullBody');
+            const timestampEl = document.getElementById('lbFullTimestampInfo');
+            try {
+                const res = await fetch(`${BACKTEST_API_URL}/api/analysis/experiments`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const rows = Array.isArray(data.data) ? data.data : [];
+
+                if (rows.length === 0) {
+                    timestampEl.textContent = '尚無任何回測紀錄';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--text-sub);">尚無任何回測紀錄</td></tr>';
+                    return;
+                }
+
+                const timestamps = rows.map(r => r.timestamp).filter(Boolean).sort();
+                const earliest = timestamps[0];
+                const latest = timestamps[timestamps.length - 1];
+                timestampEl.textContent = earliest === latest
+                    ? `🕒 資料執行於 ${latest}（共 ${rows.length} 筆）`
+                    : `🕒 資料執行區間 ${earliest} ~ ${latest}（共 ${rows.length} 筆）`;
+
+                const sorted = [...rows].sort((a, b) => (b.total_return ?? 0) - (a.total_return ?? 0));
+
+                tbody.innerHTML = '';
+                sorted.forEach((exp, i) => {
+                    const capStr = (exp.capital / 10000).toFixed(0) + "萬";
+                    const holdStr = exp.max_hold_days === 999 ? "無限制" : exp.max_hold_days + "天";
+                    const oosTag = exp.is_out_of_sample ? ' <span style="color:#f59e0b;">[OOS]</span>' : '';
+                    const poolStr = exp.pool_size ? ` | 股票池:${exp.pool_size}檔` : '';
+                    const isBest = i === 0 && sorted.length > 1;
+                    const winColor = exp.win_rate > 50 ? '#ef4444' : '#22c55e';
+                    const retColor = exp.total_return > 0 ? '#ef4444' : (exp.total_return < 0 ? '#22c55e' : '#fff');
+
+                    const tr = document.createElement('tr');
+                    if (isBest) tr.className = 'best-row';
+                    tr.innerHTML = `
+                        <td>#${i + 1} ${isBest ? '👑' : ''}</td>
+                        <td>方案 ${exp.exit_strategy}</td>
+                        <td style="font-size: 0.9em; line-height: 1.4;">
+                            ${exp.start_date} ~ ${exp.end_date}${oosTag}
+                            ${exp.timestamp ? `<br><span style="color:#6b7280; font-size:0.85em;">執行於 ${exp.timestamp}</span>` : ''}
+                            <br><span style="color:#9ca3af; font-size:0.85em;">資金:${capStr} | 持倉:${exp.max_positions}檔 | 期限:${holdStr}${poolStr}</span>
+                        </td>
+                        <td>${exp.total_trades ?? '-'}</td>
+                        <td style="color: ${winColor}">${exp.win_rate ?? 0}%</td>
+                        <td>${exp.profit_factor ?? 0}</td>
+                        <td>${exp.mdd ?? 0}%</td>
+                        <td style="color: ${retColor}">${exp.total_return ?? 0}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+                timestampEl.textContent = '';
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#f87171;">無法連線至回測引擎，讀取排行榜失敗：${e.message}</td></tr>`;
+            }
+        }
+
+        loadFullLeaderboard();
+    </script>
+</body>
+</html>
