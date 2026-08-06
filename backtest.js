@@ -399,7 +399,40 @@ window.exportCSV = async function(index) {
         alert("找不到該筆紀錄");
         return;
     }
-    
+
+    // 剛跑完的單次回測，記憶體裡本來就有完整交易明細（含進場籌碼積分/動能/ATR 這些
+    // 只有跑當下才算得出來的欄位），直接用；DB 裡撈出來的舊紀錄沒有這幾欄（從來沒有寫進
+    // 資料庫過），改成即時查 /api/analysis/trades/{id}，永遠抓當下資料庫最新的內容
+    let trades;
+    let fullDetail = true;
+
+    if (record.trades_detail && record.trades_detail.length > 0) {
+        trades = record.trades_detail;
+    } else if (record.id) {
+        if (!IS_LOCAL) {
+            alert('這筆是資料庫裡的既有紀錄，個股交易明細只能在管理者電腦端使用。可以到「數據總匯」頁面的「2. 自訂條件匯出」查看這筆的完整明細。');
+            return;
+        }
+        try {
+            const res = await fetch(`${BACKTEST_API_URL}/api/analysis/trades/${record.id}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            trades = data.data || [];
+            fullDetail = false;
+        } catch (e) {
+            alert('查詢交易明細失敗：' + e.message);
+            return;
+        }
+    } else {
+        alert('找不到這筆的交易明細，請重新整理排行榜後再試一次');
+        return;
+    }
+
+    if (!trades || trades.length === 0) {
+        alert('這筆結果沒有交易紀錄可以匯出');
+        return;
+    }
+
     let csv = "\uFEFF"; // BOM for excel
     csv += "【回測績效總結報告】\n";
     csv += `總報酬率(%),${record.return}%\n`;
@@ -407,15 +440,22 @@ window.exportCSV = async function(index) {
     csv += `最大虧損MDD(%),${record.mdd}%\n`;
     csv += `獲利因子,${record.pf}\n`;
     csv += `總交易次數,${record.trades}\n\n`;
-    
+
     // Part 2: Detailed Trade Logs
-    csv += "【大數據決策節點明細】\n";
-    csv += "股票代號,股票名稱,買入日期,買入價,進場籌碼積分,進場動能(%),進場ATR,賣出日期,賣出價,賣出原因,持有天數,損益(NTD),損益率(%),最大潛在獲利MFE(%),最大潛在虧損MAE(%),出場防線價位\n";
-    
-    record.trades_detail.forEach(t => {
-        csv += `${t.ticker},${t.name},${t.buy_date},${t.buy_price},${t.buy_score},${t.buy_momentum},${t.buy_atr},${t.sell_date},${t.sell_price},${t.reason},${t.hold_days},${t.pnl},${t.pnl_pct},${t.mfe},${t.mae},${t.trailing_stop_at_exit}\n`;
-    });
-    
+    csv += "【個股買賣交易明細】\n";
+    if (fullDetail) {
+        csv += "股票代號,股票名稱,買入日期,買入價,進場籌碼積分,進場動能(%),進場ATR,賣出日期,賣出價,賣出原因,持有天數,損益(NTD),損益率(%),最大潛在獲利MFE(%),最大潛在虧損MAE(%),出場防線價位\n";
+        trades.forEach(t => {
+            csv += `${t.ticker},${t.name},${t.buy_date},${t.buy_price},${t.buy_score},${t.buy_momentum},${t.buy_atr},${t.sell_date},${t.sell_price},${t.reason},${t.hold_days},${t.pnl},${t.pnl_pct},${t.mfe},${t.mae},${t.trailing_stop_at_exit}\n`;
+        });
+    } else {
+        // 資料庫裡沒有存進場籌碼積分/動能/ATR/出場防線價位這幾欄，不放注定空白的欄位
+        csv += "股票代號,股票名稱,買入日期,買入價,賣出日期,賣出價,賣出原因,持有天數,損益(NTD),損益率(%),最大潛在獲利MFE(%),最大潛在虧損MAE(%)\n";
+        trades.forEach(t => {
+            csv += `${t.ticker},${t.name},${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.reason},${t.hold_days},${t.pnl},${t.pnl_pct},${t.mfe},${t.mae}\n`;
+        });
+    }
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -472,7 +512,7 @@ window.loadTradeDetailTable = async function() {
     try {
         const trades = await fetchTradeDetailData();
         if (!trades || trades.length === 0) {
-            body.innerHTML = `<tr><td colspan="12" style="color:var(--text-sub); padding:20px;">目前尚無詳細個股交易明細數據${IS_LOCAL ? '，請先在上方「4. 大數據回測」點擊「啟動巨量大數據排列組合回測」' : '（正式站目前只發布排行榜總表，個股明細僅限本機查看，或請在本機發布快照後補上）'}</td></tr>`;
+            body.innerHTML = `<tr><td colspan="12" style="color:var(--text-sub); padding:20px;">目前尚無詳細個股交易明細數據${IS_LOCAL ? '，請先在上方「4. 大數據回測」點擊「啟動巨量大數據排列組合回測」' : '（此功能只能在管理者電腦端使用，正式站只發布排行榜總表）'}</td></tr>`;
             if (status) status.textContent = '';
             return;
         }
@@ -712,6 +752,7 @@ async function fetchLeaderboardFromDB() {
                     const oosTag = exp.is_out_of_sample ? ' <span style="color:#f59e0b;">[OOS]</span>' : '';
                     const poolStr = exp.pool_size ? ` | 股票池:${exp.pool_size}檔` : '';
                     return {
+                        id: exp.id,
                         strategy: `方案 ${exp.exit_strategy}`,
                         paramsHtml: `${exp.start_date} ~ ${exp.end_date}${oosTag}<br><span style="color:#9ca3af; font-size:0.85em;">資金:${capStr} | 持倉:${exp.max_positions}檔 | 期限:${holdStr}${poolStr}</span>`,
                         trades: exp.total_trades,
