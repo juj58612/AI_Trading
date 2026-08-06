@@ -424,8 +424,37 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- 6. 個股買賣交易明細 -->
+        <div class="leaderboard-panel" id="tradeDetail" style="margin-top: 25px;">
+            <div class="leaderboard-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px;">
+                <div>
+                    <div class="leaderboard-title">6. 個股買賣交易明細 (Trade-Level Detail)</div>
+                    <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 4px;">頂尖策略組合的逐筆個股買賣明細（哪一檔股票、進出場日期、價格、持倉天數、損益），跟上面第 5 項排行榜只顯示「哪個方案 A~D 賺多少」不一樣，這裡看得到實際買賣了哪些股票。</div>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button id="btnLoadTradeDetail" onclick="loadTradeDetailTable()" class="btn-search" style="background-color: #3b82f6; width: auto; padding: 8px 16px; font-size: 0.9rem;">📋 載入/更新明細表格</button>
+                    <button onclick="exportTradeHistoryToCSV()" class="btn-search" style="background-color: #059669; width: auto; padding: 8px 16px; font-size: 0.9rem;">📑 匯出成 CSV</button>
+                    <span id="tradeDetailStatus" style="color: var(--text-sub); font-size: 0.85rem; align-self: center;"></span>
+                </div>
+            </div>
+            <div style="max-height: 500px; overflow: auto;">
+                <table class="data-table" id="tradeDetailTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th><th>策略方案</th><th>股票代碼</th><th>股票名稱</th>
+                            <th>買進日期</th><th>買進價</th><th>賣出日期</th><th>賣出價</th>
+                            <th>持倉天數</th><th>平倉原因</th><th>損益率</th><th>損益金額(TWD)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradeDetailBody">
+                        <tr><td colspan="12" style="color:var(--text-sub); padding:20px;">尚未載入，請點擊上方「載入/更新明細表格」</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    
+
     <script src="backtest.js"></script>
 </body>
 </html>

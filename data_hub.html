@@ -69,10 +69,10 @@
         <button id="btnExportLeaderboard" onclick="exportAnalysisToCSV()" class="btn-action" style="background: #10b981;">📊 匯出排行榜總表 (CSV)</button>
     </div>
 
-    <div class="report-section" id="tradeDetailSection">
-        <h2>2. 匯出回測個股買賣交易明細表 (CSV)</h2>
-        <p>匯出頂尖策略組合的逐筆個股買賣交易明細（進出場日期、價格、持倉天數、損益等）。CSV 格式，Excel 與 Google 試算表皆可直接開啟。</p>
-        <button onclick="exportTradeHistoryToCSV()" class="btn-action" style="background: #059669;">📑 匯出回測個股買賣交易明細表 (CSV)</button>
+    <div class="report-section">
+        <h2>2. 個股買賣交易明細表</h2>
+        <p>這屬於回測「操作」性質的功能，已移至 <a href="backtest.html" style="color:#3b82f6;">🧪 獨立回測實驗室</a> 頁面內的「6. 個股買賣交易明細」區塊，可以直接在該頁載入表格或匯出 CSV。</p>
+        <a href="backtest.html#tradeDetail" class="btn-action" style="background: #3b82f6;">🧪 前往回測實驗室查看</a>
     </div>
 </div>
 
@@ -195,7 +195,7 @@ function exportAnalysisToCSV() {
         return;
     }
 
-    let csvContent = "\uFEFF排名,回測開始日期,回測結束日期,策略方案,持股檔數,持倉天數,累積總報酬率(%),年化報酬率CAGR(%),最大回撤MDD(%),勝率(%),獲利因子,總交易次數,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n";
+    let csvContent = "﻿排名,回測開始日期,回測結束日期,策略方案,持股檔數,持倉天數,累積總報酬率(%),年化報酬率CAGR(%),最大回撤MDD(%),勝率(%),獲利因子,總交易次數,2021報酬(%),2022空頭(%),2023主升(%),2024報酬(%),2025報酬(%),2026迄今(%)\n";
 
     currentAnalysisList.forEach((row, idx) => {
         const rank = idx + 1;
@@ -232,52 +232,6 @@ function exportAnalysisToCSV() {
     document.body.removeChild(link);
 }
 
-async function exportTradeHistoryToCSV() {
-    try {
-        let trades = [];
-        if (IS_LOCAL) {
-            let res = await fetch(`${BACKTEST_API_URL}/api/analysis/trades_all_top`);
-            if (!res.ok && BACKTEST_API_URL.includes('58889')) {
-                res = await fetch(`http://127.0.0.1:58888/api/analysis/trades_all_top`);
-            }
-            if (res && res.ok) {
-                const data = await res.json();
-                trades = data.data || [];
-            }
-        } else {
-            const snap = await getSnapshot();
-            if (snap) trades = snap.trades_all_top || [];
-        }
-
-        if (!trades || trades.length === 0) {
-            alert("目前尚無詳細個股交易明細數據，請先於【回測實驗室】點擊「啟動巨量大數據排列組合回測」！");
-            return;
-        }
-
-        let csvContent = "\uFEFF排名,策略方案,股票代碼,股票名稱,買進進場日期,進場價格(元),賣出平倉日期,賣出價格(元),持倉天數(天),交易股數(股),平倉原因,交易損益(%),獲利金額(TWD)\n";
-
-        trades.forEach(t => {
-            const sharesNum = t.shares ? (t.shares > 100 ? t.shares : t.shares * 1000) : 1000;
-            const sharesStr = sharesNum.toLocaleString();
-            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
-            csvContent += `${t.rank || 1},${t.strategy_label || '方案 D'},${t.ticker},"${t.name}",${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.hold_days || '-'},${sharesStr},"${t.reason || '平倉'}",${(t.pnl_pct || 0).toFixed(2)}%,${Math.round(pnlVal)}\n`;
-        });
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        const today = new Date().toISOString().split('T')[0];
-        link.setAttribute("href", url);
-        link.setAttribute("download", `AI_Backtest_Individual_Trades_Detail_${today}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch(e) {
-        console.error("匯出交易明細失敗", e);
-        alert("匯出交易明細失敗，請重試");
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // 正式站排行榜總表直接下載現成的 CSV 檔案（見 exportAnalysisToCSV），不需要
     // 先把 published_snapshot.json 抓下來現組，本機才需要抓即時資料來現組 CSV
@@ -285,15 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDataFreshness();
 
     if (!IS_LOCAL) {
-        // 正式站只發布排行榜結果，沒有逐筆交易明細（避免檔案又多又肥大），
-        // 交易明細匯出功能僅限本機端使用
-        const tradeSection = document.getElementById('tradeDetailSection');
-        if (tradeSection) {
-            tradeSection.innerHTML = `
-                <h2>2. 匯出回測個股買賣交易明細表 (CSV)</h2>
-                <p>此功能僅限本機端使用。正式站只發布排行榜的統計結果，不含每一筆交易的詳細紀錄，避免發布的檔案又多又肥大。</p>
-            `;
-        }
         // 排行榜總表在正式站直接提供已經產生好的試算表檔案，不用另外靠 JS 現組
         const desc = document.getElementById('leaderboardExportDesc');
         if (desc) desc.textContent = '下載本機端已發布的完整排行榜（依總報酬率排序），包含策略方案、持倉設定、各年度報酬拆解等欄位。CSV 格式，Excel 與 Google 試算表皆可直接開啟。';

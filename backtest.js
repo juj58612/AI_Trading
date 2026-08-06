@@ -425,6 +425,105 @@ window.exportCSV = async function(index) {
     URL.revokeObjectURL(url);
 };
 
+// ==========================================
+// 6. 個股買賣交易明細（跨頂尖策略組合彙整，跟上面單筆 exportCSV 匯出「一筆實驗」不同）
+// ==========================================
+let cachedSnapshot = null;
+async function getSnapshot() {
+    if (cachedSnapshot) return cachedSnapshot;
+    try {
+        const res = await fetch('published_snapshot.json');
+        if (res.ok) cachedSnapshot = await res.json();
+    } catch (e) {}
+    return cachedSnapshot;
+}
+
+// 匯出 CSV 跟表格顯示都共用這個函式，避免兩處各寫一份、之後改一邊忘了改另一邊
+async function fetchTradeDetailData() {
+    let trades = [];
+    if (IS_LOCAL) {
+        let res = await fetch(`${BACKTEST_API_URL}/api/analysis/trades_all_top`);
+        if (!res.ok && BACKTEST_API_URL.includes('58889')) {
+            res = await fetch(`http://127.0.0.1:58888/api/analysis/trades_all_top`);
+        }
+        if (res && res.ok) {
+            const data = await res.json();
+            trades = data.data || [];
+        }
+    } else {
+        const snap = await getSnapshot();
+        if (snap) trades = snap.trades_all_top || [];
+    }
+    return trades;
+}
+
+window.loadTradeDetailTable = async function() {
+    const btn = document.getElementById('btnLoadTradeDetail');
+    const status = document.getElementById('tradeDetailStatus');
+    const body = document.getElementById('tradeDetailBody');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 載入中...'; }
+
+    try {
+        const trades = await fetchTradeDetailData();
+        if (!trades || trades.length === 0) {
+            body.innerHTML = `<tr><td colspan="12" style="color:var(--text-sub); padding:20px;">目前尚無詳細個股交易明細數據${IS_LOCAL ? '，請先在上方「4. 大數據回測」點擊「啟動巨量大數據排列組合回測」' : '（正式站目前只發布排行榜總表，個股明細僅限本機查看，或請在本機發布快照後補上）'}</td></tr>`;
+            if (status) status.textContent = '';
+            return;
+        }
+
+        body.innerHTML = trades.map(t => {
+            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
+            const pnlColor = pnlVal >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+            return `<tr>
+                <td>${t.rank || 1}</td><td>${t.strategy_label || '方案 D'}</td><td>${t.ticker}</td><td>${t.name}</td>
+                <td>${t.buy_date}</td><td>${t.buy_price}</td><td>${t.sell_date}</td><td>${t.sell_price}</td>
+                <td>${t.hold_days || '-'}</td><td>${t.reason || '平倉'}</td>
+                <td style="color:${pnlColor}">${(t.pnl_pct || 0).toFixed(2)}%</td>
+                <td style="color:${pnlColor}">${Math.round(pnlVal).toLocaleString()}</td>
+            </tr>`;
+        }).join('');
+        if (status) status.textContent = `共 ${trades.length} 筆交易明細`;
+    } catch (e) {
+        console.error("載入交易明細表格失敗", e);
+        body.innerHTML = `<tr><td colspan="12" style="color:var(--accent-red); padding:20px;">載入失敗，請重試</td></tr>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '📋 載入/更新明細表格'; }
+    }
+};
+
+window.exportTradeHistoryToCSV = async function() {
+    try {
+        const trades = await fetchTradeDetailData();
+
+        if (!trades || trades.length === 0) {
+            alert("目前尚無詳細個股交易明細數據，請先在上方「4. 大數據回測」點擊「啟動巨量大數據排列組合回測」！");
+            return;
+        }
+
+        let csvContent = "﻿排名,策略方案,股票代碼,股票名稱,買進進場日期,進場價格(元),賣出平倉日期,賣出價格(元),持倉天數(天),交易股數(股),平倉原因,交易損益(%),獲利金額(TWD)\n";
+
+        trades.forEach(t => {
+            const sharesNum = t.shares ? (t.shares > 100 ? t.shares : t.shares * 1000) : 1000;
+            const sharesStr = sharesNum.toLocaleString();
+            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
+            csvContent += `${t.rank || 1},${t.strategy_label || '方案 D'},${t.ticker},"${t.name}",${t.buy_date},${t.buy_price},${t.sell_date},${t.sell_price},${t.hold_days || '-'},${sharesStr},"${t.reason || '平倉'}",${(t.pnl_pct || 0).toFixed(2)}%,${Math.round(pnlVal)}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute("href", url);
+        link.setAttribute("download", `AI_Backtest_Individual_Trades_Detail_${today}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch(e) {
+        console.error("匯出交易明細失敗", e);
+        alert("匯出交易明細失敗，請重試");
+    }
+};
+
 window.deleteRecord = function(index) {
     if (confirm("確定要刪除這筆回測紀錄嗎？")) {
         leaderboardData.splice(index, 1);
