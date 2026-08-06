@@ -68,25 +68,31 @@ async function checkDbStatus() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // 大數據回測運算刻意只在本機執行，不在雲端跑：非本機開啟時，把 1~4 區塊的操作
-    // 介面換成提示訊息，只留第 5 區塊排行榜顯示本地端最後一次發布的結果。
+    // 大數據回測運算刻意只在本機執行，不在雲端跑。但畫面本身（1~4 區塊的版面、
+    // 預設值）不管本機或雲端都要長得一模一樣，只差在雲端這邊操作元件是鎖住的，
+    // 而不是整塊消失——避免使用者看到兩種完全不同的畫面而搞混。
     if (!IS_LOCAL) {
         ['opSection1', 'opSection2', 'opSection3', 'opSection4'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
+            if (!el) return;
+            el.querySelectorAll('input, select, button').forEach(field => { field.disabled = true; });
+            el.style.opacity = '0.55';
+            el.style.pointerEvents = 'none';
         });
-        // 清空是破壞性操作，非本機時也一併隱藏，避免正式站訪客誤觸清掉資料
+        // 清空/發布快照是本機才有意義的破壞性/資料庫操作，雲端上一樣顯示、但鎖住不能按
         const clearBtn = document.getElementById('btnClearLeaderboard');
-        if (clearBtn) clearBtn.style.display = 'none';
-        // 發布快照只有本機（有真實資料庫）才有意義，正式站上按了也沒東西可發布
+        if (clearBtn) clearBtn.disabled = true;
         const publishBtn = document.getElementById('btnPublishSnapshot');
-        if (publishBtn) publishBtn.style.display = 'none';
+        if (publishBtn) publishBtn.disabled = true;
         const notice = document.getElementById('remoteOnlyNotice');
         if (notice) notice.style.display = 'block';
-        return;
+        // 「檢查本地資料庫狀態」需要連到本機回測引擎，雲端上必定連不到，
+        // 不特地去嘗試連線、直接顯示鎖定說明即可
+        if (dbDateStatus) dbDateStatus.innerHTML = '<span style="color:#94a3b8;">🔒 僅本機執行時可查詢</span>';
+    } else {
+        checkDbStatus();
     }
 
-    checkDbStatus();
     initDateDropdowns('Start', '2021-01-01');
     const todayStr = new Date().toISOString().slice(0, 10); // 用「今天」當預設結束日，避免寫死日期久了變成過去式，導致同步時誤判成「還沒抓到最新資料」而每次重抓
     initDateDropdowns('End', todayStr);
