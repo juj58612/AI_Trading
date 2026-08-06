@@ -222,25 +222,25 @@ function renderSellSignalBanner(data) {
 
     if (triggered.length === 0 && errored.length === 0) {
         el.innerHTML = results.length > 0
-            ? `<div class="alert-box alert-safe" style="margin-bottom:20px; text-align:left;">✅ 依模型驗證邏輯（逐日重播 evaluate_exit），目前無持股觸發賣出訊號。</div>`
+            ? `<div class="status-banner status-banner-safe" style="margin-bottom:20px; font-size:1.05rem;">✅ 依模型驗證邏輯（逐日重播 evaluate_exit），目前無持股觸發賣出訊號。</div>`
             : '';
         return;
     }
 
     let html = '';
     if (triggered.length > 0) {
-        html += `<div class="alert-box alert-danger" style="margin-bottom: ${errored.length ? '10px' : '20px'}; padding: 15px; text-align:left;">
-            <div style="font-weight:bold; font-size:1.05rem; margin-bottom:8px;">🚨 ${triggered.length} 檔持股觸發賣出訊號（依回測驗證模型逐日重播判斷，非首頁舊有的簡易警示框）</div>
+        html += `<div class="status-banner status-banner-danger" style="margin-bottom: ${errored.length ? '10px' : '20px'}; padding: 16px 18px;">
+            <div style="font-size:1.1rem; margin-bottom:8px;">🚨 ${triggered.length} 檔持股觸發賣出訊號（依回測驗證模型逐日重播判斷，非卡片上舊有的簡易警示框）</div>
             <div style="display:flex; flex-direction:column; gap:6px; font-weight:normal; font-size:0.9rem;">
                 ${triggered.map(r => `
-                    <a href="#card-${r.ticker}" style="color:inherit; text-decoration:underline; cursor:pointer;">
+                    <a href="#card-${r.ticker}" style="text-decoration:underline; cursor:pointer;">
                         ${r.name}：${r.sell_reason}（觸發於 ${r.sell_trigger_date}，價格 ${r.sell_trigger_price}；方案${r.exit_strategy}）
                     </a>`).join('')}
             </div>
         </div>`;
     }
     if (errored.length > 0) {
-        html += `<div class="alert-box alert-warning" style="margin-bottom:20px; padding:12px; font-size:0.85rem; font-weight:normal; text-align:left;">
+        html += `<div class="status-banner status-banner-warning" style="margin-bottom:20px; padding:12px 16px; font-size:0.85rem; font-weight:normal;">
             ⚠️ ${errored.length} 檔因資料不足暫無法計算模型訊號：${errored.map(r => `${r.name || r.ticker}（${r.error}）`).join('、')}
         </div>`;
     }
@@ -408,13 +408,13 @@ function renderActive(data) {
         const sig = sellSignals[item.ticker];
         if (sig) {
             if (sig.error) {
-                modelSignalHtml = `<div class="alert-box" style="background:#334155; font-size:0.85rem;">🧭 模型驗證訊號：${sig.error}</div>`;
+                modelSignalHtml = `<div class="status-banner status-banner-neutral status-banner-sm">🧭 模型驗證訊號：${sig.error}</div>`;
             } else if (sig.status) {
-                modelSignalHtml = `<div class="alert-box alert-safe" style="font-size:0.85rem;">🧭 模型驗證訊號（方案${sig.exit_strategy}）：${sig.status}</div>`;
+                modelSignalHtml = `<div class="status-banner status-banner-neutral status-banner-sm">🧭 模型驗證訊號（方案${sig.exit_strategy}）：${sig.status}</div>`;
             } else if (sig.sell_signal) {
-                modelSignalHtml = `<div class="alert-box alert-danger">🧭 依模型驗證邏輯，已觸發「${sig.sell_reason}」（${sig.sell_trigger_date}，方案${sig.exit_strategy}）— 現價 ${sig.latest_price}／移動停損 ${sig.current_trailing_stop}</div>`;
+                modelSignalHtml = `<div class="status-banner status-banner-danger status-banner-sm">🧭 依模型驗證邏輯，已觸發「${sig.sell_reason}」（${sig.sell_trigger_date}，方案${sig.exit_strategy}）— 現價 ${sig.latest_price}／移動停損 ${sig.current_trailing_stop}</div>`;
             } else {
-                modelSignalHtml = `<div class="alert-box alert-safe">🧭 依模型驗證邏輯（方案${sig.exit_strategy}）：尚未觸發出場，目前移動停損 ${sig.current_trailing_stop}（現價 ${sig.latest_price}）</div>`;
+                modelSignalHtml = `<div class="status-banner status-banner-safe status-banner-sm">🧭 依模型驗證邏輯（方案${sig.exit_strategy}）：尚未觸發出場，目前移動停損 ${sig.current_trailing_stop}（現價 ${sig.latest_price}）</div>`;
             }
             if (sig.notes && sig.notes.length) {
                 modelSignalHtml += `<div style="font-size:0.75rem; color:var(--text-sub); margin: -6px 0 8px;">ℹ️ ${sig.notes.join('；')}</div>`;
