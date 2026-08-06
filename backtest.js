@@ -454,6 +454,12 @@ async function fetchTradeDetailData() {
         const snap = await getSnapshot();
         if (snap) trades = snap.trades_all_top || [];
     }
+    // 表格顯示跟 CSV 匯出統一依損益金額(TWD)由高到低排序，方便一眼看出最賺/最賠的交易
+    trades.sort((a, b) => {
+        const pnlA = a.pnl !== undefined ? a.pnl : (a.pnl_amount !== undefined ? a.pnl_amount : 0);
+        const pnlB = b.pnl !== undefined ? b.pnl : (b.pnl_amount !== undefined ? b.pnl_amount : 0);
+        return pnlB - pnlA;
+    });
     return trades;
 }
 
