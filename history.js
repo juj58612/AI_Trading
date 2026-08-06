@@ -342,7 +342,16 @@ function renderActive(data) {
         const pnlFormatted = new Intl.NumberFormat('zh-TW').format(Math.abs(pnlAmount));
         const pnlColor = pnlAmount >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
         const pnlSymbol = pnlAmount >= 0 ? '▲ +' : '▼ -';
-        
+
+        // 持倉天數：從 buy_date 起算，跟 /api/portfolio/sell_check 逐日重播出場邏輯是同一個起算點，
+        // 讓使用者在卡片標題就能看到「模型是從哪一天開始算」，沒有 buy_date 就直接標示未記錄。
+        let holdInfoHtml = `<span style="margin-left:10px; font-size:0.85rem; color:var(--accent-yellow); font-weight:normal;">⚠️ 未記錄建倉日</span>`;
+        if (item.buy_date) {
+            const buyDateObj = new Date(item.buy_date);
+            const daysHeld = Math.max(0, Math.floor((Date.now() - buyDateObj.getTime()) / 86400000));
+            holdInfoHtml = `<span style="margin-left:10px; font-size:0.85rem; color:var(--text-sub); font-weight:normal;">📅 建倉日：${item.buy_date}（已持有 ${daysHeld} 天）</span>`;
+        }
+
         let alertHtml = "";
         let defenseHtml = "";
         
@@ -508,7 +517,7 @@ function renderActive(data) {
                 <div class="stock-header" style="margin-top: 0; border-bottom: none; padding-bottom: 0;">
                     <span style="font-size: 1.15rem; font-weight: bold; color: var(--text-main);">${item.name}</span>
                     <div style="margin-top: 8px;">
-                        <span class="signal-tag ${item.sigClass}">● ${item.signal || typeLabel} (${typeLabel})</span>
+                        <span class="signal-tag ${item.sigClass}">● ${item.signal || typeLabel} (${typeLabel})</span>${holdInfoHtml}
                     </div>
                 </div>
             </div>
