@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略討論 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .doc-container {
+            max-width: 960px;
+            margin: 30px auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+            line-height: 1.8;
+        }
+        .doc-header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-purple);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .doc-header h1 {
+            font-size: 2rem;
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+        .doc-header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+        .meta-box {
+            background: #0f172a;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+        .doc-section {
+            margin-bottom: 40px;
+        }
+        .doc-section h2 {
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        .doc-section h3 {
+            font-size: 1.2rem;
+            color: #c084fc;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .quote-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #fef08a;
+        }
+        .warn-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            color: #fca5a5;
+            font-size: 0.92rem;
+        }
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.92rem;
+        }
+        .doc-table th, .doc-table td {
+            padding: 10px 14px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        .doc-table th {
+            background: #1e293b;
+            color: var(--accent-blue);
+            font-weight: bold;
+        }
+        .btn-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn-top:hover { transform: translateY(-3px); }
+        .status-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+        .status-open { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .status-done { background: rgba(16,185,129,0.2); color: #4ade80; }
+    </style>
+</head>
+<body>
+
+<div class="doc-container">
+    <div class="doc-header" style="position: relative;">
+        <a href="index.html" style="position: absolute; right: 0; top: 0; background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-purple);">🏠 返回主控制台</a>
+        <h1>🧭 策略討論</h1>
+        <p>大數據回測背後的機制分析、方法論警示與尚未解決的問題</p>
+    </div>
+
+    <div class="meta-box">
+        📌 <strong>這是一份持續更新的活文件</strong>，記錄「目前資料庫」得出的分析結論——資料庫更新（新實驗、新股票、程式邏輯調整）後，具體數字都可能跟著改變。原始資料見專案根目錄 <code>STRATEGY_ANALYSIS_NOTES.md</code>（與本頁同步維護）。每次要修改模型架構前，都應該先回顧這裡的結論。
+    </div>
+
+    <!-- 一 -->
+    <div class="doc-section">
+        <h2>一、核心發現：沒有「哪個方案最強」，只有「哪個方案在什麼條件下最強」</h2>
+        <p><strong>現象</strong>：排行榜總報酬率 #1 是方案A（3檔/360天，+333.51%），但前30名裡方案D佔20筆、B佔9筆、A只有這1筆、C是0筆——乍看矛盾，其實是兩個維度的交互作用。</p>
+
+        <h3>1. 504組整體平均，方案B其實才是最強（不是A也不是D）</h3>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>504組平均報酬率</th><th>平均MDD</th><th>平均勝率</th><th>平均獲利因子</th><th>單組最高</th></tr></thead>
+            <tbody>
+                <tr><td><strong>B</strong></td><td><strong>158.8%</strong></td><td>47.4%</td><td>43.4%</td><td>1.42</td><td>285.8%</td></tr>
+                <tr><td>D</td><td>150.0%</td><td>57.1%</td><td>43.8%</td><td>1.41</td><td>327.1%</td></tr>
+                <tr><td>A</td><td>144.9%</td><td>55.7%</td><td>40.5%</td><td>1.37</td><td><strong>333.5%（#1）</strong></td></tr>
+                <tr><td>C</td><td>108.3%</td><td>56.5%</td><td>43.9%</td><td>1.27</td><td>183.1%</td></tr>
+            </tbody>
+        </table>
+        <p>A的「單組最高」全場第一，但「504組平均」是四個裡第二差的——A不是全面性強，只在特定角落極端突出。</p>
+
+        <h3>2. 持倉天數效果：A和D的曲線形狀完全相反</h3>
+        <table class="doc-table">
+            <thead><tr><th>持倉天數</th><th>方案A平均報酬</th><th>方案D平均報酬</th></tr></thead>
+            <tbody>
+                <tr><td>15天</td><td>136.0%</td><td>203.2%</td></tr>
+                <tr><td>20天</td><td>163.7%</td><td><strong>211.9%（D最高峰）</strong></td></tr>
+                <tr><td>30天</td><td>161.1%</td><td>183.7%</td></tr>
+                <tr><td>60天</td><td>183.2%</td><td>168.4%</td></tr>
+                <tr><td>360天</td><td><strong>193.3%（A最高峰）</strong></td><td>171.5%（打平）</td></tr>
+            </tbody>
+        </table>
+        <p>D在15~20天見頂後逐漸下滑打平；A則是天數越長越好，在360天（近乎無上限）才達到自己的最高峰。#1（3檔/360天）剛好命中A唯一的甜蜜點，排行榜其他名次的天數則多落在D的主場。</p>
+
+        <h3>3. 持倉檔數效果：D靠分散、A怕過度分散</h3>
+        <table class="doc-table">
+            <thead><tr><th>持倉檔數</th><th>方案A</th><th>方案B</th><th>方案D</th></tr></thead>
+            <tbody>
+                <tr><td>1檔</td><td>93.3%</td><td>82.4%</td><td>48.4%</td></tr>
+                <tr><td>5檔</td><td><strong>170.5%（A高峰）</strong></td><td><strong>186.7%（B高峰）</strong></td><td>183.6%</td></tr>
+                <tr><td>10檔</td><td>144.1%（衰退）</td><td>163.8%</td><td><strong>228.8%（D高峰，近5倍於1檔）</strong></td></tr>
+            </tbody>
+        </table>
+
+        <h3>4. 出場原因經濟性——機制層面的「why」</h3>
+        <p>跨全部504組聚合統計每一筆交易的出場原因，比單一實驗更可靠：</p>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>主要出場原因</th><th>佔比</th><th>平均損益</th></tr></thead>
+            <tbody>
+                <tr><td>A</td><td>積分轉負（需連2天確認）</td><td>66%</td><td>-2.79%（可控小賠）</td></tr>
+                <tr><td>A</td><td>15%停利</td><td>18%</td><td>+17.13%</td></tr>
+                <tr><td>B</td><td>土洋雙賣（單日觸發，最敏感）</td><td>63%</td><td><strong>-1.24%（四方案最小虧損）</strong></td></tr>
+                <tr><td>B</td><td>15%停利</td><td>15%</td><td><strong>+17.33%（四方案最高）</strong></td></tr>
+                <tr><td>D</td><td>觸發停損（唯一出場機制）</td><td>81%</td><td>+0.53%（幾乎打平）</td></tr>
+                <tr><td>D</td><td>完全沒有15%停利（程式碼設計上停用）</td><td>0%</td><td>—</td></tr>
+                <tr><td>C</td><td>觸發停損</td><td>73%</td><td>-3.22%（四方案最大虧損）</td></tr>
+            </tbody>
+        </table>
+        <p><strong>結論</strong>：B贏在「快狠準」（單日觸發+仍保留15%停利，兩邊優點都占）；A贏在「嚴格篩選」（雙條件AND，很少提早出場，天數上限只是保險不是常態路徑）；D的「不設限讓獲利奔跑」設計理想沒有被吊燈停損機制兌現（平均每筆只賺0.53%），實際上是靠「檔數夠多、天數夠短」的大數法則在賺錢；C最弱，因為它繼承D的動態收縮機制但觸發門檻更寬鬆，防守機制本身變成最大漏財出口。</p>
+
+        <h3>5. 多空年份表現（防守 vs 進攻）</h3>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>2022空頭年</th><th>2023多頭年</th></tr></thead>
+            <tbody>
+                <tr><td>B</td><td><strong>-32.9%（防守最強）</strong></td><td>42.5%（進攻最弱）</td></tr>
+                <tr><td>D</td><td>-41.9%（防守最弱）</td><td><strong>77.9%（進攻最強）</strong></td></tr>
+                <tr><td>A</td><td>-40.6%</td><td>55.7%</td></tr>
+                <tr><td>C</td><td>-39.5%</td><td>87.9%（⚠️ C整體弱，此數字樣本可能不穩）</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 二 -->
+    <div class="doc-section">
+        <h2>二、條件式建議表（取代「單一最佳解」）</h2>
+        <table class="doc-table">
+            <thead><tr><th>你的狀況</th><th>建議方案</th></tr></thead>
+            <tbody>
+                <tr><td>短線快進快出（2-15天）</td><td>方案D</td></tr>
+                <tr><td>一般波段操作（20-60天）</td><td>方案B（其次D，D在15~20天有單點極值）</td></tr>
+                <tr><td>長線持有、不常盯盤</td><td>方案B（其次A，A僅在近乎無上限天數才突出）</td></tr>
+                <tr><td>預期空頭/高波動</td><td>方案B（防守最強）</td></tr>
+                <tr><td>預期強勢多頭</td><td>方案D（進攻最強）</td></tr>
+                <tr><td>重壓少數幾檔（1-3檔）</td><td>方案A或B</td></tr>
+                <tr><td>大分散布局（8-10檔）</td><td>方案D（優勢最明顯）</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 三 -->
+    <div class="doc-section">
+        <h2>三、方案E 實驗紀錄：兩次嘗試都失敗，但失敗得有意義</h2>
+        <p><strong>設計動機</strong>：與其只在A/B/C/D之間做條件式選擇，能不能設計一個真正更好的新方案？前提是必須通過驗證，不能只憑一次歷史回測就下定論。</p>
+
+        <h3>v1：土洋雙賣，但只在虧損時觸發</h3>
+        <p>借用B的單日觸發（平均虧損四方案最小），但加一個過濾：雙賣訊號出現時，若部位目前還在獲利，忽略訊號、續抱。<br>
+        <strong>結果（5檔/20天）</strong>：130.85%，遠低於同組合的 D(303.7%)／A(197.8%)／B(184.6%)／C(140.4%)。</p>
+
+        <h3>v2：獲利中不忽略，改成收緊停損</h3>
+        <p>發現v1第一次的診斷方法有誤（誤把「虧損分支平均更差」歸咎於機制缺陷，實際上是跟B的「全部觸發」混合平均比較，基準不同）。修正後改成獲利中收緊停損而非忽略。<br>
+        <strong>結果（5檔/20天）</strong>：106.78%，比v1更差。</p>
+
+        <h3>擴大測試（8組持倉檔數/天數組合）</h3>
+        <p>E在3~5檔幾乎每次墊底；在8~10檔躍升到第2名（僅次於D），但即使在最佳角落也還是輸D一大截（196 vs 278、207 vs 286）。</p>
+
+        <div class="warn-box">
+            <strong>誠實結論</strong>：原始假設（「B在獲利部位上被雙賣訊號提早洗出場，浪費了2023多頭年的上漲空間」）沒有被數據支持——B「不管賺賠、雙賣當天就砍」這條規則本身已經調得相當好。E目前在任何測試過的組合都沒有贏過現有最佳選項。沒有繼續手動猜測微調第三版，避免在同一份歷史資料上反覆調整湊出「看起來變好」的版本（過度配適陷阱）。程式碼與UI掛載點已保留（標示🧪實驗性），供未來系統化搜尋使用。
+        </div>
+    </div>
+
+    <!-- 四 -->
+    <div class="doc-section">
+        <h2>四、方法論警示（避免誤用以上結論）</h2>
+        <ul>
+            <li>以上全部是同一份歷史資料（2021-2026）的<strong>樣本內（in-sample）</strong>結果，尚未做訓練/測試集切分驗證，不能排除對這段特定歷史過度配適的風險。</li>
+            <li>C在2023年的87.9%可能是小樣本雜訊，不宜直接採信為「C進攻力最強」。</li>
+            <li>「持倉天數區間」有兩種算法會給出不同答案：逐一天數精算峰值 vs 區間分桶平均，兩者方法論不同，解讀時要注意用的是哪一種。</li>
+        </ul>
+    </div>
+
+    <!-- 五 -->
+    <div class="doc-section">
+        <h2>五、後續討論串 <span class="status-tag status-open">進行中</span></h2>
+        <ul>
+            <li><span class="status-tag status-open">未完成</span> <code>get_attribution()</code>（`backtest_engine.py`）要重寫成動態依方案交叉分析，不要再寫死比較D跟C，避免分析中心顯示的洞察跟這裡的深度分析對不上。</li>
+            <li><span class="status-tag status-open">已討論</span> Tier 3（逐日NAV／Sharpe/Sortino）：回測引擎其實已經在算逐日equity（用來算MDD），只是算完就丟掉沒存資料庫。不用額外花錢買資料（用的是本機已有的免費 yfinance 股價），改動是把已經在算的東西存下來+重跑504組。</li>
+            <li><span class="status-tag status-open">下一步</span> <strong>改用系統化參數搜尋，不要再手動猜</strong>：本系統已有 Optuna 貝氏最佳化基礎設施（AI 網格最佳化功能，內建 70/30 訓練/測試切分）。與其手動設計規則再回測，應該把出場邏輯的關鍵參數（ATR乘數、停利百分比、確認天數、觸發門檻）變成連續可調變數，交給 Optuna 在訓練集上搜尋，並在測試集驗證。</li>
+            <li><span class="status-tag status-open">新方向</span> <strong>選股因子模型</strong>：目前深度掃描選股只看「站上5MA + 外資投信買賣超」這個很陽春的單一籌碼因子。已確認範疇：<strong>先只用現有免費資料深化，不加基本面</strong>（本益比/EPS成長率這類因子通常要花錢買資料源，之後真的需要再另外評估）。方向是用現有回測結果 + 技術面（均線排列、ATR波動度、乖離率）+ 籌碼面（外資投信買賣超、FinMind免費額度內的融資融券）找出更細緻的客觀選股因子組合。尚未開始設計。</li>
+            <li><span class="status-tag status-open">待決定</span> <strong>首頁持股主動提醒</strong>：目前系統「檢查持股該不該買賣」的邏輯只存在下單規劃頁（order_planner.html），且只有真的點進那頁才會計算；首頁不會主動提醒。是否要在首頁加提示（例如「有N筆持倉觸發停損/停利，點此查看」）尚未決定。</li>
+        </ul>
+    </div>
+</div>
+
+<a href="#" class="btn-top">⬆️ 返回頁首</a>
+
+</body>
+</html>

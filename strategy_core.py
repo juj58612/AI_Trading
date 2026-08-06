@@ -227,5 +227,26 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         if today_chip.get('foreign', 0) < 0 and today_chip.get('trust', 0) < 0:
             sell_reason = "土洋雙賣"
             return sell_reason, p
-            
+
+    elif strategy == 'E': # 快穩雙軌（實驗性 v2）：借用方案B「土洋雙賣」單日觸發（實測平均
+        # 虧損是四方案中最小），但依「觸發當下部位是賺是賠」分兩種處理：
+        #   - 虧損中：比照B，立即出場（B這部分本來就沒問題）
+        #   - 獲利中：不直接出場，改成收緊移動停損到接近現價（比照C/D的動態收縮邏輯），
+        #     等於「先把獲利鎖住，但給它一點點空間繼續漲」，而不是像v1版本那樣完全忽略訊號、
+        #     結果讓部位一路撐到真的轉虧才出場，反而讓平均出場價更差（v1實測驗證過這樣更差，
+        #     平均每筆虧損從B的-3,206元惡化到-8,223元，因此改成這個「緊縮不忽略」的版本）
+        if today_chip.get('foreign', 0) < 0 and today_chip.get('trust', 0) < 0:
+            if unrealized_pnl_pct < 0:
+                sell_reason = "土洋雙賣"
+                return sell_reason, p
+            else:
+                atr_val = today_price['ATR']
+                atr_val = atr_val if not pd.isna(atr_val) else 0.0
+                base_price = yesterday_close if yesterday_close else close
+                tightened_stop = base_price - (1.0 * atr_val)
+                p['trailing_stop'] = max(p['trailing_stop'], tightened_stop)
+                if close < p['trailing_stop']:
+                    sell_reason = "雙賣後鎖利出場"
+                    return sell_reason, p
+
     return None, p

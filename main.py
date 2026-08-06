@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 import yfinance as yf
 from bs4 import BeautifulSoup
 import strategy_core
+import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import os
@@ -84,8 +85,8 @@ except Exception as e:
     print(f"⚠️ curl_cffi 不可用，改用預設連線: {e}")
     _yf_session = None
 
-def fetch_yfinance_history(ticker: str):
-    cache_key = ticker
+def fetch_yfinance_history(ticker: str, period: str = "1mo"):
+    cache_key = f"{ticker}_{period}"
     now = time.time()
 
     if cache_key in yf_cache:
@@ -102,7 +103,7 @@ def fetch_yfinance_history(ticker: str):
     hist = None
     for suffix in suffixes:
         stock = yf.Ticker(f"{ticker}{suffix}", session=_yf_session)
-        hist = stock.history(period="1mo")
+        hist = stock.history(period=period)
         if not hist.empty:
             break
 
@@ -113,8 +114,8 @@ def fetch_yfinance_history(ticker: str):
 
 chip_cache = {}
 
-def fetch_chip_data_from_finmind(ticker):
-    cache_key = ticker
+def fetch_chip_data_from_finmind(ticker, lookback_days=45):
+    cache_key = f"{ticker}_{lookback_days}"
     now = time.time()
     if cache_key in chip_cache:
         cached_data, timestamp = chip_cache[cache_key]
@@ -122,7 +123,7 @@ def fetch_chip_data_from_finmind(ticker):
             return cached_data["inst_list"], cached_data["margin_list"], cached_data["is_mock"]
 
     token = os.getenv("FINMIND_API_TOKEN", "")  # 必須由環境變數提供，不在原始碼中寫死金鑰
-    start_date = (datetime.now() - timedelta(days=45)).strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
     
     inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={ticker}&start_date={start_date}&token={token}"
     margin_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMarginPurchaseShortSale&data_id={ticker}&start_date={start_date}&token={token}"
@@ -156,8 +157,9 @@ def fetch_chip_data_from_finmind(ticker):
                 item = inst_dict[d]
                 item["total"] = item["foreign"] + item["trust"] + item["dealer"]
                 inst_list.append(item)
-            inst_list = inst_list[-30:]
-            
+            if lookback_days <= 45:
+                inst_list = inst_list[-30:]
+
         if margin_res.get("msg") == "success":
             for row in margin_res.get("data", []):
                 margin_list.append({
@@ -165,7 +167,8 @@ def fetch_chip_data_from_finmind(ticker):
                     "margin_bal": row.get("MarginPurchaseTodayBalance", 0),
                     "short_bal": row.get("ShortSaleTodayBalance", 0)
                 })
-            margin_list = margin_list[-30:]
+            if lookback_days <= 45:
+                margin_list = margin_list[-30:]
             
     except Exception as e:
         print("FinMind Error:", e)
@@ -612,6 +615,168 @@ async def save_portfolio(request: Request, user: str = Depends(authenticate)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def _simulate_holding_exit_signal(p: dict) -> dict:
+    """
+    針對單一持倉，從 buy_date 逐日重播 strategy_core.evaluate_exit()，算出「依回測驗證出的
+    出場邏輯」現在該不該賣。跟 backtest_engine.py 的逐日出場檢查迴圈共用同一套 evaluate_exit，
+    確保實戰持倉的賣出提醒跟回測驗證邏輯不再脫節（見 STRATEGY_ANALYSIS_NOTES.md）。
+    """
+    ticker = p.get('ticker')
+    name = p.get('name', ticker)
+    buy_date_str = p.get('buy_date')
+    buy_price = p.get('cost')
+    notes = []
+
+    if p.get('type') == 'short':
+        return {"ticker": ticker, "name": name, "error": "本功能目前僅支援多單(long)部位，空單暫不計算"}
+    if not buy_date_str or not buy_price:
+        return {"ticker": ticker, "name": name, "error": "缺少 buy_date 或 cost，無法回放模型判斷"}
+
+    exit_strategy = p.get('exit_strategy')
+    if not exit_strategy:
+        exit_strategy = 'D'
+        notes.append("此筆未指定出場方案(exit_strategy)，暫用方案D計算")
+
+    max_hold_days = p.get('max_hold_days')
+    if not max_hold_days:
+        max_hold_days = 999
+        notes.append("此筆未指定持倉天數上限，暫視為無限制，「時間到期」出場條件不會觸發")
+
+    try:
+        buy_date_ts = pd.Timestamp(buy_date_str)
+    except Exception:
+        return {"ticker": ticker, "name": name, "error": f"buy_date 格式無法解析: {buy_date_str}"}
+
+    today_ts = pd.Timestamp(datetime.now().strftime('%Y-%m-%d'))
+    lookback_days = max(400, (today_ts - buy_date_ts).days + 60)
+
+    hist = fetch_yfinance_history(ticker, period="2y")
+    hist = hist[hist['Close'].notna()] if not hist.empty else hist
+    if hist.empty:
+        return {"ticker": ticker, "name": name, "error": "無法取得股價歷史資料"}
+
+    price_df = pd.DataFrame({
+        "close": hist['Close'],
+        "high": hist['High'],
+        "low": hist['Low'],
+        "volume": hist['Volume'],
+    })
+    price_df.index = price_df.index.tz_localize(None).normalize()
+    price_df = price_df[~price_df.index.duplicated(keep='last')].sort_index()
+    price_df = strategy_core.calculate_indicators(price_df)
+
+    if buy_date_ts < price_df.index.min():
+        notes.append("股價歷史資料未涵蓋到買入日，起始防線計算可能不準確")
+
+    inst_list, margin_list, is_mock = fetch_chip_data_from_finmind(ticker, lookback_days=lookback_days)
+    if inst_list:
+        chip_df = pd.DataFrame(inst_list)
+        chip_df['date'] = pd.to_datetime(chip_df['date'])
+        chip_df.set_index('date', inplace=True)
+        chip_df = chip_df[~chip_df.index.duplicated(keep='last')].sort_index()
+    else:
+        chip_df = pd.DataFrame()
+        notes.append("無法取得籌碼資料，土洋雙賣/積分轉負等籌碼相關出場條件本次無法判斷")
+
+    trading_days = [d for d in price_df.index if d > buy_date_ts]
+    if not trading_days:
+        return {
+            "ticker": ticker, "name": name,
+            "exit_strategy": exit_strategy, "buy_date": buy_date_str, "buy_price": buy_price,
+            "sell_signal": False, "status": "才剛買進，尚無新交易日資料可比對",
+            "notes": notes
+        }
+
+    atr_at_buy = None
+    if buy_date_ts in price_df.index:
+        atr_at_buy = price_df.loc[buy_date_ts]['ATR']
+    if atr_at_buy is None or pd.isna(atr_at_buy):
+        prior = price_df[price_df.index <= buy_date_ts]
+        if not prior.empty and not pd.isna(prior.iloc[-1]['ATR']):
+            atr_at_buy = prior.iloc[-1]['ATR']
+        else:
+            atr_at_buy = 0.0
+
+    mult = p.get('atr_multiplier') or (2.2 if exit_strategy == 'D' else 3.0)
+    p_sim = {
+        "buy_date": buy_date_str,
+        "buy_price": buy_price,
+        "highest_price": buy_price,
+        "lowest_price": buy_price,
+        "trailing_stop": buy_price - (mult * atr_at_buy),
+        "atr_multiplier": mult,
+    }
+
+    first_trigger = None
+    last_date = None
+    for current_date in trading_days:
+        today_price = price_df.loc[current_date]
+        idx = price_df.index.get_loc(current_date)
+        yesterday_close = price_df.iloc[idx - 1]['close'] if idx > 0 else None
+        chip_row = chip_df.loc[current_date] if (not chip_df.empty and current_date in chip_df.index) else {}
+
+        sell_reason, p_sim = strategy_core.evaluate_exit(
+            p_sim, today_price, yesterday_close, chip_row, exit_strategy, max_hold_days, current_date
+        )
+        if sell_reason and first_trigger is None:
+            first_trigger = {
+                "date": current_date.strftime('%Y-%m-%d'),
+                "reason": sell_reason,
+                "price": round(float(today_price['close']), 2)
+            }
+        last_date = current_date
+
+    latest_close = float(price_df.loc[last_date]['close'])
+    return {
+        "ticker": ticker,
+        "name": name,
+        "exit_strategy": exit_strategy,
+        "max_hold_days": max_hold_days,
+        "buy_date": buy_date_str,
+        "buy_price": buy_price,
+        "latest_price": round(latest_close, 2),
+        "latest_data_date": last_date.strftime('%Y-%m-%d'),
+        "days_held": (last_date - buy_date_ts).days,
+        "current_trailing_stop": round(float(p_sim['trailing_stop']), 2),
+        "highest_price_since_buy": round(float(p_sim['highest_price']), 2),
+        "unrealized_pnl_pct": round((latest_close - buy_price) / buy_price * 100, 2),
+        "sell_signal": first_trigger is not None,
+        "sell_reason": first_trigger['reason'] if first_trigger else None,
+        "sell_trigger_date": first_trigger['date'] if first_trigger else None,
+        "sell_trigger_price": first_trigger['price'] if first_trigger else None,
+        "notes": notes
+    }
+
+@app.get("/api/portfolio/sell_check")
+def check_portfolio_sell_signals(user: str = Depends(authenticate)):
+    """
+    依「回測驗證出的出場邏輯」(strategy_core.evaluate_exit) 即時檢查目前所有持倉是否已觸發
+    賣出訊號。history.html 卡片上原本的紅色警示框是寫死的簡單規則(固定-8%停損/手動支撐價)，
+    跟這套逐日重播模型是兩回事，兩者會並存顯示供比對，不直接互相取代。
+    """
+    pfile = get_user_portfolio_file(user)
+    portfolio = []
+    if os.path.exists(pfile):
+        try:
+            with open(pfile, "r", encoding="utf-8") as f:
+                portfolio = json.load(f)
+        except Exception:
+            portfolio = []
+
+    results = []
+    for p in portfolio:
+        try:
+            results.append(_simulate_holding_exit_signal(p))
+        except Exception as e:
+            results.append({"ticker": p.get('ticker'), "name": p.get('name', p.get('ticker')), "error": f"計算失敗: {e}"})
+
+    triggered = [r for r in results if r.get('sell_signal')]
+    return {
+        "checked_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "triggered_count": len(triggered),
+        "results": results
+    }
+
 # 歷史交易庫房 API (多用戶隔離與全域備援)
 @app.get("/api/history")
 def get_history(user: str = Depends(authenticate)):
@@ -959,7 +1124,8 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                     "journal": "",
                     "buy_date": today_str,
                     "trailing_stop": trailing_stop,
-                    "atr_multiplier": mult
+                    "atr_multiplier": mult,
+                    "exit_strategy": "D"
                 }
                 portfolio.append(new_item)
             
@@ -1022,7 +1188,7 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",

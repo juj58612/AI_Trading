@@ -4,6 +4,7 @@ const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.locatio
 
 let myPortfolio = [];
 let myHistory = [];
+let sellSignals = {}; // ticker -> /api/portfolio/sell_check 結果，依模型驗證邏輯算出的訊號
 window.chartInstances = {};
 
 const discountRateInput = document.getElementById('discountRate');
@@ -47,7 +48,10 @@ async function loadData() {
         renderActive(myPortfolio);
         renderHistory(myHistory);
         renderStatsDashboard();
-        
+
+        // 依模型驗證邏輯 (evaluate_exit 逐日重播) 檢查賣出訊號，跟股價/籌碼同步一樣背景執行、不擋畫面
+        loadSellSignals();
+
         // Background sync latest prices & chips without blocking page display
         if (myPortfolio.length > 0) {
             Promise.all(myPortfolio.map(async (item) => {
@@ -193,6 +197,54 @@ function renderStatsDashboard() {
     if (elUnrealized) elUnrealized.innerHTML = formatMoney(unrealizedPnl);
     if (elRealized) elRealized.innerHTML = formatMoney(realizedPnl);
     if (elTotal) elTotal.innerHTML = formatMoney(totalPnl);
+}
+
+async function loadSellSignals() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/portfolio/sell_check`, { headers: { 'Authorization': getAuthHeader() } });
+        if (!res.ok) return;
+        const data = await res.json();
+        sellSignals = {};
+        (data.results || []).forEach(r => { if (r.ticker) sellSignals[r.ticker] = r; });
+        renderSellSignalBanner(data);
+        renderActive(myPortfolio); // 重繪讓每張卡片帶上模型驗證訊號區塊
+    } catch (e) {
+        console.warn('模型出場訊號檢查失敗:', e);
+    }
+}
+
+function renderSellSignalBanner(data) {
+    const el = document.getElementById('sellSignalBanner');
+    if (!el) return;
+    const results = data.results || [];
+    const triggered = results.filter(r => r.sell_signal);
+    const errored = results.filter(r => r.error);
+
+    if (triggered.length === 0 && errored.length === 0) {
+        el.innerHTML = results.length > 0
+            ? `<div class="alert-box alert-safe" style="margin-bottom:20px; text-align:left;">✅ 依模型驗證邏輯（逐日重播 evaluate_exit），目前無持股觸發賣出訊號。</div>`
+            : '';
+        return;
+    }
+
+    let html = '';
+    if (triggered.length > 0) {
+        html += `<div class="alert-box alert-danger" style="margin-bottom: ${errored.length ? '10px' : '20px'}; padding: 15px; text-align:left;">
+            <div style="font-weight:bold; font-size:1.05rem; margin-bottom:8px;">🚨 ${triggered.length} 檔持股觸發賣出訊號（依回測驗證模型逐日重播判斷，非首頁舊有的簡易警示框）</div>
+            <div style="display:flex; flex-direction:column; gap:6px; font-weight:normal; font-size:0.9rem;">
+                ${triggered.map(r => `
+                    <a href="#card-${r.ticker}" style="color:inherit; text-decoration:underline; cursor:pointer;">
+                        ${r.name}：${r.sell_reason}（觸發於 ${r.sell_trigger_date}，價格 ${r.sell_trigger_price}；方案${r.exit_strategy}）
+                    </a>`).join('')}
+            </div>
+        </div>`;
+    }
+    if (errored.length > 0) {
+        html += `<div class="alert-box alert-warning" style="margin-bottom:20px; padding:12px; font-size:0.85rem; font-weight:normal; text-align:left;">
+            ⚠️ ${errored.length} 檔因資料不足暫無法計算模型訊號：${errored.map(r => `${r.name || r.ticker}（${r.error}）`).join('、')}
+        </div>`;
+    }
+    el.innerHTML = html;
 }
 
 async function savePortfolioToStorage() {
@@ -352,6 +404,23 @@ function renderActive(data) {
             alertHtml += `<div class="alert-box alert-mock">⚠️ 籌碼資料獲取受限，目前為備用模擬數據</div>`;
         }
 
+        let modelSignalHtml = "";
+        const sig = sellSignals[item.ticker];
+        if (sig) {
+            if (sig.error) {
+                modelSignalHtml = `<div class="alert-box" style="background:#334155; font-size:0.85rem;">🧭 模型驗證訊號：${sig.error}</div>`;
+            } else if (sig.status) {
+                modelSignalHtml = `<div class="alert-box alert-safe" style="font-size:0.85rem;">🧭 模型驗證訊號（方案${sig.exit_strategy}）：${sig.status}</div>`;
+            } else if (sig.sell_signal) {
+                modelSignalHtml = `<div class="alert-box alert-danger">🧭 依模型驗證邏輯，已觸發「${sig.sell_reason}」（${sig.sell_trigger_date}，方案${sig.exit_strategy}）— 現價 ${sig.latest_price}／移動停損 ${sig.current_trailing_stop}</div>`;
+            } else {
+                modelSignalHtml = `<div class="alert-box alert-safe">🧭 依模型驗證邏輯（方案${sig.exit_strategy}）：尚未觸發出場，目前移動停損 ${sig.current_trailing_stop}（現價 ${sig.latest_price}）</div>`;
+            }
+            if (sig.notes && sig.notes.length) {
+                modelSignalHtml += `<div style="font-size:0.75rem; color:var(--text-sub); margin: -6px 0 8px;">ℹ️ ${sig.notes.join('；')}</div>`;
+            }
+        }
+
         let instTableRows = "";
         if (item.inst_data && item.inst_data.length > 0) {
             const revInst = [...item.inst_data].reverse();
@@ -432,6 +501,7 @@ function renderActive(data) {
         const headerBg = isShort ? 'linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)' : 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)';
         const pCard = document.createElement('div');
         pCard.className = 'stock-card';
+        pCard.id = `card-${item.ticker}`;
         pCard.innerHTML = `
             <div style="background: ${headerBg}; margin: -18px -18px 15px -18px; padding: 18px; border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--border-color); position: relative;">
                 <button class="btn-remove" onclick="removeFromPortfolio(${index})" style="top: 18px; right: 18px;">✕ 移除</button>
@@ -459,6 +529,7 @@ function renderActive(data) {
             </div>
             ${defenseHtml}
             ${alertHtml}
+            ${modelSignalHtml}
             ${journalSectionHtml}
             ${chartSectionHtml}
         `;
