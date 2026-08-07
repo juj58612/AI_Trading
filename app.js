@@ -100,9 +100,10 @@ function openAuthModal(isLogin = false) {
     const toggleText = document.getElementById('authToggleText');
     const btnToggle = document.getElementById('btnAuthToggle');
     const errorMsg = document.getElementById('authErrorMsg');
-    
+    const passwordInput = document.getElementById('authPassword');
+
     if (errorMsg) errorMsg.style.display = 'none';
-    
+
     if (isAuthModeLogin) {
         if (title) title.textContent = '🔒 VIP 用戶登入';
         if (subtitle) subtitle.textContent = '請輸入您開戶時自訂的帳號與密碼！';
@@ -110,6 +111,8 @@ function openAuthModal(isLogin = false) {
         if (btnSubmit) btnSubmit.textContent = '🔑 立即登入';
         if (toggleText) toggleText.textContent = '還沒有帳號？';
         if (btnToggle) btnToggle.textContent = '輸入邀請碼開戶註冊';
+        // 登入模式：提示瀏覽器「請幫我填入已儲存的密碼」
+        if (passwordInput) passwordInput.setAttribute('autocomplete', 'current-password');
     } else {
         if (title) title.textContent = '🔑 VIP 邀請碼開戶註冊';
         if (subtitle) subtitle.textContent = '輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！';
@@ -117,8 +120,10 @@ function openAuthModal(isLogin = false) {
         if (btnSubmit) btnSubmit.textContent = '✨ 立即註冊並開戶';
         if (toggleText) toggleText.textContent = '已有帳號？';
         if (btnToggle) btnToggle.textContent = '切換至登入';
+        // 註冊模式：提示瀏覽器「這是一組新密碼，送出成功後可以問要不要存起來」
+        if (passwordInput) passwordInput.setAttribute('autocomplete', 'new-password');
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -136,9 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    const btnSubmit = document.getElementById('btnAuthSubmit');
-    if (btnSubmit) {
-        btnSubmit.addEventListener('click', async () => {
+    const authForm = document.getElementById('authForm');
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const errorMsg = document.getElementById('authErrorMsg');
             if (errorMsg) errorMsg.style.display = 'none';
             

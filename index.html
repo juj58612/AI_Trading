@@ -139,23 +139,27 @@
         <p id="authSubtitle" style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">輸入管理者發放的專屬邀請碼，即可開立獨立帳戶！</p>
         
         <div id="authErrorMsg" style="display: none; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; text-align: center;"></div>
-        
-        <div id="inviteCodeContainer" class="input-box" style="margin-bottom: 12px;">
-            <label style="color: #cbd5e1; font-weight: bold;">🔑 專屬邀請碼 (Passcode)</label>
-            <input type="text" id="authInviteCode" placeholder="請輸入專屬邀請碼" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
-        </div>
-        
-        <div class="input-box" style="margin-bottom: 12px;">
-            <label style="color: #cbd5e1; font-weight: bold;">👤 自訂帳號名稱 (Username)</label>
-            <input type="text" id="authUsername" placeholder="至少包含 3 個字元" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
-        </div>
-        
-        <div class="input-box" style="margin-bottom: 20px;">
-            <label style="color: #cbd5e1; font-weight: bold;">🔒 自訂密碼 (Password)</label>
-            <input type="password" id="authPassword" placeholder="至少包含 4 個字元" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
-        </div>
-        
-        <button id="btnAuthSubmit" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">✨ 立即註冊並開戶</button>
+
+        <!-- 包成正規 <form>、加上 autocomplete 屬性，瀏覽器才認得出這是登入表單，
+             送出後才會跳出「要不要儲存密碼？」的提示 -->
+        <form id="authForm" autocomplete="on">
+            <div id="inviteCodeContainer" class="input-box" style="margin-bottom: 12px;">
+                <label style="color: #cbd5e1; font-weight: bold;">🔑 專屬邀請碼 (Passcode)</label>
+                <input type="text" id="authInviteCode" placeholder="請輸入專屬邀請碼" autocomplete="off" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+            </div>
+
+            <div class="input-box" style="margin-bottom: 12px;">
+                <label style="color: #cbd5e1; font-weight: bold;">👤 自訂帳號名稱 (Username)</label>
+                <input type="text" id="authUsername" placeholder="至少包含 3 個字元" autocomplete="username" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+            </div>
+
+            <div class="input-box" style="margin-bottom: 20px;">
+                <label style="color: #cbd5e1; font-weight: bold;">🔒 自訂密碼 (Password)</label>
+                <input type="password" id="authPassword" placeholder="至少包含 4 個字元" autocomplete="current-password" style="padding: 10px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 8px;">
+            </div>
+
+            <button id="btnAuthSubmit" type="submit" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">✨ 立即註冊並開戶</button>
+        </form>
         
         <div style="text-align: center; margin-top: 16px; font-size: 0.85rem;">
             <span id="authToggleText" style="color: #94a3b8;">已有帳號？</span>
