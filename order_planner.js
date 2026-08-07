@@ -107,7 +107,11 @@ async function loadPlannerData() {
                         stage: b.stage,
                         reason: '',
                         checked: prev ? prev.checked : true,
-                        userEdited: useEditedValues
+                        userEdited: useEditedValues,
+                        atr: b.atr,
+                        live_price: b.live_price,
+                        gap_amount: b.gap_amount,
+                        gap_atr_ratio: b.gap_atr_ratio
                     });
                 });
                 // Add sell orders
@@ -202,6 +206,22 @@ function renderWarnings(apiWarning) {
     }
 }
 
+// 跳空/ATR比警示：推薦價是掃描當下的收盤價，使用者實際下單通常是隔一個交易日，這中間如果
+// 開盤跳空，用推薦價去追價的風險就跟回測沒驗證過的價位差很多了。門檻依 ATR 倍數判斷：
+// 0.5倍以內算正常雜訊、0.5~1倍提醒留意、1倍以上明確不建議追價（除非有明確利多支撐）。
+function buildGapWarningHtml(o) {
+    if (typeof o.gap_atr_ratio !== 'number' || !isFinite(o.gap_atr_ratio)) return '';
+    const ratio = o.gap_atr_ratio;
+    const absRatio = Math.abs(ratio);
+    if (ratio <= 0 || absRatio < 0.5) return ''; // 持平、下跌、或跳空幅度在容許雜訊範圍內，不用特別警示
+
+    const gapText = `現價 ${o.live_price} 元，較推薦時 (${o.price} 元) 高了 ${o.gap_amount} 元（${ratio.toFixed(2)} 倍 ATR）`;
+    if (absRatio >= 1.0) {
+        return `<div class="status-banner status-banner-danger status-banner-sm">🚨 跳空追高警示：${gapText}，已超過 1 倍 ATR，追價風險高，建議等拉回或放棄，除非有明確籌碼/消息面支撐</div>`;
+    }
+    return `<div class="status-banner status-banner-warning status-banner-sm">⚠️ 跳空提醒：${gapText}，追價前留意成本已偏高</div>`;
+}
+
 // Render Lists
 function renderOrders() {
     // 0. Render Urgent Sell Signals (觸發停損/時間到期) — 獨立醒目區塊，跟一般加碼建議分開
@@ -259,6 +279,7 @@ function renderOrders() {
             const costTwd = o.price * o.shares * 1000;
             const costWan = (costTwd / 10000).toFixed(2);
             const actionText = `<span style="color:var(--accent-green)">買進做多 (${o.stage})</span>`;
+            const gapWarningHtml = buildGapWarningHtml(o);
 
             const div = document.createElement('div');
             div.className = 'order-card buy-card';
@@ -272,6 +293,7 @@ function renderOrders() {
                         動作: ${actionText} | 推薦量: <b>${(o.shares * 1000).toLocaleString()} 股</b> | 預定價: <b>${o.price} 元</b><br>
                         預估交割金額: <b>${costTwd.toLocaleString('zh-TW')} 元</b> (約 ${costWan} 萬元)
                     </div>
+                    ${gapWarningHtml}
                 </div>
                 <div class="order-actions">
                     <button class="btn-edit-order" onclick="openEditModal('auto', ${idx})">✏️ 調整成交</button>

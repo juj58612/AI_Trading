@@ -369,10 +369,11 @@ def run_scan(tickers):
 
             momentum = round((latest_close - ma20) / ma20, 4) if ma20 > 0 else 0
             vol_ratio = round(vol_today / vol_ma5, 2) if vol_ma5 > 0 else 0
+            atr = round(calc_atr(hist), 2)
 
             return {
                 "ticker": ticker, "latest_close": latest_close, "ma20": ma20, "ma5": ma5,
-                "momentum": momentum, "vol_ratio": vol_ratio,
+                "momentum": momentum, "vol_ratio": vol_ratio, "atr": atr,
                 "chip_score": chip_score, "signal": signal_text,
                 "last_foreign": inst_data[-1]['foreign'] if inst_data else 0,
                 "last_trust": inst_data[-1]['trust'] if inst_data else 0,
@@ -983,6 +984,7 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                     "ticker": t,
                     "name": item.get('name', t),
                     "price": item.get('latest_close'),
+                    "atr": item.get('atr', 0),
                     "score": chip_score,
                     "signal": f"右側順勢加碼 (第 {next_stage_num} 階段)",
                     "stage": f"第 {next_stage_num} 批 {next_stage_label}",
@@ -997,6 +999,7 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "ticker": t,
                 "name": item.get('name', t),
                 "price": item.get('latest_close'),
+                "atr": item.get('atr', 0),
                 "score": chip_score,
                 "signal": item.get('signal', 'S1 止跌/右側試探盤'),
                 "stage": "首批 30%",
@@ -1022,6 +1025,7 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "ticker": b['ticker'],
                 "name": b['name'],
                 "price": price,
+                "atr": b.get('atr', 0),
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
@@ -1034,13 +1038,33 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "ticker": b['ticker'],
                 "name": b['name'],
                 "price": price,
+                "atr": b.get('atr', 0),
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
                 "stage": b['stage'],
                 "stage_num": b.get('stage_num', 1)
             })
-            
+
+    # 跳空/ATR比警示：recommendations 裡的 price 是「掃描當下(通常是前一天收盤)」的價格，
+    # 使用者實際下單通常是隔一個交易日，這中間如果開盤跳空，用掃描價去追價風險就跟回測沒驗證過
+    # 的價位差很多了。這裡另外抓一次「現在」的即時價格(用不同的 cache_key，不會跟排程掃描共用
+    # 快取拿到同一個舊值)，跟推薦價比較算出跳空幅度是幾倍 ATR，前端依此決定要不要跳警示。
+    for b in buys:
+        try:
+            live_hist = fetch_yfinance_history(b['ticker'], period="5d")
+            live_hist = live_hist[live_hist['Close'].notna()] if not live_hist.empty else live_hist
+            if live_hist.empty:
+                continue
+            live_price = round(float(live_hist['Close'].iloc[-1]), 2)
+            gap_amount = round(live_price - b['price'], 2)
+            atr_val = b.get('atr', 0)
+            b['live_price'] = live_price
+            b['gap_amount'] = gap_amount
+            b['gap_atr_ratio'] = round(gap_amount / atr_val, 2) if atr_val and atr_val > 0 else None
+        except Exception as e:
+            print(f"跳空警示計算失敗 {b['ticker']}:", e)
+
     today = datetime.today()
     target_day = today + timedelta(days=1)
     if today.weekday() == 4:

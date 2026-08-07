@@ -64,23 +64,7 @@
         .outcome-profit { background: rgba(239, 68, 68, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
         .outcome-loss { background: rgba(16, 185, 129, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
         .outcome-neutral { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
-
-        /* 顯眼提醒橫幅：實心底色反白，用於「模型驗證訊號」這類需要使用者第一眼看到的狀態提醒
-           (不管是「無需動作」還是「需要動作」都要夠搶眼，不能因為是安全狀態就做成不起眼的淡色框) */
-        .status-banner {
-            padding: 14px 18px;
-            border-radius: 10px;
-            font-weight: bold;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-            margin-bottom: 12px;
-            text-align: left;
-        }
-        .status-banner-safe { background: #10b981; color: #ffffff; }
-        .status-banner-danger { background: #ef4444; color: #ffffff; }
-        .status-banner-warning { background: #f59e0b; color: #1e1b16; }
-        .status-banner-neutral { background: #475569; color: #ffffff; }
-        .status-banner a { color: #ffffff; }
-        .status-banner-sm { padding: 10px 14px; font-size: 0.85rem; border-radius: 8px; box-shadow: none; margin: 10px 0; }
+        /* .status-banner* 顯眼提醒橫幅樣式已搬到共用的 style.css，跨頁面共用同一套視覺語言 */
     </style>
 </head>
 <body>
