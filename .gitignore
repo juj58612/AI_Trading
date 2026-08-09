@@ -25,6 +25,7 @@ backup_v1/
 *.db
 backtest_logs.db
 backtest_database.json
+backtest_database_custom.json
 
 # Note: daily_scan_cache.json and latest_scan_results.json are intentionally
 # tracked as a Render-restart fallback snapshot — do not add them here.

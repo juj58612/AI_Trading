@@ -68,11 +68,11 @@ async function checkDbStatus() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // 大數據回測運算刻意只在本機執行，不在雲端跑。但畫面本身（1~4 區塊的版面、
+    // 大數據回測運算刻意只在本機執行，不在雲端跑。但畫面本身（1~5 區塊的版面、
     // 預設值）不管本機或雲端都要長得一模一樣，只差在雲端這邊操作元件是鎖住的，
     // 而不是整塊消失——避免使用者看到兩種完全不同的畫面而搞混。
     if (!IS_LOCAL) {
-        ['opSection1', 'opSection2', 'opSection3', 'opSection4'].forEach(id => {
+        ['opSection1', 'opSection2', 'opSection3', 'opSection4', 'opSection5'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             el.querySelectorAll('input, select, button').forEach(field => { field.disabled = true; });
@@ -89,6 +89,8 @@ window.addEventListener('DOMContentLoaded', () => {
         // 「檢查本地資料庫狀態」需要連到本機回測引擎，雲端上必定連不到，
         // 不特地去嘗試連線、直接顯示鎖定說明即可
         if (dbDateStatus) dbDateStatus.innerHTML = '<span style="color:#94a3b8;">🔒 僅本機執行時可查詢</span>';
+        const buyholdDbStatusEl = document.getElementById('buyholdDbStatus');
+        if (buyholdDbStatusEl) buyholdDbStatusEl.innerHTML = '<span style="color:#94a3b8;">🔒 僅本機執行時可查詢</span>';
     } else {
         checkDbStatus();
     }

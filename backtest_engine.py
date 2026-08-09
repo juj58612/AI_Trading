@@ -31,6 +31,11 @@ DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(DIR_PATH, "backtest_database.json")
 SQLITE_PATH = os.path.join(DIR_PATH, "backtest_logs.db")
 
+# 「買入持有回測計算機」專用：跟上面 A/B/C/D 模型的股池完全分開的獨立資料庫，
+# 使用者自選 ETF/個股清單，只快取股價+配息（不抓法人籌碼，這個計算機用不到）。
+CUSTOM_DB_PATH = os.path.join(DIR_PATH, "backtest_database_custom.json")
+CUSTOM_LIST_PATH = os.path.join(DIR_PATH, "custom_stock_list.txt")
+
 # Initialize SQLite Database
 def init_db():
     conn = sqlite3.connect(SQLITE_PATH)
@@ -191,7 +196,9 @@ STOCK_NAMES = {
 
 TICKERS = ["2330", "2317", "2382", "3231", "6669", "2376", "2356", "2324", "3706", "2357", "2353", "3017", "3324", "2421", "3653", "3338", "8996", "3013", "6117", "3693", "8210", "2059", "2308", "6282", "2345", "2368", "3044", "2313", "3037", "8046", "3189", "2383", "6274", "6213", "3661", "3443", "3035", "6643", "3529", "6531", "2454", "3034", "8299", "5269", "4966", "3711", "2449", "3131", "3583", "6187", "6515", "2360", "3533", "2359", "6414", "2395", "6139", "5443", "2303", "6230",
            # 2026-08-05 新增：矽光子/CPO 光通訊供應鏈補強
-           "3081", "3105", "2455", "3163", "3363", "6442", "3380", "6830", "3587", "3289"]
+           "3081", "3105", "2455", "3163", "3363", "6442", "3380", "6830", "3587", "3289",
+           # 2026-08-09 新增：AI硬體供應鏈六大類擴充（晶片設計/晶圓封測/關鍵材料/伺服器/散熱電力/軟體）
+           "1503", "1513", "1514", "1519", "1560", "1609", "2301", "2337", "2355", "2385", "2404", "2412", "2436", "2458", "2480", "2492", "3005", "3413", "3532", "4755", "4958", "5388", "5434", "6166", "6183", "6196", "6202", "6206", "6214", "6239", "6257", "6269", "6285", "6412", "6415", "6438", "6533", "6719", "6770", "8081", "8114", "3227", "3374", "3438", "3680", "4979", "4991", "5227", "5347", "5483", "6182", "6223", "6488", "6510", "8050", "8086"]
 
 def fetch_taiex_history(start="2022-01-01"):
     try:
@@ -269,7 +276,9 @@ def fetch_macro_3in1_series(start_date, end_date):
 
 OTC_TICKERS = {"3131", "3324", "3529", "3693", "4966", "5443", "6187", "6274", "6643", "8299",
                # 2026-08-05 新增矽光子/CPO 標的中，實測確認為上櫃者
-               "3081", "3105", "3163", "3363", "3587", "3289"}
+               "3081", "3105", "3163", "3363", "3587", "3289",
+               # 2026-08-09 新增AI硬體供應鏈擴充標的中，實測確認為上櫃者
+               "3227", "3374", "3438", "3680", "4979", "4991", "5227", "5347", "5483", "6182", "6223", "6488", "6510", "8050", "8086"}
 
 def get_tw_ticker(t):
     return f"{t}.TWO" if t in OTC_TICKERS else f"{t}.TW"
@@ -409,7 +418,10 @@ async def download_data(request: Request):
                 continue # Skip! We already have this data!
                 
             # FinMind is strict, so we fetch missing data and add delay
-            inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={t}&start_date={start_date}&end_date={end_date}"
+            # 沒帶 token 會被當成匿名請求，配額極低很快就被拒絕（2026-08-09 實測發現：新增56檔
+            # 時遇到 "Requests reach the upper limit" 402，全部靜默失敗、chips 完全沒抓到）
+            finmind_token = os.getenv("FINMIND_API_TOKEN", "")
+            inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={t}&start_date={start_date}&end_date={end_date}&token={finmind_token}"
             try:
                 res = requests.get(inst_url, timeout=10).json()
                 if res.get("msg") == "success":
@@ -438,10 +450,11 @@ async def download_data(request: Request):
                     # IMMEDIATELY SAVE after each stock (斷點續傳)
                     with open(DB_PATH, 'w', encoding='utf-8') as f:
                         json.dump(db, f, ensure_ascii=False)
-                        
+                else:
+                    print(f"FinMind 籌碼抓取失敗 {t}: {res.get('msg')}")
             except Exception as e:
                 pass
-            
+
             time.sleep(1.0) # Increased delay to prevent FinMind ban
             
     except Exception as e:
@@ -453,6 +466,294 @@ async def download_data(request: Request):
         json.dump(db, f, ensure_ascii=False)
 
     return {"message": "Data downloaded successfully"}
+
+# ============================================================
+# 買入持有回測計算機（獨立於 A/B/C/D 模型之外，純算術，見 STRATEGY_ANALYSIS_NOTES.md
+# 「2026-08-07（續2）：規劃「買入持有回測計算機」」章節的完整決策紀錄）
+# ============================================================
+
+def load_custom_stock_list():
+    """
+    買入持有股池是固定名單（使用者跟 Claude 討論後直接編輯 custom_stock_list.txt 決定），
+    不提供使用者自行新增/移除的 UI 或 API——使用者只能從這份固定清單中「勾選要測試哪幾檔」。
+    """
+    if os.path.exists(CUSTOM_LIST_PATH):
+        with open(CUSTOM_LIST_PATH, "r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    return []
+
+STOCK_METADATA_PATH = os.path.join(DIR_PATH, "stock_metadata.json")
+
+def load_stock_metadata():
+    """ticker -> {name_cn, category, subcategory}，供股池下拉選單分類分組＋顯示中文名稱用。"""
+    if os.path.exists(STOCK_METADATA_PATH):
+        try:
+            with open(STOCK_METADATA_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+@app.get("/api/buyhold/pool")
+async def get_buyhold_pool():
+    tickers = load_custom_stock_list()
+    meta = load_stock_metadata()
+    items = [{
+        "ticker": t,
+        "name_cn": meta.get(t, {}).get("name_cn", t),
+        "category": meta.get(t, {}).get("category", "未分類"),
+        "subcategory": meta.get(t, {}).get("subcategory", ""),
+    } for t in tickers]
+    return {"tickers": tickers, "items": items, "count": len(tickers)}
+
+@app.get("/api/buyhold/pool_prices")
+async def get_buyhold_pool_prices(start_date: str, end_date: str):
+    """
+    給股票選單勾選畫面用：一次回傳股池內每一檔在買入日/結算日（或之後最近一個有資料的交易日）
+    的價格，讓使用者勾選當下就能看到「買入時股價/賣出時股價」，不用等按下計算才知道。
+    """
+    tickers = load_custom_stock_list()
+    prices = {}
+    if not tickers or not os.path.exists(CUSTOM_DB_PATH):
+        return {"prices": prices}
+    with open(CUSTOM_DB_PATH, 'r', encoding='utf-8') as f:
+        db = json.load(f)
+    for t in tickers:
+        rows = db.get("prices", {}).get(t)
+        if not rows:
+            continue
+        buy_rows = [r for r in rows if r["date"] >= start_date]
+        sell_rows = [r for r in rows if r["date"] >= end_date]
+        # 找不到「該日之後」的資料時（例如結算日預設抓今天，但今天是週末/假日、資料庫最新
+        # 交易日還是上週五），改用資料庫裡最後一筆已知價格頂替，不要直接顯示查無資料
+        if not buy_rows and rows:
+            buy_rows = [rows[-1]]
+        if not sell_rows and rows:
+            sell_rows = [rows[-1]]
+        prices[t] = {
+            "buy_price": buy_rows[0]["close"] if buy_rows else None,
+            "buy_date": buy_rows[0]["date"] if buy_rows else None,
+            "sell_price": sell_rows[0]["close"] if sell_rows else None,
+            "sell_date": sell_rows[0]["date"] if sell_rows else None,
+        }
+    return {"prices": prices}
+
+@app.get("/api/buyhold/status")
+async def get_buyhold_db_status():
+    tickers = load_custom_stock_list()
+    pool_size = len(tickers)
+
+    if pool_size == 0:
+        return {"status": "empty", "last_updated": "無資料", "pool_size": 0, "covered": 0, "missing_tickers": [], "date_start": None, "date_end": None}
+
+    if not os.path.exists(CUSTOM_DB_PATH):
+        return {"status": "missing", "last_updated": "無資料", "pool_size": pool_size, "covered": 0, "missing_tickers": tickers, "date_start": None, "date_end": None}
+
+    mod_time = os.path.getmtime(CUSTOM_DB_PATH)
+    try:
+        with open(CUSTOM_DB_PATH, 'r', encoding='utf-8') as f:
+            db = json.load(f)
+    except Exception:
+        return {"status": "missing", "last_updated": "資料庫檔案損毀", "pool_size": pool_size, "covered": 0, "missing_tickers": tickers, "date_start": None, "date_end": None}
+
+    prices = db.get("prices", {})
+    covered = [t for t in tickers if prices.get(t)]
+    missing = [t for t in tickers if t not in covered]
+
+    date_start, date_end = None, None
+    for t in covered:
+        dates = [row["date"] for row in prices[t]]
+        if not dates:
+            continue
+        t_min, t_max = min(dates), max(dates)
+        if date_start is None or t_min < date_start:
+            date_start = t_min
+        if date_end is None or t_max > date_end:
+            date_end = t_max
+
+    return {
+        "status": "ok",
+        "last_updated": datetime.datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S'),
+        "pool_size": pool_size,
+        "covered": len(covered),
+        "missing_tickers": missing,
+        "date_start": date_start,
+        "date_end": date_end
+    }
+
+@app.post("/api/buyhold/sync")
+async def sync_buyhold_db(request: Request):
+    payload = await request.json()
+    force = payload.get("force", False)
+
+    tickers = load_custom_stock_list()
+    if not tickers:
+        return {"message": "股池目前是空的，請先新增股票再同步", "skipped": True}
+
+    db = {"prices": {}}
+    if os.path.exists(CUSTOM_DB_PATH):
+        try:
+            with open(CUSTOM_DB_PATH, 'r', encoding='utf-8') as f:
+                db = json.load(f)
+        except Exception:
+            pass
+    if "prices" not in db:
+        db["prices"] = {}
+
+    today_str = datetime.date.today().isoformat()
+    if not force and db.get("last_full_sync_date") == today_str:
+        return {"message": f"今天（{today_str}）已經完整同步過一次，不需要再重新抓取", "skipped": True}
+
+    synced, failed = [], []
+    for t in tickers:
+        try:
+            existing_rows = db["prices"].get(t, [])
+            fetch_start = None
+            if existing_rows:
+                last_date = existing_rows[-1]["date"]
+                next_day = (datetime.date.fromisoformat(last_date) + datetime.timedelta(days=1)).isoformat()
+                if next_day > today_str:
+                    synced.append(t)
+                    continue
+                fetch_start = next_day  # 斷點續傳：只補最後一天之後到今天
+
+            hist = None
+            # ETF/個股不一定知道是上市(.TW)還是上櫃(.TWO)，兩個都試一次，跟 main.py 的
+            # fetch_yfinance_history 用同一套判斷邏輯，不要求使用者自己分類
+            for suffix in [".TW", ".TWO"]:
+                stock = yf.Ticker(f"{t}{suffix}")
+                if fetch_start:
+                    h = stock.history(start=fetch_start, auto_adjust=False, actions=True)
+                else:
+                    h = stock.history(period="max", auto_adjust=False, actions=True)
+                if not h.empty:
+                    hist = h
+                    break
+
+            if hist is None or hist.empty:
+                if not existing_rows:
+                    failed.append(t)
+                else:
+                    synced.append(t)  # 已有舊資料，只是今天沒有新的可補，不算失敗
+                continue
+
+            hist = hist[hist['Close'].notna()]
+            existing = {row["date"]: row for row in existing_rows}
+            for date, row in hist.iterrows():
+                d_str = date.strftime('%Y-%m-%d')
+                existing[d_str] = {
+                    "date": d_str,
+                    "close": round(float(row['Close']), 4),
+                    "dividend": round(float(row['Dividends']), 4) if 'Dividends' in row and not pd.isna(row['Dividends']) else 0.0
+                }
+            db["prices"][t] = [existing[k] for k in sorted(existing.keys())]
+            synced.append(t)
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"買入持有股池同步失敗 {t}:", e)
+            failed.append(t)
+
+    db["last_full_sync_date"] = today_str
+    with open(CUSTOM_DB_PATH, 'w', encoding='utf-8') as f:
+        json.dump(db, f, ensure_ascii=False)
+
+    return {
+        "message": f"同步完成：成功 {len(synced)} 檔，失敗 {len(failed)} 檔" + (f"（失敗：{'、'.join(failed)}）" if failed else ""),
+        "synced": synced,
+        "failed": failed
+    }
+
+BUYHOLD_FEE_RATE = 0.001425  # 買賣手續費，跟主系統下單規劃器的假設一致
+BUYHOLD_TAX_RATE = 0.003     # 證交稅（賣出時收）
+
+@app.get("/api/buyhold/price_on_date")
+async def get_buyhold_price_on_date(ticker: str, date: str):
+    """
+    給前端「張數/總價」雙向試算欄位用的單一股票牌價查詢：回傳指定股票在指定日期（或之後
+    最近一個有資料的交易日）的收盤價，僅供輸入時的即時試算預覽，不是正式的損益計算結果。
+    """
+    if not os.path.exists(CUSTOM_DB_PATH):
+        raise HTTPException(status_code=400, detail="請先同步歷史資料庫")
+    with open(CUSTOM_DB_PATH, 'r', encoding='utf-8') as f:
+        db = json.load(f)
+    prices = db.get("prices", {}).get(ticker)
+    if not prices:
+        raise HTTPException(status_code=404, detail=f"尚未同步 {ticker} 的歷史資料")
+    rows = [r for r in prices if r["date"] >= date]
+    if not rows:
+        # 找不到「該日之後」的資料（例如選到週末/假日、資料庫最新交易日還沒更新到那麼新），
+        # 改用資料庫裡最後一筆已知價格頂替，不要直接回 404
+        rows = [prices[-1]] if prices else []
+    if not rows:
+        raise HTTPException(status_code=404, detail="查無資料")
+    row = rows[0]
+    return {"ticker": ticker, "date": row["date"], "price": row["close"]}
+
+class BuyHoldRequest(BaseModel):
+    tickers: List[str]
+    start_date: str
+    end_date: str
+    shares: float  # 股數（整張換算後的股數，例如 3 張 = 3000 股）
+
+@app.post("/api/buyhold/calculate")
+async def calculate_buyhold(req: BuyHoldRequest):
+    if not os.path.exists(CUSTOM_DB_PATH):
+        raise HTTPException(status_code=400, detail="請先同步歷史資料庫")
+    with open(CUSTOM_DB_PATH, 'r', encoding='utf-8') as f:
+        db = json.load(f)
+
+    if not req.shares or req.shares <= 0:
+        raise HTTPException(status_code=400, detail="請提供有效股數")
+
+    results = []
+    for t in req.tickers:
+        prices = db.get("prices", {}).get(t)
+        if not prices:
+            results.append({"ticker": t, "error": "尚未同步此股票的歷史資料，請先在上方同步歷史資料庫"})
+            continue
+
+        rows_in_range = [r for r in prices if req.start_date <= r["date"] <= req.end_date]
+        if not rows_in_range:
+            results.append({"ticker": t, "error": "所選期間內查無資料"})
+            continue
+
+        start_row = rows_in_range[0]
+        end_row = rows_in_range[-1]
+        start_price = start_row["close"]
+        end_price = end_row["close"]
+        shares = req.shares
+
+        # 手續費/證交稅一律計入，不提供關閉選項——買賣持有的目的就是要看「賣出後真正拿到多少」
+        buy_cost = shares * start_price * (1 + BUYHOLD_FEE_RATE)
+        end_market_value = shares * end_price * (1 - BUYHOLD_FEE_RATE - BUYHOLD_TAX_RATE)
+        total_dividends = round(sum(r.get("dividend", 0) for r in rows_in_range) * shares, 0)
+
+        final_value = end_market_value + total_dividends
+        pnl = final_value - buy_cost
+        pnl_pct = (pnl / buy_cost * 100) if buy_cost > 0 else 0
+
+        days_held = (datetime.date.fromisoformat(end_row["date"]) - datetime.date.fromisoformat(start_row["date"])).days
+        years = days_held / 365.25
+        annualized_pct = (((final_value / buy_cost) ** (1 / years)) - 1) * 100 if years > 0 and buy_cost > 0 and final_value > 0 else 0
+
+        results.append({
+            "ticker": t,
+            "start_date": start_row["date"],
+            "end_date": end_row["date"],
+            "start_price": start_price,
+            "end_price": end_price,
+            "shares": round(shares, 0),
+            "buy_cost": round(buy_cost, 0),
+            "end_market_value": round(end_market_value, 0),
+            "total_dividends": total_dividends,
+            "final_value": round(final_value, 0),
+            "pnl": round(pnl, 0),
+            "pnl_pct": round(pnl_pct, 2),
+            "annualized_pct": round(annualized_pct, 2),
+            "days_held": days_held
+        })
+
+    return {"status": "success", "results": results}
 
 class BacktestRequest(BaseModel):
     capital: float

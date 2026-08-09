@@ -203,6 +203,27 @@ def calc_atr(hist):
 
 _macro_status_cache = {"date": None, "status": None}
 
+# 跳空/ATR比警示用的即時牌價快取：一天只查一次，同一天內重複打開下單規劃器直接吃快取，
+# 避免每次開頁都即時打 yfinance（yfinance 對高頻請求容易封鎖，見使用者 2026-08-09 指示）
+_gap_check_price_cache = {"date": None, "prices": {}}
+
+def fetch_gap_check_price(ticker: str):
+    """回傳指定股票「今天」查到的最新收盤價，一天只向 yfinance 查一次並快取起來。"""
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    if _gap_check_price_cache["date"] != today_str:
+        _gap_check_price_cache["date"] = today_str
+        _gap_check_price_cache["prices"] = {}
+    if ticker in _gap_check_price_cache["prices"]:
+        return _gap_check_price_cache["prices"][ticker]
+
+    price = None
+    live_hist = fetch_yfinance_history(ticker, period="5d")
+    live_hist = live_hist[live_hist['Close'].notna()] if not live_hist.empty else live_hist
+    if not live_hist.empty:
+        price = round(float(live_hist['Close'].iloc[-1]), 2)
+    _gap_check_price_cache["prices"][ticker] = price
+    return price
+
 def get_latest_macro_status():
     """
     即時查詢「三合一巨觀風控熔斷保險絲」最新一個交易日的訊號。
@@ -1048,15 +1069,14 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
 
     # 跳空/ATR比警示：recommendations 裡的 price 是「掃描當下(通常是前一天收盤)」的價格，
     # 使用者實際下單通常是隔一個交易日，這中間如果開盤跳空，用掃描價去追價風險就跟回測沒驗證過
-    # 的價位差很多了。這裡另外抓一次「現在」的即時價格(用不同的 cache_key，不會跟排程掃描共用
-    # 快取拿到同一個舊值)，跟推薦價比較算出跳空幅度是幾倍 ATR，前端依此決定要不要跳警示。
+    # 的價位差很多了。這裡另外查一次「今天」的即時價格，跟推薦價比較算出跳空幅度是幾倍 ATR，
+    # 前端依此決定要不要跳警示。查價一天只打一次 yfinance（見 fetch_gap_check_price 的快取），
+    # 同一天內重複打開下單規劃器不會重複觸發即時查詢。
     for b in buys:
         try:
-            live_hist = fetch_yfinance_history(b['ticker'], period="5d")
-            live_hist = live_hist[live_hist['Close'].notna()] if not live_hist.empty else live_hist
-            if live_hist.empty:
+            live_price = fetch_gap_check_price(b['ticker'])
+            if live_price is None:
                 continue
-            live_price = round(float(live_hist['Close'].iloc[-1]), 2)
             gap_amount = round(live_price - b['price'], 2)
             atr_val = b.get('atr', 0)
             b['live_price'] = live_price
@@ -1212,7 +1232,7 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",

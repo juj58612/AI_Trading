@@ -207,6 +207,24 @@
             width: 35% !important;
             animation: megaIndeterminateSlide 1.1s ease-in-out infinite;
         }
+
+        /* 買入持有股池勾選清單：依產業性質分組，組內橫式多欄排列，避免166檔擠成一條長長的直式清單 */
+        .buyhold-cat-group { margin-bottom: 14px; }
+        .buyhold-cat-group:last-child { margin-bottom: 0; }
+        .buyhold-cat-title {
+            font-weight: bold; color: #6ee7b7; font-size: 0.85rem;
+            padding-bottom: 4px; margin-bottom: 6px; border-bottom: 1px solid rgba(110,231,183,0.25);
+        }
+        .buyhold-cat-items {
+            columns: 220px auto;
+            column-gap: 16px;
+        }
+        .buyhold-cat-items label {
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
+            font-size: 0.85rem; padding: 3px 0; break-inside: avoid;
+            white-space: nowrap;
+        }
+        .buyhold-cat-items label span.ticker-code { color: var(--text-sub); font-size: 0.78rem; }
     </style>
 </head>
 <body>
@@ -229,9 +247,94 @@
             <div style="font-size: 0.9rem; color: var(--text-sub);">這裡是管理者研究用的獨立實驗室，運算刻意不在雲端執行。請在本機雙擊 <code>start_backtest.command</code>，於本機瀏覽器開啟此頁面才能操作 1~4 區塊。<br>下方排行榜顯示的是本地端最後一次執行並發布的結果。</div>
         </div>
 
-        <!-- 1. 同步歷史資料庫 -->
-        <div class="config-panel" id="opSection1">
-            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">1. 同步歷史資料庫</h2>
+        <!-- 1. 買入持有回測（獨立於 A/B/C/D 模型之外的純算術計算機，見 STRATEGY_ANALYSIS_NOTES.md） -->
+        <div class="config-panel" id="opSection1" style="border-color: #10b981;">
+            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">1. 買入持有回測（不套用模型策略）</h2>
+            <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">
+                不套用任何本站台使用的模型，純粹計算「買進後完全不賣，持有到指定日期」的損益，含股價漲跌與配息，用來跟大盤或模型策略的績效互相對照。
+            </p>
+
+            <div class="db-status" style="margin-bottom: 15px;">
+                <div class="db-info">
+                    <strong>本地離線快取資料庫狀態：</strong> <span id="buyholdDbStatus">尚未檢查...</span>
+                </div>
+                <button id="btnSyncBuyholdDB" class="btn-blue" style="width: auto; padding: 10px 20px; background: #10b981;">🔄 同步歷史資料庫</button>
+            </div>
+
+            <div class="config-grid">
+                <div class="config-item" style="position: relative;">
+                    <label>選擇要測試的股票（可複選，股池為AI概念股及ETF固定名單）</label>
+                    <button type="button" id="btnBuyholdPoolDropdown" style="width: 100%; text-align: left; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px; border-radius: 8px; cursor: pointer;" onclick="toggleBuyholdPoolDropdown()">
+                        <span id="buyholdSelectedSummary">尚未選擇股票</span> <span style="float:right;">▾</span>
+                    </button>
+                    <div id="buyholdPoolDropdownPanel" style="display: none; position: absolute; z-index: 20; top: 100%; left: 0; margin-top: 4px; background: #0f172a; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 14px; max-height: 480px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: max-content; min-width: 100%; max-width: min(1000px, 90vw);">
+                        <div id="buyholdPoolCheckboxList">股池是空的</div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                            <button type="button" class="btn-blue" style="padding: 6px 16px; width: auto;" onclick="confirmBuyholdPoolSelection()">確定</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>張數（僅整張，不接受零股）</label>
+                    <input type="number" id="buyholdLots" min="1" step="1" value="1" placeholder="輸入張數">
+                </div>
+                <div class="config-item">
+                    <label>總價（元，會自動換算成最接近但不超過的整張數）</label>
+                    <input type="text" id="buyholdTotalCost" placeholder="輸入預算金額">
+                </div>
+            </div>
+
+            <div class="config-grid" style="grid-template-columns: 1fr;">
+                <div class="config-item">
+                    <div id="buyholdPricePreview" style="font-size: 0.85rem; color: var(--text-sub); padding: 4px 0;">請先選擇股票並設定買入日期，才能試算張數與費用</div>
+                    <div id="buyholdCostSummary" style="font-size: 0.9rem; color: #6ee7b7; font-weight: bold; padding: 4px 0;"></div>
+                </div>
+            </div>
+
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>買入日期（Start Date）</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="btBhStartYear" style="flex: 1.2;"></select>
+                        <select id="btBhStartMonth" style="flex: 1;"></select>
+                        <select id="btBhStartDay" style="flex: 1;"></select>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>結算日期（賣出獲利的數值）</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="btBhEndYear" style="flex: 1.2;"></select>
+                        <select id="btBhEndMonth" style="flex: 1;"></select>
+                        <select id="btBhEndDay" style="flex: 1;"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-bar" style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btnRunBuyhold" class="btn-search" style="width: 250px; background: #10b981;">📈 開始計算買入持有績效</button>
+            </div>
+
+            <div id="buyholdResultsContainer" style="display: none; margin-top: 20px;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+                    <button onclick="exportBuyholdResultsToCSV()" class="btn-search" style="background-color: #059669; width: auto; padding: 8px 16px; font-size: 0.9rem;">📑 匯出成 CSV(可用 Google 試算表開啟)</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="lb-table" style="width: 100%; min-width: 900px;">
+                        <thead>
+                            <tr>
+                                <th>股票</th><th>買入日</th><th>結算日</th><th>買入價</th><th>結算價</th><th>股數</th>
+                                <th>投入成本</th><th>期末市值</th><th>累積配息</th><th>總損益</th><th>報酬率</th><th>年化報酬率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buyholdResultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 同步歷史資料庫（AI 選股模型專用的 126 檔股池） -->
+        <div class="config-panel" id="opSection2">
+            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">2. 同步歷史資料庫（套用模型策略）</h2>
             <div class="db-status" style="margin-bottom: 0;">
                 <div class="db-info">
                     <strong>本地離線快取資料庫狀態：</strong> <span id="dbDateStatus">尚未檢查...</span>
@@ -240,8 +343,8 @@
             </div>
         </div>
 
-        <div class="config-panel" id="opSection2">
-            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">2. 單次回測</h2>
+        <div class="config-panel" id="opSection3">
+            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">3. 單次回測（套用模型策略）</h2>
 
             <div class="config-grid">
                 <div class="config-item">
@@ -316,9 +419,9 @@
             </div>
         </div>
 
-        <!-- 3. AI 網格最佳化 -->
-        <div class="config-panel" id="opSection3" style="border-color: #8957e5;">
-            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">3. AI 網格最佳化 (Grid Search)</h2>
+        <!-- 4. AI 網格最佳化 -->
+        <div class="config-panel" id="opSection4" style="border-color: #8957e5;">
+            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">4. AI 網格最佳化 (Grid Search)</h2>
             <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">
                 用 Optuna 貝氏最佳化演算法自動嘗試 20 組參數（策略方案／持倉檔數／持倉天數），並自動把資料切成前 70% 訓練期、後 30% 樣本外測試期，避免手動選參數導致過度擬合。
             </p>
@@ -327,15 +430,15 @@
             </div>
         </div>
 
-        <!-- 4. 大數據回測 -->
-        <div class="config-panel" id="opSection4" style="border-color: #8957e5;">
-            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">4. 大數據回測 (Mega Grid Permutation)</h2>
+        <!-- 5. 大數據回測 -->
+        <div class="config-panel" id="opSection5" style="border-color: #8957e5;">
+            <h2 style="color: #fff; margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">5. 大數據回測 (Mega Grid Permutation)</h2>
             <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">
                 系統將會為您交叉比對多維參數的所有排列組合，並在後端背景執行。跑完後，您可以在大數據分析中心將獲利率切片拆解成「2022 空頭年」與「2023 多頭年」進行防禦力排名。
             </p>
 
             <div id="megaSharedConditionsBox" style="margin-bottom: 20px; padding: 12px 15px; background: rgba(137,87,229,0.08); border: 1px dashed #8957e5; border-radius: 8px; font-size: 0.85rem; color: #c084fc;">
-                <span style="font-weight:bold;">📌 共用設定（沿用上方「2. 單次回測」的資金／手續費／日期區間設定，如需更改請至該區塊調整）：</span>
+                <span style="font-weight:bold;">📌 共用設定（沿用上方「3. 單次回測（套用模型策略）」的資金／手續費／日期區間設定，如需更改請至該區塊調整）：</span>
                 <span id="megaSharedConditionsText">載入中...</span>
             </div>
 
@@ -392,11 +495,11 @@
             </div>
         </div>
 
-        <!-- 5. 個股買賣交易明細 -->
+        <!-- 6. 個股買賣交易明細 -->
         <div class="leaderboard-panel" id="tradeDetail">
             <div class="leaderboard-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px;">
                 <div>
-                    <div class="leaderboard-title">5. 個股買賣交易明細 (Trade-Level Detail)</div>
+                    <div class="leaderboard-title">6. 個股買賣交易明細 (Trade-Level Detail)</div>
                     <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 4px;">頂尖策略組合的逐筆個股買賣明細（哪一檔股票、進出場日期、價格、持倉天數、損益），跟下面排行榜只顯示「哪個方案 A~D 賺多少」不一樣，這裡看得到實際買賣了哪些股票。</div>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -421,7 +524,7 @@
             </div>
         </div>
 
-        <!-- 6. 排行榜 -->
+        <!-- 7. 排行榜 -->
         <div class="leaderboard-panel" style="margin-top: 25px;">
             <div class="leaderboard-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                 <div>
@@ -458,5 +561,6 @@
     </div>
 
     <script src="backtest.js"></script>
+    <script src="buyhold.js"></script>
 </body>
 </html>

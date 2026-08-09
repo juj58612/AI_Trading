@@ -172,7 +172,7 @@ async function loadDataFreshness() {
 
         banner.style.display = 'block';
         const covered = data.covered ?? 0;
-        const pool = data.pool_size ?? 70;
+        const pool = data.pool_size ?? 126;
         const isComplete = covered >= pool;
         const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
 

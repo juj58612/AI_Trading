@@ -184,7 +184,7 @@ def main():
         tickers = [line.strip() for line in f if line.strip() and not line.startswith('#')]
         
     all_trades = []
-    # 測試全數 70 檔股票
+    # 測試 ai_stock_list.txt 內全數股票（股池會隨時間增補，這裡動態讀取實際檔數，不寫死）
     for ticker in tickers:
         try:
             trades = run_backtest(ticker)

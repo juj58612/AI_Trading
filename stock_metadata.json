@@ -1,0 +1,832 @@
+{
+  "2059": {
+    "name_cn": "川湖科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "2308": {
+    "name_cn": "台達電子",
+    "category": "五、散熱與電力能源",
+    "subcategory": "高功率電源供應與電源管理"
+  },
+  "2313": {
+    "name_cn": "華通電子",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "2317": {
+    "name_cn": "鴻海精密",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "2324": {
+    "name_cn": "仁寶電腦",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "2330": {
+    "name_cn": "台積電",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "先進製程晶圓代工"
+  },
+  "2353": {
+    "name_cn": "宏碁",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "2356": {
+    "name_cn": "英業達",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "2357": {
+    "name_cn": "華碩電腦",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "2368": {
+    "name_cn": "金像電子",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "2382": {
+    "name_cn": "廣達電腦",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "2383": {
+    "name_cn": "台光電子",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "2421": {
+    "name_cn": "建準電機",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "2449": {
+    "name_cn": "京元電子",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "2454": {
+    "name_cn": "聯發科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "3013": {
+    "name_cn": "晟銘電子",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "3017": {
+    "name_cn": "奇鋐科技",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "3034": {
+    "name_cn": "聯詠科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "3035": {
+    "name_cn": "智原科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3037": {
+    "name_cn": "欣興電子",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "3081": {
+    "name_cn": "聯亞光電",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "3105": {
+    "name_cn": "穩懋半導體",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3131": {
+    "name_cn": "弘塑科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "3163": {
+    "name_cn": "波若威",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "3189": {
+    "name_cn": "景碩科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "3231": {
+    "name_cn": "緯創資通",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "3324": {
+    "name_cn": "雙鴻科技",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "3363": {
+    "name_cn": "波若威科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "3443": {
+    "name_cn": "創意電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3529": {
+    "name_cn": "力旺電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3583": {
+    "name_cn": "辛耘企業",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "3653": {
+    "name_cn": "健策精密",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "3661": {
+    "name_cn": "世芯電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3706": {
+    "name_cn": "神達電腦",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "3711": {
+    "name_cn": "日月光投控",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "4966": {
+    "name_cn": "譜瑞-KY",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "6139": {
+    "name_cn": "亞翔工程",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "6213": {
+    "name_cn": "聯茂電子",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "6230": {
+    "name_cn": "尼得科超眾",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "6274": {
+    "name_cn": "台燿科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "6414": {
+    "name_cn": "樺漢科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "6669": {
+    "name_cn": "緯穎科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "8046": {
+    "name_cn": "南亞電路板",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "8210": {
+    "name_cn": "勤誠興業",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "8299": {
+    "name_cn": "群聯電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "8996": {
+    "name_cn": "高力熱處理",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "3693": {
+    "name_cn": "營邦企業",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "2303": {
+    "name_cn": "聯華電子",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "先進製程晶圓代工"
+  },
+  "6117": {
+    "name_cn": "迎廣科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "6531": {
+    "name_cn": "愛普*",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "2395": {
+    "name_cn": "研華科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "2376": {
+    "name_cn": "技嘉科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "5443": {
+    "name_cn": "均豪精密",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "3533": {
+    "name_cn": "嘉澤端子",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "3338": {
+    "name_cn": "泰碩電子",
+    "category": "五、散熱與電力能源",
+    "subcategory": "液冷與風冷散熱系統"
+  },
+  "5269": {
+    "name_cn": "祥碩科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "6515": {
+    "name_cn": "穎崴科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "6282": {
+    "name_cn": "康舒科技",
+    "category": "五、散熱與電力能源",
+    "subcategory": "高功率電源供應與電源管理"
+  },
+  "2345": {
+    "name_cn": "智邦科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "2359": {
+    "name_cn": "所羅門",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3380": {
+    "name_cn": "明泰科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "6830": {
+    "name_cn": "汎銓科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "3587": {
+    "name_cn": "閎康科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "3289": {
+    "name_cn": "宜特科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "6442": {
+    "name_cn": "光聖",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "1503": {
+    "name_cn": "士林電機",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "1513": {
+    "name_cn": "中興電工",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "1519": {
+    "name_cn": "華城電機",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "1609": {
+    "name_cn": "大亞電線電纜",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "2436": {
+    "name_cn": "偉詮電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "3374": {
+    "name_cn": "精材科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "3532": {
+    "name_cn": "台勝科",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "4979": {
+    "name_cn": "LuxNet",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "5347": {
+    "name_cn": "世界先進",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "先進製程晶圓代工"
+  },
+  "6196": {
+    "name_cn": "帆宣系統",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "6202": {
+    "name_cn": "盛群半導體",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "6206": {
+    "name_cn": "Flytech",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "6214": {
+    "name_cn": "精誠資訊",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "雲端整合、AI軟體與資安"
+  },
+  "6239": {
+    "name_cn": "力成科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "6285": {
+    "name_cn": "啟碁科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "6412": {
+    "name_cn": "群光電能",
+    "category": "五、散熱與電力能源",
+    "subcategory": "高功率電源供應與電源管理"
+  },
+  "6415": {
+    "name_cn": "矽力*-KY",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "6488": {
+    "name_cn": "環球晶圓",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "6510": {
+    "name_cn": "中華精測",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "6533": {
+    "name_cn": "晶心科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "6770": {
+    "name_cn": "力積電",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "先進製程晶圓代工"
+  },
+  "8086": {
+    "name_cn": "宏捷科",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "6719": {
+    "name_cn": "力智電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "8081": {
+    "name_cn": "致新科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "2458": {
+    "name_cn": "義隆電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "3438": {
+    "name_cn": "類比科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "4991": {
+    "name_cn": "GCS Holdings",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "2337": {
+    "name_cn": "旺宏電子",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "3227": {
+    "name_cn": "原相科技",
+    "category": "一、晶片與IC設計",
+    "subcategory": "高階IC設計與高速傳輸(PCIe/CXL/電源管理)"
+  },
+  "3680": {
+    "name_cn": "家登精密",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "2404": {
+    "name_cn": "漢唐集成",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "3413": {
+    "name_cn": "京鼎精密",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "6438": {
+    "name_cn": "迅得機械",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "6257": {
+    "name_cn": "矽格科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "6223": {
+    "name_cn": "旺矽科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "1560": {
+    "name_cn": "中砂科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "4755": {
+    "name_cn": "三福化工",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "5434": {
+    "name_cn": "崇越科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "5483": {
+    "name_cn": "中美矽晶",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "6182": {
+    "name_cn": "合晶科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "特化化學、晶圓與載板材料"
+  },
+  "2355": {
+    "name_cn": "敬鵬工業",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "6269": {
+    "name_cn": "台郡科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "4958": {
+    "name_cn": "臻鼎-KY",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "2492": {
+    "name_cn": "華新科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "3005": {
+    "name_cn": "神基科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "AI伺服器代工與整機系統(OEM/ODM)"
+  },
+  "8050": {
+    "name_cn": "廣積科技",
+    "category": "四、伺服器與硬體設備",
+    "subcategory": "伺服器機殼、滑軌與機構件"
+  },
+  "2301": {
+    "name_cn": "光寶科技",
+    "category": "五、散熱與電力能源",
+    "subcategory": "高功率電源供應與電源管理"
+  },
+  "2385": {
+    "name_cn": "群光電子",
+    "category": "五、散熱與電力能源",
+    "subcategory": "高功率電源供應與電源管理"
+  },
+  "1514": {
+    "name_cn": "亞力電機",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "2480": {
+    "name_cn": "敦陽科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "雲端整合、AI軟體與資安"
+  },
+  "6183": {
+    "name_cn": "關貿網路",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "雲端整合、AI軟體與資安"
+  },
+  "2412": {
+    "name_cn": "中華電信",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "雲端整合、AI軟體與資安"
+  },
+  "5227": {
+    "name_cn": "立凱-KY（能源儲存材料，原分類猜測有誤，已改列此類）",
+    "category": "五、散熱與電力能源",
+    "subcategory": "電力基建、重電與能源儲存"
+  },
+  "6166": {
+    "name_cn": "凌華科技",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "8114": {
+    "name_cn": "振樺電子",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "5388": {
+    "name_cn": "中磊電子",
+    "category": "六、軟體、軟硬整合與趨勢應用",
+    "subcategory": "端側AI與趨勢應用(AIPC/IPC/Edge AI)"
+  },
+  "2360": {
+    "name_cn": "致茂電子",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "IC封測與晶片檢測"
+  },
+  "2455": {
+    "name_cn": "全新光電",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "矽光子(CPO)與光通訊模組"
+  },
+  "3044": {
+    "name_cn": "健鼎科技",
+    "category": "三、關鍵零組件與上游原料",
+    "subcategory": "高頻高速PCB與CCL"
+  },
+  "6187": {
+    "name_cn": "萬潤科技",
+    "category": "二、晶圓製造與先進封裝",
+    "subcategory": "CoWoS先進封裝與設備"
+  },
+  "6643": {
+    "name_cn": "M31",
+    "category": "一、晶片與IC設計",
+    "subcategory": "矽智財(IP)與ASIC客製化設計"
+  },
+  "00685L": {
+    "name_cn": "群益台灣加權正2",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00675L": {
+    "name_cn": "富邦臺灣加權正2",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00631L": {
+    "name_cn": "元大台灣50正2",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00894": {
+    "name_cn": "中信小資高價30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00881": {
+    "name_cn": "國泰台灣5G+",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0053": {
+    "name_cn": "元大電子",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00892": {
+    "name_cn": "富邦台灣半導體",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00891": {
+    "name_cn": "中信關鍵半導體",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00935": {
+    "name_cn": "野村台灣新科技50",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0050": {
+    "name_cn": "元大台灣50",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "006208": {
+    "name_cn": "富邦台50",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "006203": {
+    "name_cn": "元大MSCI台灣",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0057": {
+    "name_cn": "富邦摩台",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00850": {
+    "name_cn": "元大臺灣ESG永續",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00923": {
+    "name_cn": "群益台ESG低碳",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00922": {
+    "name_cn": "國泰台灣領袖50",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00895": {
+    "name_cn": "富邦未來車",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00762": {
+    "name_cn": "元大全球AI",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00918": {
+    "name_cn": "大華優利高填息30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00927": {
+    "name_cn": "群益半導體收益",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "006204": {
+    "name_cn": "永豐臺灣加權",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00893": {
+    "name_cn": "國泰智能電動車",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0051": {
+    "name_cn": "元大中型100",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00909": {
+    "name_cn": "國泰數位支付服務",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00896": {
+    "name_cn": "中信綠能及電動車",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00919": {
+    "name_cn": "群益台灣精選高息",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00915": {
+    "name_cn": "凱基優選高股息30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00670L": {
+    "name_cn": "富邦NASDAQ正2",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0056": {
+    "name_cn": "元大高股息",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00878": {
+    "name_cn": "國泰永續高股息",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00647L": {
+    "name_cn": "元大S&P500正2",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00929": {
+    "name_cn": "復華台灣科技優息",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00900": {
+    "name_cn": "富邦特選高股息30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00733": {
+    "name_cn": "富邦臺灣中小",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "0055": {
+    "name_cn": "元大MSCI金融",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00730": {
+    "name_cn": "富邦臺灣優質高息30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00934": {
+    "name_cn": "中信成長高股息",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00713": {
+    "name_cn": "元大台灣高息低波",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00731": {
+    "name_cn": "復華富時高息低波",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  },
+  "00701": {
+    "name_cn": "國泰股利精選30",
+    "category": "七、ETF",
+    "subcategory": "大盤/主題ETF"
+  }
+}
