@@ -21,23 +21,20 @@
 - **穩定性修正**：Render 上 yfinance 被 Yahoo 封鎖（改用 curl_cffi 偽裝瀏覽器連線）、FinMind 逾時+重試、`/api/scan_all` 與下單規劃器的資料一致性 bug（首頁跟下單頁曾經顯示不同天的資料）。
 - **回測實驗室（`backtest.html`）本機/雲端畫面一致化**：雲端版現在畫面跟本機長得一樣，只是操作元件變成 disabled（不是整塊隱藏），避免兩邊看到完全不同的內容而搞混。
 - **新增「5. 個股買賣交易明細」區塊**（在排行榜之前），可即時查看/匯出頂尖策略組合的逐筆股票買賣明細。
-- **使用者帳號改用 Firebase Firestore 永久保存 + 密碼改用 bcrypt 雜湊**（這是最後、也是**尚未完全部署完成**的工作，見下方第 3 節）。
+- **使用者帳號改用 Firebase Firestore 永久保存 + 密碼改用 bcrypt 雜湊**——**已於 2026-08-10 完成部署並驗證**，見下方第 3 節。
 - 登入表單補上正規 `<form>` + `autocomplete` 屬性，讓瀏覽器能正常提示「儲存密碼」。
 - 管理者密碼目前是 `bbg7965`——**這是使用者在被告知風險後、知情狀況下自己選的**（是先前外洩過的舊密碼），不要在新對話裡重複警告這件事，使用者已經表態不想再聽這個提醒。
 
-## 3.【當前遇到的問題/瓶頸——這是接續對話要優先處理的事】
+## 3.【Firebase Firestore 整合狀態——已完成】
 
-**Firebase Firestore 整合，程式碼已經 push 上 GitHub，但 Render 上還沒接上，正式站的自助註冊/登入功能目前應該還是壞的（會找不到帳號）：**
+- 使用者已在 Firebase Console 建立專案（`ai-trading-users`）、啟用 Firestore（Standard 版、asia-east1）、下載服務帳戶金鑰 JSON。
+- 金鑰已寫進這台電腦本機的 `.env`（key 名稱：`FIREBASE_SERVICE_ACCOUNT_JSON`），本機測試通過（註冊→登入→重啟伺服器後帳號仍存在）。
+- 使用者已把同一組值貼進 **Render 後台環境變數**（`https://dashboard.render.com/web/srv-d9knueqjnfac739i9el0/settings`）並存檔觸發重新部署。
+- **已在正式站驗證**：呼叫 `/api/register` + `/api/login`（測試帳號 `firebasetest2`）皆成功，且 Render 部署 log 有出現 `✅ Firebase Firestore 已連線，自助註冊帳號將永久保存`，證實正式站的自助註冊帳號現在會永久保存、不會再因重新部署而消失。
 
-- 使用者已經自己在 Firebase Console 建立好專案（`ai-trading-users`）、啟用 Firestore（Standard 版、asia-east1）、下載了服務帳戶金鑰 JSON，並且已經貼給我。
-- 我已經把這組金鑰**寫進這台電腦本機的 `.env`**（key 名稱：`FIREBASE_SERVICE_ACCOUNT_JSON`，值是整份 service account JSON 壓成一行），並且**在本機完整測試過、確認可行**：註冊 → 登入成功、錯誤密碼會被拒絕、管理者登入不受影響、**重啟伺服器後帳號仍然存在**（證明真的寫進 Firestore，不是本機檔案）。
-- **卡住的地方**：使用者還沒有把同一組 `FIREBASE_SERVICE_ACCOUNT_JSON` 貼到 **Render 後台的環境變數**裡（`https://dashboard.render.com/web/srv-d9knueqjnfac739i9el0/settings`）。在那之前，正式站上的自助註冊/登入會失敗（`firestore_db` 會是 `None`，退回讀本機檔案，但 Render 本機檔案是空的）。
-- 這組金鑰的值**只存在這台電腦的本機 `.env` 裡**（沒有進 git，符合預期），新對話如果要繼續處理這件事，直接讀本機 `.env` 裡的 `FIREBASE_SERVICE_ACCOUNT_JSON` 就有值可以用，**不需要使用者重新去 Firebase 下載一次**。
+## 4.【下一步具體任務（剩餘、尚未完成）】
 
-## 4.【下一步具體任務】
-
-1. **優先**：提醒/帶使用者把 `.env` 裡的 `FIREBASE_SERVICE_ACCOUNT_JSON` 值貼到 Render 環境變數（同一個 key 名稱），存檔觸發重新部署。
-2. 部署完成後，比照本機測試的方式，直接呼叫正式站的 `/api/register` 和 `/api/login` 驗證整個流程在雲端也正常運作（可以用一個新的測試帳號，例如 `firebasetest2`，避免跟本機測試搞混）。
-3. 確認沒問題後，提醒使用者：如果之後要開放邀請碼給真的親友使用，記得先把 `INVITATION_CODE` 想清楚要不要換一組（目前這組 `owAsxRo1InuW` 只有這個對話串知道，還沒外流，但也還沒正式開放給人用）。
-4. 另外要提醒使用者：**WIN2 那台電腦的本機 `.env` 也要補上同一組 `FIREBASE_SERVICE_ACCOUNT_JSON`**，還有前面幾輪已經同步過的 `ADMIN_PASSWORD=bbg7965`，這個新對話沒辦法直接連過去改，要請使用者自己動手（或引導使用者複製這台電腦 `.env` 的內容過去）。
-5. 這次對話裝了幾個新的本機 Python 套件（`bcrypt`、`firebase-admin`、`python-dotenv`），都已經加進 `requirements.txt`，Render 重新部署時會自動安裝，不用額外處理；但如果之後要在 WIN2 或 Mac 本機重新 `pip install -r requirements.txt`，記得這幾個新套件需要一點時間安裝。
+1. 如果之後要開放邀請碼給真的親友使用，記得先把 `INVITATION_CODE` 想清楚要不要換一組（目前這組 `owAsxRo1InuW` 只有這個對話串知道，還沒外流，但也還沒正式開放給人用）。
+2. **WIN2 那台電腦的本機 `.env` 也要補上同一組 `FIREBASE_SERVICE_ACCOUNT_JSON`**，還有前面幾輪已經同步過的 `ADMIN_PASSWORD=bbg7965`，這個新對話沒辦法直接連過去改，要請使用者自己動手（或引導使用者複製這台電腦 `.env` 的內容過去）。
+3. 這次對話裝了幾個新的本機 Python 套件（`bcrypt`、`firebase-admin`、`python-dotenv`），都已經加進 `requirements.txt`，Render 重新部署時會自動安裝，不用額外處理；但如果之後要在 WIN2 或 Mac 本機重新 `pip install -r requirements.txt`，記得這幾個新套件需要一點時間安裝。
+4. 正式站上殘留的測試帳號 `firebasetest2`（密碼 `test1234`）目前還在 Firestore 裡，非必要但可以考慮之後清掉。
