@@ -1282,26 +1282,37 @@ def get_trades(experiment_id: int):
 
 @app.get("/api/analysis/trades_all_top")
 def get_all_top_trades():
+    """
+    只取報酬率最高的「單一」策略組合，把它的所有交易依買進日期排序回傳——
+    模擬「如果真的從頭到尾都照這一套規則下單，每天實際買賣了什麼」的交易日誌。
+    刻意不混合多組參數組合的交易（那些各自是獨立回測、不是同一條真實時間軸），
+    跨組合的報酬率比較留給下面的「7. 綜合策略排行榜」負責。
+    """
     if not os.path.exists(SQLITE_PATH):
         return {"data": []}
-        
+
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL ORDER BY total_return DESC LIMIT 10")
-    top_exps = c.fetchall()
-    
+    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL ORDER BY total_return DESC LIMIT 1")
+    best_exp = c.fetchone()
+
+    if not best_exp:
+        conn.close()
+        return {"data": []}
+
+    hold_str = "無限制" if best_exp['max_hold_days'] == 999 else f"{best_exp['max_hold_days']}天"
+    label = f"方案 {best_exp['exit_strategy']}（{best_exp['max_positions']}檔／{hold_str}）"
+
+    c.execute("SELECT * FROM trades WHERE experiment_id = ? ORDER BY buy_date ASC", (best_exp['id'],))
+    t_rows = c.fetchall()
     all_trades = []
-    for rank_idx, exp in enumerate(top_exps):
-        exp_id = exp['id']
-        c.execute("SELECT * FROM trades WHERE experiment_id = ? ORDER BY buy_date ASC", (exp_id,))
-        t_rows = c.fetchall()
-        for t in t_rows:
-            td = dict(t)
-            td['rank'] = rank_idx + 1
-            td['strategy_label'] = f"方案 {exp['exit_strategy']}"
-            all_trades.append(td)
-            
+    for t in t_rows:
+        td = dict(t)
+        td['rank'] = 1
+        td['strategy_label'] = label
+        all_trades.append(td)
+
     conn.close()
     return {"data": all_trades}
 

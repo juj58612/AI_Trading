@@ -468,7 +468,7 @@ window.exportCSV = async function(index) {
 };
 
 // ==========================================
-// 6. 個股買賣交易明細（跨頂尖策略組合彙整，跟上面單筆 exportCSV 匯出「一筆實驗」不同）
+// 6. 個股買賣交易明細（只取報酬率最高的單一策略組合，依日期排序，跟上面單筆 exportCSV 匯出「一筆實驗」不同）
 // ==========================================
 let cachedSnapshot = null;
 async function getSnapshot() {
@@ -496,12 +496,9 @@ async function fetchTradeDetailData() {
         const snap = await getSnapshot();
         if (snap) trades = snap.trades_all_top || [];
     }
-    // 表格顯示跟 CSV 匯出統一依損益金額(TWD)由高到低排序，方便一眼看出最賺/最賠的交易
-    trades.sort((a, b) => {
-        const pnlA = a.pnl !== undefined ? a.pnl : (a.pnl_amount !== undefined ? a.pnl_amount : 0);
-        const pnlB = b.pnl !== undefined ? b.pnl : (b.pnl_amount !== undefined ? b.pnl_amount : 0);
-        return pnlB - pnlA;
-    });
+    // 表格顯示跟 CSV 匯出統一依買進日期由舊到新排序，呈現「照這套最佳策略從頭到尾
+    // 實際操作，每天會買賣什麼股票」的交易日誌，而不是跨組合湊出來的最賺交易排行
+    trades.sort((a, b) => (a.buy_date || '').localeCompare(b.buy_date || ''));
     return trades;
 }
 
