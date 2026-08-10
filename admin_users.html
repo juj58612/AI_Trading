@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用者帳號管理 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container { max-width: 800px; margin: 30px auto; }
+        .admin-table { width: 100%; border-collapse: collapse; background-color: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
+        .admin-table th { background-color: #1e3a8a; color: #f8fafc; padding: 12px; text-align: left; font-size: 0.9rem; }
+        .admin-table td { padding: 12px; border-top: 1px solid var(--border-color); font-size: 0.9rem; }
+        .admin-table tr:hover { background-color: rgba(59, 130, 246, 0.08); }
+        .btn-reset { background-color: rgba(245, 158, 11, 0.15); border: 1px solid var(--accent-yellow); color: var(--accent-yellow); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; margin-right: 8px; }
+        .btn-reset:hover { background-color: rgba(245, 158, 11, 0.3); }
+        .btn-delete { background-color: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
+        .btn-delete:hover { background-color: rgba(239, 68, 68, 0.3); }
+        #adminMsg { text-align: center; margin: 15px 0; font-weight: bold; min-height: 1.2em; }
+        .empty-msg { text-align: center; color: var(--text-sub); padding: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container admin-container">
+    <header style="padding-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: center;">
+        <h1>🔐 使用者帳號管理</h1>
+        <p>僅限管理者查看：列出所有邀請碼自助註冊的帳號，可重設密碼或刪除帳號</p>
+        <div style="margin-top: 12px;">
+            <a href="index.html" style="color: var(--accent-blue); text-decoration: none; font-weight: bold;">← 回首頁</a>
+        </div>
+    </header>
+
+    <div id="adminMsg"></div>
+    <div id="usersTableWrap"></div>
+</div>
+
+<script src="admin_users.js"></script>
+</body>
+</html>

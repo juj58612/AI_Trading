@@ -74,6 +74,15 @@ def add_registered_user(username: str, password_hash: str):
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
 
+def delete_registered_user(username: str):
+    if firestore_db:
+        firestore_db.collection("users").document(username).delete()
+        return
+    users = load_registered_users()
+    users.pop(username, None)
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(users, f, ensure_ascii=False, indent=4)
+
 def verify_password(plain_password: str, password_hash: str) -> bool:
     try:
         return bcrypt.checkpw(plain_password.encode("utf-8"), password_hash.encode("utf-8"))
@@ -637,6 +646,44 @@ def login_user(req: LoginRequest):
     if uname in users and verify_password(pwd, users[uname]):
         return {"status": "success", "username": uname}
     raise HTTPException(status_code=401, detail="帳號或密碼錯誤！")
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
+@app.get("/api/admin/users")
+def admin_list_users(user: str = Depends(authenticate)):
+    if user != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail="僅限管理者查看使用者清單")
+    users = load_registered_users()
+    return {"users": sorted(users.keys())}
+
+@app.delete("/api/admin/users/{username}")
+def admin_delete_user(username: str, user: str = Depends(authenticate)):
+    if user != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail="僅限管理者刪除使用者")
+    if username == ADMIN_USERNAME:
+        raise HTTPException(status_code=400, detail="不能刪除管理者帳號")
+    users = load_registered_users()
+    if username not in users:
+        raise HTTPException(status_code=404, detail="找不到此使用者")
+    delete_registered_user(username)
+    return {"status": "success", "message": f"已刪除使用者 {username}"}
+
+@app.post("/api/admin/users/{username}/reset_password")
+def admin_reset_password(username: str, req: ResetPasswordRequest, user: str = Depends(authenticate)):
+    if user != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail="僅限管理者重設密碼")
+    if username == ADMIN_USERNAME:
+        raise HTTPException(status_code=400, detail="管理者密碼請透過環境變數 ADMIN_PASSWORD 修改")
+    new_pwd = req.new_password.strip() if req.new_password else ""
+    if len(new_pwd) < 4:
+        raise HTTPException(status_code=400, detail="密碼至少需要包含 4 個字元！")
+    users = load_registered_users()
+    if username not in users:
+        raise HTTPException(status_code=404, detail="找不到此使用者")
+    password_hash = bcrypt.hashpw(new_pwd.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    add_registered_user(username, password_hash)
+    return {"status": "success", "message": f"已重設 {username} 的密碼"}
 
 def get_user_portfolio_file(username: str) -> str:
     if not username or username in [ADMIN_USERNAME, "admin", "default", "undefined"]:
@@ -1278,7 +1325,7 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
