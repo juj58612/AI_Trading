@@ -225,6 +225,27 @@
             white-space: nowrap;
         }
         .buyhold-cat-items label span.ticker-code { color: var(--text-sub); font-size: 0.78rem; }
+
+        /* 交易明細表格/CSV 欄位說明：滑鼠移到 i 圖示上顯示 */
+        .info-tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+        .info-tooltip-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(148, 163, 184, 0.2); color: var(--text-sub);
+            font-size: 0.8rem; font-weight: bold; cursor: help; user-select: none;
+            border: 1px solid var(--border-color);
+        }
+        .info-tooltip-box {
+            display: none; position: absolute; z-index: 50; top: 28px; left: 0;
+            width: 420px; max-width: 80vw; background: #0f172a; border: 1px solid var(--accent-blue);
+            border-radius: 10px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            font-size: 0.78rem; color: var(--text-main); text-align: left; line-height: 1.5;
+        }
+        .info-tooltip-wrap:hover .info-tooltip-box { display: block; }
+        .info-tooltip-box table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .info-tooltip-box th, .info-tooltip-box td { border: 1px solid var(--border-color); padding: 5px 7px; text-align: left; vertical-align: top; }
+        .info-tooltip-box th { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .info-tooltip-box .warn-cell { color: var(--accent-yellow); }
     </style>
 </head>
 <body>
@@ -232,7 +253,7 @@
         <div class="nav-links" style="display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                 <a href="index.html" class="btn-nav" style="background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #3b82f6 !important;">🏠 返回控制台</a>
-                <a href="analysis.html" class="btn-nav" style="background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #f59e0b !important;">📊 分析中心</a>
+                <a href="analysis.html" class="btn-nav" style="background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #f59e0b !important;">📊 大數據回測量化分析中心</a>
                 <a href="data_hub.html" class="btn-nav" style="background: rgba(148,163,184,0.15); border-color: #94a3b8; color: #94a3b8 !important;">📁 數據總匯</a>
                 <a href="doc.html" class="btn-nav" style="background: rgba(139,92,246,0.15); border-color: #8b5cf6; color: #c084fc !important;">📄 策略白皮書</a>
             </div>
@@ -505,6 +526,25 @@
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button id="btnLoadTradeDetail" onclick="loadTradeDetailTable()" class="btn-search" style="background-color: #3b82f6; width: auto; padding: 8px 16px; font-size: 0.9rem;">📋 載入/更新明細表格</button>
                     <button onclick="exportTradeHistoryToCSV()" class="btn-search" style="background-color: #059669; width: auto; padding: 8px 16px; font-size: 0.9rem;">📑 匯出成 CSV</button>
+                    <span class="info-tooltip-wrap">
+                        <span class="info-tooltip-icon">i</span>
+                        <div class="info-tooltip-box">
+                            <div style="font-weight:bold; color:#f0f6fc; margin-bottom:4px;">欄位意思與排序方式</div>
+                            <table>
+                                <tr><th>欄位</th><th>意思</th></tr>
+                                <tr><td>排名</td><td>固定顯示 1，因為現在只取報酬率最高的單一策略組合，不再混合多組參數比較</td></tr>
+                                <tr><td>策略方案</td><td>這組最佳策略的完整參數，例如「方案 D（5檔／30天）」</td></tr>
+                                <tr><td>股票代碼／名稱</td><td>買賣的是哪一檔股票</td></tr>
+                                <tr><td>買進日期／買進價</td><td>這筆交易的進場日期與價格</td></tr>
+                                <tr><td>賣出日期／賣出價</td><td>出場日期與價格</td></tr>
+                                <tr><td>持倉天數</td><td>買進到賣出總共抱了幾天</td></tr>
+                                <tr><td>交易股數（僅 CSV 有這欄）</td><td class="warn-cell">⚠️ 固定顯示 1,000（一張），沒有真的計算實際股數，僅供格式參考，不代表真實部位大小</td></tr>
+                                <tr><td>平倉原因</td><td>為什麼賣出，例如「觸發停損」「時間到期」</td></tr>
+                                <tr><td>損益率／損益金額(TWD)</td><td>這筆交易賺賠多少</td></tr>
+                            </table>
+                            <div style="margin-top:8px; color: var(--text-sub);">排序方式：依買進日期由舊到新排序，呈現「如果從頭到尾都照這套最佳策略操作，每天實際會買賣什麼」的交易日誌。</div>
+                        </div>
+                    </span>
                     <span id="tradeDetailStatus" style="color: var(--text-sub); font-size: 0.85rem; align-self: center;"></span>
                 </div>
             </div>
