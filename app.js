@@ -74,7 +74,7 @@ function updateUserBadge() {
         if (!creds) {
             badge.innerHTML = `👤 未登入 <a href="javascript:void(0)" onclick="openAuthModal(false)" style="color:#f59e0b; margin-left:6px; font-size:0.85rem; text-decoration:underline;">🔑 邀請碼開戶/登入</a>`;
         } else if (creds.username === 'cyc58612') {
-            badge.innerHTML = `👤 管理者 (cyc58612) <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
+            badge.innerHTML = `👤 管理者 (cyc58612) <a href="admin_users.html" style="color:#3b82f6; margin-left:6px; font-size:0.8rem; text-decoration:underline;">🔐 帳號管理</a> <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
         } else {
             badge.innerHTML = `👤 用戶 (${creds.username}) <a href="javascript:void(0)" onclick="logoutUser()" style="color:#ef4444; margin-left:6px; font-size:0.8rem; text-decoration:underline;">登出</a>`;
         }
