@@ -59,6 +59,7 @@ def init_db():
             profit_factor REAL,
             total_trades INTEGER,
             is_out_of_sample BOOLEAN DEFAULT 0,
+            is_grid_trial BOOLEAN DEFAULT 0,
             return_2021 REAL DEFAULT 0,
             return_2022 REAL DEFAULT 0,
             return_2023 REAL DEFAULT 0,
@@ -74,6 +75,10 @@ def init_db():
         cols = [col[1] for col in c.fetchall()]
         if 'is_out_of_sample' not in cols:
             c.execute("ALTER TABLE experiments ADD COLUMN is_out_of_sample BOOLEAN DEFAULT 0")
+        if 'is_grid_trial' not in cols:
+            # 「4. AI 網格最佳化」內部 20 次訓練期(前 70%)探索性試跑的標記，跟正式的
+            # 單次回測/大數據回測區隔開，避免污染排行榜與 AI 智慧決策建議的統計平均
+            c.execute("ALTER TABLE experiments ADD COLUMN is_grid_trial BOOLEAN DEFAULT 0")
         if "cagr" not in cols:
             c.execute("ALTER TABLE experiments ADD COLUMN cagr REAL DEFAULT 0")
         if "pool_size" not in cols:
@@ -766,6 +771,7 @@ class BacktestRequest(BaseModel):
     max_hold_days: int
     exit_strategy: str
     is_out_of_sample: bool = False
+    is_grid_trial: bool = False
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest):
@@ -1122,9 +1128,9 @@ async def run_backtest(req: BacktestRequest):
         conn = sqlite3.connect(SQLITE_PATH)
         c = conn.cursor()
         c.execute('''
-            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, pool_size, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, len(TICKERS), yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
+            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, is_grid_trial, pool_size, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, req.is_grid_trial, len(TICKERS), yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
         
         experiment_id = c.lastrowid
         
@@ -1178,15 +1184,14 @@ async def run_bayesian_optimization(req: GridSearchRequest):
         return {"status": "error", "detail": f"日期解析錯誤: {str(e)}"}
         
     n_trials = 20 # 限制在 20 次以內快速完成展示
-    results = []
-    
+
     for i in range(n_trials):
         trial = study.ask()
-        
+
         strategy = trial.suggest_categorical("strategy", ['C', 'D'])
         pos = trial.suggest_int("max_positions", 2, 5)
         hd = trial.suggest_categorical("max_hold_days", [30, 60, 999])
-        
+
         sub_req = BacktestRequest(
             capital=req.capital,
             max_positions=pos,
@@ -1195,23 +1200,21 @@ async def run_bayesian_optimization(req: GridSearchRequest):
             end_date=is_end_date,
             max_hold_days=hd,
             exit_strategy=strategy,
-            is_out_of_sample=False
+            is_out_of_sample=False,
+            # 這 20 次只涵蓋前 70% 訓練期，不是完整區間的正式回測結果，標記起來
+            # 讓排行榜與 get_attribution() 的統計平均可以把它們排除，避免污染
+            is_grid_trial=True
         )
-        
+
         try:
             res = await run_backtest(sub_req)
             ret = res["metrics"]["total_return"]
             mdd = res["metrics"]["mdd"]
             score = ret - (mdd * 2)
             study.tell(trial, score)
-            
-            results.append({
-                "strategy": strategy, "max_positions": pos, "max_hold_days": hd,
-                "metrics": res["metrics"], "score": score
-            })
         except Exception as e:
             study.tell(trial, -999) # 懲罰失敗的 trial
-            
+
     best_params = study.best_params
     
     # Run Out-Of-Sample
@@ -1255,10 +1258,12 @@ def get_experiments():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute("SELECT * FROM experiments ORDER BY total_return DESC")
+    # is_grid_trial = 1 是「4. AI 網格最佳化」內部只涵蓋前 70% 訓練期的探索性試跑，
+    # 不是完整區間的正式回測結果，排行榜不顯示，避免跟正式結果混淆
+    c.execute("SELECT * FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL ORDER BY total_return DESC")
     rows = c.fetchall()
     conn.close()
-    
+
     return {"data": [dict(r) for r in rows]}
 
 @app.get("/api/analysis/trades/{experiment_id}")
@@ -1283,7 +1288,7 @@ def get_all_top_trades():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments ORDER BY total_return DESC LIMIT 10")
+    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL ORDER BY total_return DESC LIMIT 10")
     top_exps = c.fetchall()
     
     all_trades = []
@@ -1466,7 +1471,8 @@ def get_attribution():
         
     try:
         conn = sqlite3.connect(SQLITE_PATH)
-        df_exp = pd.read_sql_query("SELECT * FROM experiments", conn)
+        # 排除網格最佳化的訓練期(前 70%)探索性試跑，只用完整區間的正式回測結果算敏感度統計
+        df_exp = pd.read_sql_query("SELECT * FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL", conn)
         conn.close()
         
         if df_exp.empty:
