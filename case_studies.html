@@ -153,6 +153,8 @@
         <a href="#case3">③ 3:3:4分批 vs 一次買完 全股池對照</a>
         <a href="#case4">④ 出場機制對照：卡片防線 vs Scale-out vs 多空頭regime</a>
         <a href="#case5">⑤ Regime自動切換：能否贏過任何單一固定方案？</a>
+        <a href="#case6">⑥ A/B/C/D/E 五方案全面對照：哪個方案該當regime模型的基底？</a>
+        <a href="#case7">⑦ 用方案B重新設計空頭端：一次不如預期的嘗試</a>
     </div>
 
     <!-- 個案一 -->
@@ -346,6 +348,68 @@
             📌 沒被用來挑規則的四個年份（2021/2023/2025/2026）全部是正報酬，勝率50~63%；反而是唯一用來挑空頭規則的2022年，勝率是六年裡最低的（40.5%）。整體表現不是靠兩個「主場年」撐起來的，多數年份都站得住腳，大幅降低了過度配適（overfitting）的疑慮，但樣本仍只涵蓋5.5年、每個regime僅有限個完整年份，還稱不上長期穩健驗證。
         </div>
         <p><strong>結論</strong>：以「即時可算、不使用未來資訊」的regime訊號動態切換進出場參數，確實贏過目前測過的任何單一固定方案，且沒被用來挑規則的年份表現同樣站得住腳，不只是巧合湊出來的兩年好結果。這驗證了「依市況判斷適合的參數」這個設計方向本身是有效的。<strong>但這仍是研究階段的結果，尚未套用到 <code>strategy_core.py</code> 或任何正式頁面／模型中</strong>——下一步若要正式導入，建議先累積更多年份的資料（尤其更多獨立的空頭年樣本）再考慮上線，並在使用者主動要求前，不會將此邏輯做成首頁功能。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;">關於樣本年限：股票池全部是AI概念股，AI題材本身只有約5年的爆發期可回測，往前拉長年限沒有對應的真實資料可測，不是刻意把驗證範圍縮小。</p>
+    </div>
+
+    <!-- 個案六 -->
+    <div class="doc-section" id="case6">
+        <h2>⑥ A/B/C/D/E 五方案全面對照：哪個方案該當regime模型的基底？<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：個案⑤的regime自動切換只用了方案A當進場篩選基底，還沒跟B/C/D/E比較過，不知道A是不是真的是最佳基底，還是隨便挑到的。這裡把五個方案都拿來在同樣的條件下（一次買完、各方案原生 <code>evaluate_exit</code> 邏輯、8檔持股）對照。</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">⚠️ regime模型的目標不是只優化多頭——最終希望不論多頭或空頭，系統都能依當下狀況自動給出最佳進出場建議，這裡的多空頭分開對照是為了先搞清楚每個方案各自的強項在哪個階段，不是要把模型限定成只在多頭使用。</p>
+
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>全期間總報酬</th><th>全期間MDD</th><th>2024多頭總報酬</th><th>2022空頭總報酬</th><th>2022空頭MDD</th></tr></thead>
+            <tbody>
+                <tr><td><strong>A</strong></td><td><strong>314.29%</strong></td><td><strong>21.1%（最低）</strong></td><td><strong>63.29%（最高）</strong></td><td>-23.94%</td><td>30.49%</td></tr>
+                <tr><td>B</td><td>191.93%</td><td>27.4%</td><td>30.82%</td><td><strong>-20.64%（最少虧）</strong></td><td><strong>23.55%（最低）</strong></td></tr>
+                <tr><td>C</td><td>206.64%</td><td>43.09%</td><td>34.7%</td><td>-27.11%</td><td>30.36%</td></tr>
+                <tr><td>D</td><td>246.98%</td><td>41.59%</td><td>21.57%</td><td><strong>-35.65%（最慘）</strong></td><td><strong>41.53%（最差）</strong></td></tr>
+                <tr><td>E</td><td>188.41%</td><td>34.75%</td><td>24.43%</td><td>-24.1%</td><td>27.81%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>方案A在全期間跟2024純多頭年都是五個方案裡表現最好、風險（MDD）最低的</strong>——確認個案⑤選A當多頭模式基底的決定是對的，不是隨意挑到。但2022空頭年最強的其實是<strong>方案B</strong>（虧損最少、MDD最低），方案A在空頭年只是中段班；方案D則是空頭年表現最差的方案，全期間亮眼的246.98%其實是靠多頭年撐起來、承擔了最高的空頭風險換來的。
+        </div>
+        <p><strong>結論與下一步</strong>：目前的regime自動切換模型（個案⑤）多頭端用方案A當基底是有實證支持的最佳選擇；方案B是空頭年單獨表現最好的方案，理論上該拿來重新設計空頭端——實際嘗試結果見個案⑦，並不如預期。</p>
+    </div>
+
+    <!-- 個案七 -->
+    <div class="doc-section" id="case7">
+        <h2>⑦ 用方案B重新設計空頭端：一次不如預期的嘗試，附方法論修正<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：個案⑥發現方案B是2022空頭年單獨表現最好的方案，照使用者的規劃方向，應該拿它重新設計regime模型的空頭端（取代個案⑤沿用的card-line組合），理論上應該更好。</p>
+
+        <h3>方法論修正：先解決結果不可重現的問題</h3>
+        <p style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ 第一次測試時發現同一支腳本、同樣的參數，跑兩次得到不同結果（200.54% vs 162.67%）——追查後發現腳本每次執行都即時呼叫 yfinance／FinMind 抓取TAIEX與巨觀風控資料，同樣的程式碼因為外部API當下狀態不同（尤其FinMind常逾時），兩次會拿到不同的輸入資料。已修正為先把TAIEX、巨觀風控資料存成本地固定快取，之後重跑一律讀取同一份快取，重跑兩次確認結果完全一致（251.51% / 162.67%，分毫不差）後才採信。
+        </p>
+
+        <h3>結果：整合方案B反而讓整體表現變差</h3>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
+            <tbody>
+                <tr><td>靜態方案A（全程不切換，不含巨觀風控）</td><td>251.51%</td><td>27.41%</td><td>43.01%</td><td>1.47</td><td>965</td></tr>
+                <tr><td>Regime v2（多頭A原生＋空頭B原生分批）</td><td><strong>162.67%（更差）</strong></td><td><strong>37.18%（更差）</strong></td><td>41.53%</td><td>1.37</td><td>891</td></tr>
+                <tr><td>對照：個案⑤ Regime v1（空頭用card-line組合，同樣不含巨觀風控）</td><td><strong>522.18%</strong></td><td>22.25%</td><td>53.11%</td><td>2.92</td><td>273</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 方案B雖然是2022年單獨測試表現最好的方案，但把它整合進regime系統、取代原本card-line組合當空頭邏輯後，總報酬跟MDD都比「全程只用方案A」還差，更遠遠不如個案⑤原本的card-line組合版本（522.18%）。個別最強的積木，湊在一起不保證整體最強——這跟個案④「組合最佳假設不成立」是同一種現象。
+        </div>
+        <p><strong>結論</strong>：目前測過的regime模型設計中，<strong>個案⑤的版本（多頭=一次買完+關防線A；空頭=3:3:4分批+關防線A/保本停利直接出清的card-line組合）仍然是表現最好的</strong>，用「方案B原生邏輯」取代空頭端是一次已驗證失敗的嘗試，不採用。</p>
+
+        <h3>後續嘗試：只把方案B真正的差異點（土洋雙賣）疊加進去，不是整套換掉</h3>
+        <p>查證 <code>evaluate_entry</code> 發現方案A/B/C/E的進場篩選邏輯其實完全相同（只有方案D有額外濾網），方案B真正的差異只在出場端一條規則：「土洋雙賣」（外資與投信同一天都賣超就立即全部出清）。與其整套替換（已證實失敗），改成把這條規則當成<strong>新增的第五條防線</strong>疊加進個案⑤原本的空頭card-line組合裡，其餘不變。</p>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
+            <tbody>
+                <tr><td>個案⑤原版（重跑確認可重現，分毫不差）</td><td><strong>522.18%</strong></td><td>22.25%</td><td><strong>53.11%</strong></td><td>2.92</td><td>273</td></tr>
+                <tr><td>疊加土洋雙賣</td><td>468.71%</td><td><strong>17.48%（明顯更低）</strong></td><td>44.09%</td><td>2.62</td><td>465</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 這次不是單純的贏或輸，是另一組風險-報酬取捨：總報酬略降（522%→469%），但MDD明顯改善（22.25%→17.48%，降了近5個百分點），交易周轉也大增（273→465筆，土洋雙賣觸發更頻繁）。用一部分報酬換取更強的空頭防守——重視資金保護優先於總報酬極大化時，這個疊加版更合適；純看總報酬，原版仍勝出。
+        </div>
+        <p><strong>結論</strong>：方案B的空頭優勢已經找到一種有效整合方式（疊加土洋雙賣，而非整套替換），但這是取捨而非全面勝出，目前仍以個案⑤原版當基準，是否改用疊加版取決於使用者對「報酬 vs 防守」的優先順序，尚未決定採用哪一版，也尚未套用到 <code>strategy_core.py</code>。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>
