@@ -39,3 +39,31 @@ Commit：[`418ead7`](https://github.com/juj58612/AI_Trading/commit/418ead7)（�
 **處理**：`main.py` 的 `/api/planner/recommendations` 在風控觸發時，讓 `market_status`/`market_advice`/`market_color` 一併改口說明風控狀態，沿用系統既有的「觀望＝綠、築底＝黃橘」配色語意，不新增配色規則。
 
 Commit：[`1ab864f`](https://github.com/juj58612/AI_Trading/commit/1ab864f)
+
+---
+
+## 2026-08-10 — Windows 端資安總清查 + 使用者帳號改用 Firebase 永久保存
+
+**背景**：這台 Windows 電腦這次對話發現整個公開 repo 有嚴重的機密外洩問題（管理者密碼、FinMind token 直接寫死在 `main.py` 跟前端 JS 裡，任何人看原始碼都找得到），順帶清查出好幾個既有 bug。
+
+**處理（資安）**：
+- 密碼/token/邀請碼全部改讀環境變數，不寫死在程式碼；用 `git filter-repo` 改寫過 git 歷史清掉舊機密的 commit 紀錄（**Mac 端如果 `git pull` 失敗，要改用 `git fetch && git reset --hard origin/main`**）。
+- 修掉 `history.js`/`order_planner.js` 的認證繞過漏洞（沒登入卻被當管理者）。
+- 管理者密碼目前設定為使用者知情狀況下選定的舊密碼，之後如果又要換，直接改 Render 環境變數即可。
+
+**處理（穩定性）**：
+- Render 上 `yfinance` 被 Yahoo 官方封鎖雲端 IP 的問題（改用 `curl_cffi` 偽裝瀏覽器連線）。
+- FinMind API 逾時從 5 秒延長到 8 秒 + 失敗重試一次。
+- 修掉下單執行中心跟首頁掃描資料「顯示不同天資料」的一致性 bug（下單頁改成快取沒命中時自己即時掃描，不再依賴使用者先去首頁掃過）。
+
+**處理（回測實驗室 UI）**：
+- `backtest.html` 雲端版跟本機版畫面改成完全一致，雲端版操作元件用 `disabled` 鎖住而不是整塊隱藏，避免同一個網址在兩邊看到完全不同內容。
+- 新增「個股買賣交易明細」表格（可查看/匯出頂尖策略組合的逐筆股票買賣紀錄，跟排行榜的方案層級統計是不同東西）。
+
+**處理（使用者帳號持久化）**：
+- 發現 `registered_users.json`（自助註冊帳密）因為正確地被排除在 git 之外（避免明碼密碼外洩），導致每次 Render 重新部署都會被清空，所有自助註冊帳號都會消失。
+- 改成存進 **Firebase Firestore**（新的免費雲端資料庫，環境變數 `FIREBASE_SERVICE_ACCOUNT_JSON`），本機測試確認：重啟伺服器後帳號依然存在，證明真的持久化了。
+- 順便把密碼存放方式改成 `bcrypt` 雜湊，不再存明碼（就算 Firestore 資料外流，密碼本身也不會直接洩漏）。
+- **注意**：這次只完成本機測試 + 程式碼 push，**Render 上的 `FIREBASE_SERVICE_ACCOUNT_JSON` 環境變數還沒設定**，正式站的自助註冊/登入在那之前應該還是壞的，細節見 `NEXT_SESSION_HANDOFF.md`。
+
+Commit：[`3d62917`](https://github.com/juj58612/AI_Trading/commit/3d62917)（Firestore + bcrypt，最後一個 commit，之前還有一長串資安/穩定性 commit）
