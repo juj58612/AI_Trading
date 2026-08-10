@@ -10,6 +10,8 @@ import math
 import sqlite3
 import optuna
 import strategy_core
+from dotenv import load_dotenv
+load_dotenv()  # 本機開發時載入 .env（Render 上沒有這個檔案，不影響雲端行為）
 from fastapi import FastAPI, APIRouter, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

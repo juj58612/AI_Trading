@@ -1,4 +1,5 @@
 import secrets
+import bcrypt
 from fastapi import FastAPI, HTTPException, Request, Depends, status
 from pydantic import BaseModel
 from typing import List, Optional
@@ -15,13 +16,47 @@ import os
 import json
 import time
 import concurrent.futures
+from dotenv import load_dotenv
+
+# 本機開發時把 .env 檔案內容載入成環境變數；Render 上本來就是用平台自己的環境變數
+# （沒有 .env 檔案），這裡不會覆蓋、也不影響雲端行為，純粹補齊本機測試的最後一哩路
+load_dotenv()
 
 # 管理者帳密與邀請碼一律從環境變數讀取，不在原始碼中寫死任何機密
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "cyc58612")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # 未設定則管理者登入路徑一律不通過（安全預設）
 
+# 自助註冊帳號存放位置：Render 免費方案沒有永久硬碟，本機檔案在每次重新部署後
+# 都會被清空，所以優先用 Firebase Firestore 永久保存；沒有設定 Firebase 環境變數時
+# （例如本機開發初期還沒設定），退回本機檔案，僅供本機測試使用、不保證能撐過重新部署。
+FIREBASE_CREDS_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "")
+firestore_db = None
+if FIREBASE_CREDS_JSON:
+    try:
+        import firebase_admin
+        from firebase_admin import credentials as fb_credentials, firestore
+        fb_cred = fb_credentials.Certificate(json.loads(FIREBASE_CREDS_JSON))
+        firebase_admin.initialize_app(fb_cred)
+        firestore_db = firestore.client()
+        print("✅ Firebase Firestore 已連線，自助註冊帳號將永久保存")
+    except Exception as e:
+        print(f"⚠️ Firebase 初始化失敗，自助註冊帳號將無法永久保存（重新部署後會遺失）: {e}")
+
 USERS_FILE = "registered_users.json"
+
 def load_registered_users():
+    """回傳 {username: password_bcrypt_hash} 字典。"""
+    if firestore_db:
+        try:
+            users = {}
+            for doc in firestore_db.collection("users").stream():
+                data = doc.to_dict()
+                if data and "password_hash" in data:
+                    users[doc.id] = data["password_hash"]
+            return users
+        except Exception as e:
+            print(f"讀取 Firestore 使用者資料失敗: {e}")
+            return {}
     if os.path.exists(USERS_FILE):
         try:
             with open(USERS_FILE, "r", encoding="utf-8") as f:
@@ -30,9 +65,20 @@ def load_registered_users():
             return {}
     return {}
 
-def save_registered_users(users):
+def add_registered_user(username: str, password_hash: str):
+    if firestore_db:
+        firestore_db.collection("users").document(username).set({"password_hash": password_hash})
+        return
+    users = load_registered_users()
+    users[username] = password_hash
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
+
+def verify_password(plain_password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), password_hash.encode("utf-8"))
+    except Exception:
+        return False
 
 def authenticate(request: Request):
     auth = request.headers.get("Authorization")
@@ -48,7 +94,7 @@ def authenticate(request: Request):
             if ADMIN_PASSWORD and secrets.compare_digest(user, ADMIN_USERNAME) and secrets.compare_digest(pwd, ADMIN_PASSWORD):
                 return ADMIN_USERNAME
             users = load_registered_users()
-            if user in users and secrets.compare_digest(users[user], pwd):
+            if user in users and verify_password(pwd, users[user]):
                 return user
         except Exception:
             pass
@@ -572,9 +618,9 @@ def register_user(req: RegisterRequest):
     users = load_registered_users()
     if uname in users or uname == ADMIN_USERNAME:
         raise HTTPException(status_code=400, detail="此帳號名稱已被註冊，請換一個！")
-        
-    users[uname] = pwd
-    save_registered_users(users)
+
+    password_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    add_registered_user(uname, password_hash)
     return {"status": "success", "message": "註冊成功！請使用新帳密登入。", "username": uname}
 
 class LoginRequest(BaseModel):
@@ -588,7 +634,7 @@ def login_user(req: LoginRequest):
     if ADMIN_PASSWORD and secrets.compare_digest(uname, ADMIN_USERNAME) and secrets.compare_digest(pwd, ADMIN_PASSWORD):
         return {"status": "success", "username": ADMIN_USERNAME}
     users = load_registered_users()
-    if uname in users and secrets.compare_digest(users[uname], pwd):
+    if uname in users and verify_password(pwd, users[uname]):
         return {"status": "success", "username": uname}
     raise HTTPException(status_code=401, detail="帳號或密碼錯誤！")
 
