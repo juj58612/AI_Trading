@@ -326,6 +326,10 @@
         </div>
         <p>• <strong>運作概念</strong>：當在大數據回測中發現更強的冠軍參數組合（例如回測發現 28 天持倉比 30 天更好，或是 1.15x ATR 鎖利更精準時），按下此按鈕，系統會自動將最新冠軍參數更新至實戰控制台 <code>strategy_core.py</code> 中！<br>
         • <strong>發展遠景</strong>：讓實戰模型具備如同 AI 般的自適應學習能力，根據最新市場數據進行<strong>動態自我修正與持續進化</strong>。</p>
+
+        <h3>5.6 研究筆記：乖離率／動能過熱指標該不該納入 Chip Score？</h3>
+        <p>目前的<a href="#" onclick="return false;" style="color:#c084fc; text-decoration:none;">法人籌碼積分模型（見 2.2 節）</a>只判斷「是否站上 5MA」與「法人買賣方向」，<strong>完全沒有納入「已經漲了多少」「連續漲停幾天」這類過熱／動能強度因子</strong>。這是模型的漏洞，還是刻意的設計？</p>
+        <p>結論：不是設計疏漏，而是有實證支持——動能因子文獻（Jegadeesh &amp; Titman, 1993；George &amp; Hwang, 2004 的52週高點動能效應）與我們自己跨A/D兩方案共8組實驗（4,247筆交易）的分組驗證都顯示，乖離率越高勝率與報酬不降反升，硬性過濾反而會砍掉表現最好的交易。唯一值得留意的例外是「A方案 + 距低點漲幅超過100%」的組合明顯轉差，D方案的自適應吊燈鎖利機制已有相當防護，此為持續驗證中的研究方向，尚未套用到 <code>strategy_core.py</code>。完整學術回顧、分組數據與逐實驗檢查結果見 <a href="case_studies.html#case1" target="_blank" style="color:#ec4899;">📂 個案研究 ①</a>。</p>
     </div>
 
     <!-- 第六章 -->

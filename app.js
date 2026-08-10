@@ -363,6 +363,27 @@ btnGlobalSearch.addEventListener('click', async () => {
 
 window.stockDataCache = window.stockDataCache || {};
 
+function buildSparklineSVG(prices) {
+    if (!prices || prices.length < 2) return '';
+    const w = 280, h = 50, pad = 4;
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    const stepX = (w - pad * 2) / (prices.length - 1);
+    const coords = prices.map((p, i) => ({
+        x: pad + i * stepX,
+        y: pad + (1 - (p - min) / range) * (h - pad * 2)
+    }));
+    const points = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+    const last = coords[coords.length - 1];
+    const up = prices[prices.length - 1] >= prices[0];
+    const color = up ? 'var(--accent-green)' : 'var(--accent-red)';
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:50px; display:block; margin-bottom:8px;">
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="${color}"/>
+    </svg>`;
+}
+
 async function fetchRealDataUnified(ticker, stockName, prefix = '') {
     const statusEl = document.getElementById(`${prefix}live-status-${ticker}`);
     const highInput = document.getElementById(`${prefix}high-${ticker}`);
@@ -424,7 +445,25 @@ async function fetchRealDataUnified(ticker, stockName, prefix = '') {
                 if (volumeEl) volumeEl.textContent = volStr;
                 if (maTrendEl) maTrendEl.textContent = maStr;
             }
-            
+
+            const history7El = document.getElementById(`${prefix}history7-${ticker}`);
+            if (history7El) {
+                const dates7 = (data.history_dates || []).slice(-7);
+                const prices7 = (data.history_prices || []).slice(-7);
+                if (dates7.length > 0) {
+                    const sparklineSvg = buildSparklineSVG(prices7);
+                    const rowsHtml = dates7.map((d, i) => {
+                        const p = prices7[i];
+                        const prevP = i > 0 ? prices7[i - 1] : p;
+                        const color = p > prevP ? 'var(--accent-green)' : (p < prevP ? 'var(--accent-red)' : 'var(--text-main)');
+                        return `<div style="text-align:center; flex:1;"><div style="color:var(--text-sub); font-size:0.7rem;">${d}</div><div style="color:${color}; font-weight:bold; font-size:0.8rem;">${p}</div></div>`;
+                    }).join('');
+                    history7El.innerHTML = `${sparklineSvg}<div style="display:flex; justify-content:space-between; gap:4px;">${rowsHtml}</div>`;
+                } else {
+                    history7El.innerHTML = `<span style="color:var(--text-sub); font-size:0.75rem;">無資料</span>`;
+                }
+            }
+
             const existsInPortfolio = myPortfolio.find(item => item.ticker === ticker && item.type === (prefix === 'sell-' ? 'short' : 'long'));
             if (existsInPortfolio) {
                 existsInPortfolio.closePrice = data.latest_close;
@@ -506,56 +545,6 @@ function calcStockUnified(ticker, prefix = '') {
         } else { resDD.textContent = "-"; }
     }
 }
-
-window.addToPortfolioByTicker = function(ticker, prefix = '', type = 'long') {
-    const nameInput = document.getElementById(`${prefix}name-${ticker}`);
-    const name = nameInput.value;
-    const closePrice = parseFloat(nameInput.dataset.close) || 0;
-    const cost = parseFloat(document.getElementById(`${prefix}cost-${ticker}`).value) || 0;
-    const shares = parseFloat(document.getElementById(`${prefix}shares-${ticker}`).value) || 1;
-    const supp = parseFloat(document.getElementById(`${prefix}supp-${ticker}`).value) || 0;
-    const high = parseFloat(document.getElementById(`${prefix}high-${ticker}`).value) || 0;
-    const sigClass = nameInput.dataset.sigclass;
-    const signal = nameInput.dataset.signal;
-    const is_mock = false;
-
-    if (cost <= 0) {
-        alert("⚠️ 請先輸入『購買/放空成本 ($C$)』後再加入追蹤！");
-        return;
-    }
-
-    const exists = myPortfolio.findIndex(item => item.ticker === ticker && item.type === type);
-    if (exists !== -1) {
-        const oldItem = myPortfolio[exists];
-        const oldShares = oldItem.shares || 0;
-        const oldCost = oldItem.cost || 0;
-        const newShares = shares;
-        const newCost = cost;
-        const totalShares = oldShares + newShares;
-        
-        let avgCost = 0;
-        if (totalShares > 0) {
-            avgCost = ((oldCost * oldShares) + (newCost * newShares)) / totalShares;
-        }
-        
-        let updatedHigh = high;
-        if (oldItem.high > 0 && high > 0) {
-            updatedHigh = type === 'long' ? Math.max(oldItem.high, high) : Math.min(oldItem.high, high);
-        } else if (oldItem.high > 0) {
-            updatedHigh = oldItem.high;
-        }
-        
-        myPortfolio[exists] = { ...oldItem, name, closePrice, cost: avgCost, shares: totalShares, supp, high: updatedHigh, sigClass, signal };
-        alert(`✅ 偵測到已有 ${name} 庫存，已執行加碼攤平計算！\n最新平均成本為: ${avgCost.toFixed(2)}\n總張數為: ${totalShares}`);
-    } else {
-        myPortfolio.push({ name, ticker, closePrice, cost, shares, supp, high, sigClass, signal, type, inst_data: [], margin_data: [], history_dates: [], history_prices: [], is_mock, reason: '', journal: '' });
-        alert(`✅ 已將 ${name} 加入追蹤！請至「我的操盤室」查看詳細損益與圖表。`);
-    }
-    
-    savePortfolioToStorage();
-    
-    fetchRealDataUnified(ticker, name, prefix);
-};
 
 window.removeFromPortfolio = async function(index) {
     const item = myPortfolio[index];
@@ -824,11 +813,11 @@ async function renderStockCards(count, forceRefresh = false) {
                 <div class="res-row"><span style="color:var(--text-sub);">均線共振:</span><span id="maTrend-${stock.ticker}" style="color:var(--text-main); font-weight:bold;">${stock.maTrend}</span></div>
             </div>
             
-            <div class="inputs-container">
-                <div class="input-box"><label>購買成本 ($C$)</label><input type="number" id="cost-${stock.ticker}" value="" placeholder="自動填入最新價"></div>
-                <div class="input-box"><label>操作張數 (張) <span id="total-cost-${stock.ticker}" style="color:var(--accent-green); font-size:0.8rem; float:right;">$0</span></label><input type="number" id="shares-${stock.ticker}" value="1" min="0.001" step="0.001"></div>
+            <div class="inputs-container" style="grid-template-columns: 1fr 1fr;">
                 <div class="input-box"><label>關鍵支撐 ($S_{key}$)</label><input type="number" id="supp-${stock.ticker}" value="" placeholder="自動填入前低"></div>
                 <div class="input-box"><label>波段最高收盤價</label><input type="number" id="high-${stock.ticker}" value="0" readonly title="系統將自動根據收盤價更新最高水位"></div>
+                <input type="hidden" id="cost-${stock.ticker}" value="">
+                <input type="hidden" id="shares-${stock.ticker}" value="1">
             </div>
 
             <div class="card-results">
@@ -837,7 +826,12 @@ async function renderStockCards(count, forceRefresh = false) {
                 <div class="res-row"><span>保本停利 (+15%鎖+5%):</span><span class="val-green" id="resWin-${stock.ticker}">-</span></div>
                 <div class="res-row"><span>實質高點打折鎖利:</span><span class="val-yellow" id="resDD-${stock.ticker}">-</span></div>
             </div>
-            <button class="btn-add" onclick="addToPortfolioByTicker('${stock.ticker}', '', 'long')">📥 加入多單追蹤</button>
+            <div class="card-results" style="margin-top:8px;">
+                <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:6px;">📈 近7日收盤價</div>
+                <div id="history7-${stock.ticker}">
+                    <span style="color:var(--text-sub); font-size:0.75rem;">載入中...</span>
+                </div>
+            </div>
         `;
         stocksGrid.appendChild(card);
 
@@ -918,11 +912,11 @@ async function renderSellCards(count) {
                 <div class="res-row"><span style="color:var(--text-sub);">均線共振:</span><span id="sell-maTrend-${stock.ticker}" style="color:var(--text-main); font-weight:bold;">${stock.maTrend}</span></div>
             </div>
             
-            <div class="inputs-container">
-                <div class="input-box"><label>放空成本 ($C$)</label><input type="number" id="sell-cost-${stock.ticker}" value="" placeholder="自動填入最新價"></div>
-                <div class="input-box"><label>操作張數 (張) <span id="sell-total-cost-${stock.ticker}" style="color:var(--accent-red); font-size:0.8rem; float:right;">$0</span></label><input type="number" id="sell-shares-${stock.ticker}" value="1" min="0.001" step="0.001"></div>
+            <div class="inputs-container" style="grid-template-columns: 1fr 1fr;">
                 <div class="input-box"><label>關鍵壓力 ($R_{key}$)</label><input type="number" id="sell-supp-${stock.ticker}" value=""></div>
                 <div class="input-box"><label>波段最低收盤價</label><input type="number" id="sell-high-${stock.ticker}" value="0" readonly title="系統將自動根據收盤價更新最低水位"></div>
+                <input type="hidden" id="sell-cost-${stock.ticker}" value="">
+                <input type="hidden" id="sell-shares-${stock.ticker}" value="1">
             </div>
 
             <div class="card-results">
@@ -941,7 +935,12 @@ async function renderSellCards(count) {
                 </div>
             </div>
 
-            <button class="btn-add" style="border-color: var(--sell-border); color: var(--sell-border); background-color: rgba(234, 88, 12, 0.1);" onclick="addToPortfolioByTicker('${stock.ticker}', 'sell-', 'short')">📥 加入空單追蹤</button>
+            <div class="card-results" style="margin-top:8px;">
+                <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:6px;">📈 近7日收盤價</div>
+                <div id="sell-history7-${stock.ticker}">
+                    <span style="color:var(--text-sub); font-size:0.75rem;">載入中...</span>
+                </div>
+            </div>
         `;
         sellGrid.appendChild(card);
 
@@ -998,4 +997,16 @@ sellPriceRange.addEventListener('change', () => renderSellCards(sellCountInput.v
 
 window.addEventListener('DOMContentLoaded', () => {
     loadPortfolioFromStorage();
+    loadScanCacheStatus();
 });
+
+async function loadScanCacheStatus() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/scan_all/status`);
+        if (!res.ok) return;
+        const status = await res.json();
+        updateStaleDataBanner(status, status.pool_size);
+    } catch (e) {
+        console.warn('讀取掃描快取狀態失敗:', e);
+    }
+}

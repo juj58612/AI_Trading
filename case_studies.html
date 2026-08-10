@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個案研究 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .doc-container {
+            max-width: 960px;
+            margin: 30px auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+            line-height: 1.8;
+        }
+        .doc-header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-purple);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .doc-header h1 {
+            font-size: 2rem;
+            color: #ec4899;
+            margin-bottom: 10px;
+        }
+        .doc-header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+        .meta-box {
+            background: #0f172a;
+            border-left: 4px solid #ec4899;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+        .case-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .case-nav a {
+            background: rgba(236, 72, 153, 0.12);
+            border: 1px solid #ec4899;
+            color: #f472b6;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .case-nav a:hover {
+            background: rgba(236, 72, 153, 0.25);
+        }
+        .doc-section {
+            margin-bottom: 50px;
+            padding-top: 10px;
+            border-top: 1px dashed #334155;
+        }
+        .doc-section:first-of-type {
+            border-top: none;
+        }
+        .doc-section h2 {
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+        .doc-section h3 {
+            font-size: 1.2rem;
+            color: #c084fc;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .quote-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #fef08a;
+        }
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .doc-table th, .doc-table td {
+            padding: 10px 14px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        .doc-table th {
+            background: #1e293b;
+            color: var(--accent-blue);
+            font-weight: bold;
+        }
+        .status-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .status-solid { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid #10b981; }
+        .status-illustrative { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+        .btn-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #ec4899;
+            color: #0f172a;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div class="doc-container">
+    <div class="doc-header" style="position: relative;">
+        <a href="backtest.html" style="position: absolute; right: 0; top: 0; background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-purple);">🧪 返回回測實驗室</a>
+        <h1>📂 個案研究 (Case Studies)</h1>
+        <p>模型設計討論過程中衍生的實測與驗證紀錄，純資料展示，不會在此頁觸發任何重新計算</p>
+    </div>
+
+    <div class="meta-box">
+        這裡收錄的是策略討論過程中，針對某個具體疑問做的實測驗證——跟 <a href="doc.html" style="color:#c084fc;">📄 策略白皮書</a> 的差別是：白皮書講的是系統目前「怎麼運作」，這裡記錄的是「我們怎麼驗證某個做法有沒有道理」的過程與數據。每個題目的可信度不同，已用標籤註明：<span class="status-tag status-solid">通用驗證</span> 代表跨多組實驗/多檔股票的統計結果，<span class="status-tag status-illustrative">單案示範</span> 代表樣本小、僅供具體理解概念用，不代表通用結論。完整討論脈絡與原始數據見 <code>STRATEGY_ANALYSIS_NOTES.md</code>。
+    </div>
+
+    <div class="case-nav">
+        <a href="#case1">① 乖離率／過熱指標該不該扣分</a>
+        <a href="#case2">② 6213聯茂 進場時機示範</a>
+        <a href="#case3">③ 3:3:4分批 vs 一次買完 全股池對照</a>
+        <a href="#case4">④ 出場機制對照：卡片防線 vs Scale-out vs 多空頭regime</a>
+        <a href="#case5">⑤ Regime自動切換：能否贏過任何單一固定方案？</a>
+    </div>
+
+    <!-- 個案一 -->
+    <div class="doc-section" id="case1">
+        <h2>① 乖離率／動能過熱指標該不該納入 Chip Score<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：法人籌碼積分模型（見<a href="doc.html" style="color:#c084fc;">白皮書 2.2 節</a>）只判斷「是否站上5MA」與「法人買賣方向」，完全沒有「已經漲了多少」「連續漲停幾天」這類過熱因子。這是漏洞還是刻意設計？</p>
+
+        <h3>學術與業界觀點</h3>
+        <p>動能因子經典研究（Jegadeesh &amp; Titman, 1993）顯示，過去強勢股未來3~12個月傾向延續強勢，不是均值回歸。George &amp; Hwang（2004）的52週高點動能效應更直接：股價越接近甚至站上52週高點，反而是動能延續訊號，不是反轉訊號——AI主題股這種資金集中湧入的多頭階段尤其明顯。業界主流做法不是把乖離率/RSI當硬性過濾器，而是①跟大盤/族群健康度連動的動態門檻 ②反映在部位大小與停損收緊，而非直接攔截訊號。</p>
+
+        <h3>實測交叉驗證</h3>
+        <p>取 A、D 兩方案各4組表現前段的回測實驗（2218/2516/2501/2517、2055/2403/2417/1873），合計4,247筆交易，逐筆重算進場當下的乖離率、距60日低點漲幅、進場前連續漲停天數：</p>
+        <div class="quote-box">
+            📌 乖離率越高（越「過熱」），勝率與平均報酬不降反升——0~5%組勝率42.6%/+1.29%，一路升到 &gt;20%組勝率48.7%/+3.09%，A、D兩方案分開看都一致。直接把乖離率當硬性過濾器，大機率會砍掉表現最好的一批交易。
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>指標</th><th>發現</th></tr></thead>
+            <tbody>
+                <tr><td>距60日低點漲幅</td><td>「甜蜜區間」型態：0~10%表現最差，50~100%最好，但&gt;100%明顯轉差——<strong>只在A方案成立</strong>（4組實驗全部一致轉差，勝率低於基準約10個百分點以上），<strong>D方案幾乎沒事</strong>（研判D方案2.4節自適應吊燈鎖利已吸收此風險）。</td></tr>
+                <tr><td>進場前連續漲停天數</td><td>0~2天連續漲停，勝率與報酬隨天數提升；3天以上（合併8組實驗共25筆）勝率24.0%、平均-1.75%，8組實驗方向一致轉差，信心程度高於單一實驗版本，但事件本身罕見。</td></tr>
+            </tbody>
+        </table>
+        <p><strong>結論</strong>：現行 Chip Score 不納入乖離率/RSI，是有實證支持的，不是設計疏漏。真正的風險集中在「A方案 + 極端漲幅」的組合，D方案的既有出場機制已有相當防護。未來若要處理，方向應該是只針對A方案做部位縮減/停損收緊的軟性降權，而非兩方案一視同仁的硬性排除規則。<strong>尚未套用到 <code>strategy_core.py</code> 的即時模型中。</strong></p>
+    </div>
+
+    <!-- 個案二 -->
+    <div class="doc-section" id="case2">
+        <h2>② 6213 聯茂：不同進場時點的具體示範<span class="status-tag status-illustrative">單案示範</span></h2>
+        <p><strong>起因</strong>：使用者發現首頁推薦順位 #1 是 6213 聯茂，但這支股票其實是先跌後急拉（07/10 385元跌到07/30剩239.5元，07/31起反轉，7個交易日內漲到08/10收427.5，+62.5%）。用來具體理解「系統多早會給訊號、給訊號當下股價多少」以及「一次買完跟3:3:4分批買，實際數字上差在哪裡」。</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">⚠️ 本案例只测試單一標的、5個進場時點，<strong>不能當作通用結論</strong>，通用性驗證見下方個案③。</p>
+
+        <h3>4~8月共5個滿分（5分）進場點</h3>
+        <table class="doc-table">
+            <thead><tr><th>進場日</th><th>收盤價</th><th>一次買完損益</th><th>分批買進損益</th><th>分批完成度</th><th>出場原因</th></tr></thead>
+            <tbody>
+                <tr><td>2026-04-02</td><td>168.6</td><td>+61.47%</td><td>+47.66%</td><td>100%</td><td>觸發停損</td></tr>
+                <tr><td>2026-04-22</td><td>294.5</td><td>-14.65%</td><td>-14.65%</td><td>30%</td><td>觸發停損</td></tr>
+                <tr><td>2026-06-26</td><td>343.6</td><td>+4.62%</td><td>+2.02%</td><td>100%</td><td>觸發停損</td></tr>
+                <tr><td>2026-07-03（崩跌前夕）</td><td>394.0</td><td>-8.76%</td><td>-7.49%</td><td>100%</td><td>觸發停損</td></tr>
+                <tr><td>2026-08-07（近況）</td><td>389.0</td><td>+9.90%（未實現）</td><td>+4.72%（未實現）</td><td>60%⚠️</td><td>尚未出場</td></tr>
+            </tbody>
+        </table>
+        <p style="color:#94a3b8; font-size:0.85rem;">⚠️ 08/07那筆分批的第2批加碼（08/10）是法人資料尚未同步時「預設中性1分」湊到門檻加碼的，不算可靠依據。</p>
+
+        <div class="quote-box">
+            📌 5個案例中4個，一次買完的報酬率贏過或打平分批——不是分批比較弱，是分批越晚加碼、均價通常被墊高。但04/22這組清楚示範了分批的真正價值：兩者損益率完全一樣（-14.65%），因為停損觸發太快分批沒機會加碼，分批只投入30%資金，實際虧損金額只有一次買完的三分之一。
+        </div>
+        <p><strong>結論</strong>：3:3:4分批是業界風控紀律慣例（白皮書早已如此定位，見3.2節「徹底克制人性弱點」），目的是降低單筆誤判的資金曝險，不是拿來衝高報酬率的工具，這組案例把這個取捨用具體數字呈現出來。</p>
+    </div>
+
+    <!-- 個案三 -->
+    <div class="doc-section" id="case3">
+        <h2>③ 3:3:4 分批進場 vs 一次買完：全股池對照實驗<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：個案②只測了6213一檔股票、5個樣本，不能回答「通用上哪個實用」。3:3:4分批機制原本只存在於明日下單建議頁面的即時推薦引擎，<strong>從來沒有被回測引擎驗證過</strong>（<code>backtest_engine.py</code>全文沒有任何分批/pyramid邏輯，過去330%等回測數字全部都是「一次買滿」跑出來的）——這是本次研究第一次把兩者放在同規模上直接對照。</p>
+
+        <h3>參數與規模</h3>
+        <p>現行126檔股池、資金100萬、持股上限8檔、手續費0.3%、方案A、2021-01-01~2026-08-07。一次買完版直接呼叫正式 <code>run_backtest</code>；分批版依照真實的跨天金字塔加碼邏輯（訊號重新出現才加碼下一批，均價動態更新，出場邏輯共用同一套 <code>evaluate_exit</code>）另外撰寫驗證腳本，不影響任何正式程式碼。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;">（本頁數字為擴大樣本後的版本：持股上限從3檔提高到8檔、交易數從322~324筆提升到839~895筆，取代原本樣本較小的初版結果。）</p>
+        <p>📎 <a href="research_data/case3_staged_vs_lumpsum_trades.csv" download style="color:#ec4899; font-weight:500;">下載完整逐筆交易明細 (CSV，2,351筆，255KB)</a>　——涵蓋全期間／2022空頭年／2024多頭年三組、一次買完與3:3:4分批兩種方式，無需登入即可下載。</p>
+
+        <table class="doc-table">
+            <thead><tr><th>指標</th><th>一次買完</th><th>3:3:4分批</th></tr></thead>
+            <tbody>
+                <tr><td>總報酬率</td><td>314.29%</td><td>119.17%</td></tr>
+                <tr><td>CAGR</td><td>28.92%</td><td>15.05%</td></tr>
+                <tr><td>MDD（最大回撤）</td><td>21.1%</td><td>20.41%</td></tr>
+                <tr><td>勝率</td><td>43.15%</td><td>33.63%</td></tr>
+                <tr><td>獲利因子</td><td>1.67</td><td>1.53</td></tr>
+                <tr><td>交易數</td><td>839</td><td>895</td></tr>
+            </tbody>
+        </table>
+        <p>分批進場的895筆交易中，第一批（536筆）、第二批（229筆）、第三批滿倉（130筆）。持股分散到8檔後，<strong>兩者的MDD幾乎打平（21.1% vs 20.41%）</strong>——3檔持股時分批的MDD優勢很明顯（30.01% vs 44.63%），代表分批進場的「降風險」效果，有很大一部分其實跟「持股夠分散」重疊；本來就分散持有8檔的話，分批能額外降低的風險已經很有限。</p>
+
+        <h3>牛市偏誤檢查：空頭年結論是否一致？（含一次方法論修正）</h3>
+        <p style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>修正說明</strong>：這裡最初用「把5.5年連續回測的交易，依進場當下的大盤狀態貼標籤分組」來檢驗空頭年結論，得出「空頭震盪期一次買完領先幅度反而更大」——這個方法不夠嚴謹：同一條資金曲線裡，空頭期的部位與資金狀態會延續自之前的多頭期，不是乾淨的獨立樣本。改用真正獨立、單獨鎖定一整年的回測後，<strong>結論被推翻</strong>，修正如下。
+        </p>
+        <p>直接鎖定資料庫裡最差的一年（2022年，單獨總報酬-41.11%），獨立跑一次完整回測（不是連續回測裡挑分段，是真正只用 2022-01-01~2022-12-31 這個區間單獨跑一次buy-to-sell的完整模擬，持股上限同樣提高到8檔，交易數從54~63筆提升到116~164筆）：</p>
+        <table class="doc-table">
+            <thead><tr><th>指標（2022年單獨回測）</th><th>一次買完</th><th>3:3:4分批</th></tr></thead>
+            <tbody>
+                <tr><td>總報酬率</td><td>-23.94%</td><td><strong>-5.49%</strong></td></tr>
+                <tr><td>MDD</td><td>30.49%</td><td><strong>19.86%</strong></td></tr>
+                <tr><td>勝率</td><td>26.72%</td><td>23.17%</td></tr>
+                <tr><td>獲利因子</td><td>0.94（虧損略大於獲利）</td><td><strong>2.33（毛利明顯大於毛損）</strong></td></tr>
+                <tr><td>交易數</td><td>116</td><td>164</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 在真正獨立、乾淨的空頭年裡，<strong>分批進場明顯優於一次買完</strong>——雖然兩者都虧錢，分批只虧約1/4、MDD低了1/3，獲利因子達2.33；一次買完的獲利因子只有0.94，虧損略大於獲利。這跟5.5年混合期間「一次買完總報酬贏」的結論方向相反，且擴大樣本後（116~164筆，優於初版的54~63筆）結論依然穩固。
+        </div>
+
+        <h3>對稱驗證：多頭年（2024）結論是否相反？</h3>
+        <p>為了讓多空頭對照完整、不偏頗，同樣獨立鎖定資料庫裡最強的一年（2024年，單獨總報酬+127.18%）跑一次：</p>
+        <table class="doc-table">
+            <thead><tr><th>指標（2024年單獨回測）</th><th>一次買完</th><th>3:3:4分批</th></tr></thead>
+            <tbody>
+                <tr><td>總報酬率</td><td><strong>63.29%</strong></td><td>11.42%</td></tr>
+                <tr><td>MDD</td><td>9.09%</td><td>7.29%</td></tr>
+                <tr><td>勝率</td><td>46.58%</td><td>35.6%</td></tr>
+                <tr><td>獲利因子</td><td>4.73</td><td>6.11</td></tr>
+                <tr><td>交易數</td><td>146</td><td>191</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 2024多頭年裡<strong>一次買完明顯優於分批</strong>（63.29% vs 11.42%），方向跟2022空頭年完全相反——三個期間的結果現在完全對稱：全期間（多頭占多數）一次買完贏、2022空頭年分批贏、2024多頭年一次買完贏。這不是巧合，這跟<a href="#case4" style="color:#ec4899;">個案④出場機制的防線A regime反轉現象</a>是同一個底層邏輯。
+        </div>
+        <p><strong>結論（完整版）</strong>：3:3:4分批沒有「絕對比較好」或「絕對比較差」，取決於所處的市場階段——多頭年適合積極（一次買完），空頭年適合保守（分批進場）。5.5年混合期間一次買完總報酬勝出，是因為那段期間<strong>多頭年占多數</strong>（2023~2026都是大賺年份）；但單獨看空頭年，分批才是防守更好的做法。也就是說：對強勢多頭階段（如目前AI主題）有把握時，歷史數據支持一次買完；懷疑要進入或已經在空頭階段時，分批進場對本金的保護明顯更好。<strong>風險控管機制的價值要看市場所處階段，不能用單一固定規則一刀切</strong>——這個結論在進場（本個案）與出場（個案④）兩邊都獨立驗證成立。</p>
+    </div>
+
+    <!-- 個案四 -->
+    <div class="doc-section" id="case4">
+        <h2>④ 出場機制對照：卡片防線 vs Scale-out vs 多空頭regime<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：白皮書3.2節描述的「3:4:3階梯出場」（防線A、防線B、保本停利、高點打折鎖利）查證後發現，這其實是「我的操盤室」卡片的<strong>純顯示用警示邏輯</strong>（app.js/history.js），從未接進 <code>backtest_engine.py</code>，跟真正驅動回測的 <code>evaluate_exit</code> 是兩套不同系統——跟個案③的3:3:4進場是同一種狀況，講的機制從未被回測驗證過。</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">四條防線裡「保本停利（+15%鎖+5%）」在卡片原始邏輯裡不是賣出動作，是「把防守線上調到成本+5%」，因此測了兩種處理方式：adjust（照原始定義，觸發後只上調防守線）、sell（觸發當下直接出清）。進場邏輯全程不變（統一用方案A的候選篩選），只比較出場端。</p>
+
+        <h3>全期間（2021~2026，8檔持股，205~361筆交易）</h3>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
+            <tbody>
+                <tr><td>卡片四防線（保本停利=adjust，基準）</td><td>140.52%</td><td>21.51%</td><td>44.88%</td><td>1.61</td><td>205</td></tr>
+                <tr><td>關掉防線A</td><td><strong>316.87%</strong></td><td>23.03%</td><td>48.61%</td><td>3.02</td><td>144</td></tr>
+                <tr><td>保本停利=直接出清</td><td>179.46%</td><td>21.15%</td><td>45.15%</td><td>1.43</td><td>361</td></tr>
+                <tr><td>組合（關防線A+保本直接出清）</td><td>216.04%</td><td><strong>36.37%（最差）</strong></td><td>51.81%</td><td>1.57</td><td>276</td></tr>
+                <tr><td>Scale-out分批賣出</td><td>126.24%</td><td>28.26%</td><td><strong>60.61%</strong></td><td>4.62</td><td>66</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 「組合最佳」的假設不成立：把「關掉防線A」和「保本停利=直接出清」這兩個各自證實有效的調整疊加在一起，總報酬（216.04%）跟MDD（36.37%）都輸給只改「關掉防線A」一項（316.87% / 23.03%）。兩個改動合在一起會互相干擾，不是1+1的效果。
+        </div>
+
+        <h3>多空頭regime隔離測試（真正獨立單年回測，不是連續回測貼標籤）</h3>
+        <p>吸取個案③的方法論教訓，這裡直接鎖定2022（資料庫最差的一年）與2024（最強的一年，+127.18%）分別獨立回測：</p>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>2022空頭年 總報酬</th><th>2024多頭年 總報酬</th></tr></thead>
+            <tbody>
+                <tr><td>卡片四防線（基準）</td><td>-19.93%</td><td>33.65%</td></tr>
+                <tr><td>關掉防線A</td><td><strong>-20.28%（最差）</strong></td><td><strong>34.8%（最好）</strong></td></tr>
+                <tr><td>保本停利=直接出清</td><td>-19.78%</td><td>25.69%</td></tr>
+                <tr><td>組合（疊加）</td><td><strong>-14.99%（最好）</strong></td><td><strong>15.17%（最差）</strong></td></tr>
+                <tr><td>Scale-out分批賣出</td><td>-16.91%</td><td>26.11%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 防線A的角色在多空頭年完全相反：空頭年裡拿掉防線A表現變差（-19.93%→-20.28%，四組裡最差），多頭年裡拿掉防線A表現變好（33.65%→34.8%，四組裡最好）。全期間測出的「拿掉防線A比較好」其實只反映多頭年占多數的偏誤，跟個案③的方法論教訓是同一件事——固定停損機制的價值要看市場所處階段，不能用單一規則一刀切。
+        </div>
+        <p><strong>結論</strong>：沒有「放諸四海皆準」的最佳出場方案。防線A理論上應該視大盤階段動態開關（概念上呼應白皮書2.6節的巨觀風控分級），而非固定拿掉或固定保留。若要選一個不用判斷regime、跨期間都維持前段班的方案，<strong>Scale-out分批賣出的穩定度最好</strong>（全期間勝率60.61%最高、2022年勝率38.64%次佳、2024年勝率60.87%最高，三個期間都不是墊底）。以上規則均未套用到 <code>strategy_core.py</code> 的即時模型中，純研究記錄。</p>
+    </div>
+
+    <!-- 個案五 -->
+    <div class="doc-section" id="case5">
+        <h2>⑤ Regime自動切換：能否贏過任何單一固定方案？<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：個案③④都指向同一個結論——進場方式與出場防線的最佳選擇，會隨大盤處於多頭或空頭而反轉。與其手動判斷、固定選一套規則，能不能設計一個<strong>即時可算、不使用未來資訊</strong>的訊號，讓模型每天自動判斷該用哪一套參數？這是白皮書2.6節「三合一巨觀風控」原則的自然延伸——把「依市況調整」從「要不要買」擴大到「怎麼買、怎麼賣」。</p>
+
+        <h3>切換規則設計</h3>
+        <p>regime訊號：當天TAIEX收盤價 vs 20日均線（每天都算得出來，不偷看未來）。兩條子規則分別取自個案③④裡，各自在獨立年份回測中表現最好的組合：</p>
+        <ul>
+            <li><strong>多頭模式</strong>（TAIEX站上20MA）：一次買完 + 關掉防線A（2024多頭年實測最佳）</li>
+            <li><strong>空頭模式</strong>（TAIEX跌破20MA）：3:3:4分批 + 關防線A+保本停利直接出清組合（2022空頭年實測最佳）</li>
+        </ul>
+
+        <h3>全期間對照（2021-2026，8檔持股）</h3>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
+            <tbody>
+                <tr><td>靜態基準（一次買完+卡片四防線）</td><td>298.72%</td><td>22.97%</td><td>48.02%</td><td>2.25</td><td>227</td></tr>
+                <tr><td>靜態最佳單一改動（一次買完+關防線A）</td><td>394.38%</td><td>21.68%</td><td>49.7%</td><td>3.16</td><td>165</td></tr>
+                <tr><td><strong>Regime自動切換</strong></td><td><strong>522.18%</strong></td><td>22.25%</td><td><strong>53.11%</strong></td><td>2.92</td><td>273</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 Regime自動切換贏過兩個靜態方案：總報酬比目前已知最好的靜態單一改動高出約33%（394%→522%），勝率也是三組裡最高，MDD維持在跟靜態方案相近的水準——不是靠犧牲風控換來的。
+        </div>
+
+        <h3>樣本外檢查：沒被用來挑規則的年份表現如何？</h3>
+        <p style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>方法論限制</strong>：兩條子規則本身是從2024（多頭）、2022（空頭）獨立回測裡挑出的贏家，而驗證切換效果的全期間測試又把這兩年算在裡面——這不是完全乾淨的樣本外驗證，2022、2024的表現某種程度上是「贏家在自己的主場」。因此另外拉出各年度單獨表現，檢查沒被用來挑規則的年份是否也站得住腳。
+        </p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>是否用於挑規則</th><th>交易數</th><th>勝率</th><th>該年損益</th></tr></thead>
+            <tbody>
+                <tr><td>2021</td><td>否</td><td>37</td><td>54.1%</td><td>+139,412</td></tr>
+                <tr><td>2022</td><td><strong>是（空頭規則來源）</strong></td><td>37</td><td><strong>40.5%（六年最低）</strong></td><td>+5,342</td></tr>
+                <tr><td>2023</td><td>否</td><td>35</td><td>62.9%</td><td>+484,824</td></tr>
+                <tr><td>2024</td><td><strong>是（多頭規則來源）</strong></td><td>55</td><td>56.4%</td><td>+1,076,981</td></tr>
+                <tr><td>2025</td><td>否</td><td>44</td><td>50.0%</td><td>+1,650,162</td></tr>
+                <tr><td>2026</td><td>否（年度未完）</td><td>65</td><td>53.8%</td><td>+1,891,968</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 沒被用來挑規則的四個年份（2021/2023/2025/2026）全部是正報酬，勝率50~63%；反而是唯一用來挑空頭規則的2022年，勝率是六年裡最低的（40.5%）。整體表現不是靠兩個「主場年」撐起來的，多數年份都站得住腳，大幅降低了過度配適（overfitting）的疑慮，但樣本仍只涵蓋5.5年、每個regime僅有限個完整年份，還稱不上長期穩健驗證。
+        </div>
+        <p><strong>結論</strong>：以「即時可算、不使用未來資訊」的regime訊號動態切換進出場參數，確實贏過目前測過的任何單一固定方案，且沒被用來挑規則的年份表現同樣站得住腳，不只是巧合湊出來的兩年好結果。這驗證了「依市況判斷適合的參數」這個設計方向本身是有效的。<strong>但這仍是研究階段的結果，尚未套用到 <code>strategy_core.py</code> 或任何正式頁面／模型中</strong>——下一步若要正式導入，建議先累積更多年份的資料（尤其更多獨立的空頭年樣本）再考慮上線，並在使用者主動要求前，不會將此邏輯做成首頁功能。</p>
+    </div>
+
+    <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>
+</div>
+
+<a href="#" class="btn-top" onclick="window.scrollTo({top:0, behavior:'smooth'}); return false;">⬆ 回頂端</a>
+
+</body>
+</html>

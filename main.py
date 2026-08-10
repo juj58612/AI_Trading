@@ -469,6 +469,16 @@ def run_scan(tickers):
     results.sort(key=lambda x: (x['chip_score'], x['momentum']), reverse=True)
     return results
 
+@app.get("/api/scan_all/status")
+def get_scan_all_status():
+    """輕量狀態查詢：只讀今日已快取的掃描結果，不觸發任何新的抓取，讓首頁一載入
+    就能固定顯示涵蓋度，不用等使用者按下「啟動 AI 深度掃描」才看得到。"""
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    cache_db = get_daily_scan_cache()
+    pool_size = len(load_ai_stock_list())
+    today_data = cache_db.get(today_str, [])
+    return {"data": today_data, "cached": bool(today_data), "cache_date": today_str, "pool_size": pool_size}
+
 @app.post("/api/scan_all")
 async def scan_all_stocks(request: Request):
     try:
@@ -1265,21 +1275,9 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                     "exit_strategy": "D"
                 }
                 portfolio.append(new_item)
-            
-            # Log transaction in history journal for history.html
-            history.append({
-                "name": o.name,
-                "ticker": o.ticker,
-                "cost": o.price,
-                "closePrice": o.price,
-                "exitPrice": o.price,
-                "shares": o.shares,
-                "buy_date": today_str,
-                "exitDate": today_str,
-                "outcome": o.reason or "買進建倉",
-                "signal": "AI 實戰建倉",
-                "type": "buy"
-            })
+
+            # 買進不寫入 history.json：history 的「退役結案紀錄」區塊只顯示已出場/已平倉的部位，
+            # 現役持倉已完整記錄在 portfolio.json，重複寫入會讓同一檔股票同時出現在現役與已結案兩區。
         elif o.type == 'sell':
             exists = next((item for item in portfolio if item['ticker'] == o.ticker), None)
             if exists:
@@ -1322,10 +1320,19 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 
     return {"status": "success", "message": f"成功寫入 {len(req.orders)} 筆下單交易至【現役持倉】與【歷史庫房】！"}
 
+# 個案研究附帶的原始資料檔 (無需登入即可下載，跟其他靜態頁面一致；白名單防止路徑穿越)
+@app.get("/research_data/{filename}")
+def serve_research_data(filename: str):
+    allowed = {"case3_staged_vs_lumpsum_trades.csv", "README.md"}
+    filepath = os.path.join("research_data", filename)
+    if filename not in allowed or not os.path.exists(filepath):
+        raise HTTPException(status_code=404)
+    return FileResponse(filepath, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
