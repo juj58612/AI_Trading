@@ -347,9 +347,13 @@ async def download_data(request: Request):
             pass
 
     # 一天最多完整同步一次：籌碼資料是前一天的盤後資料，同一天內不管重點幾次「同步」，
-    # 當天不會再有新資料可抓，直接略過整批網路請求，不用每次都花時間逐檔重新確認
+    # 當天不會再有新資料可抓，直接略過整批網路請求，不用每次都花時間逐檔重新確認。
+    # 但這個「今天已同步過」的略過邏輯，只在資料庫真的涵蓋全部股票時才成立——如果還缺檔
+    # （例如股票池剛擴充、或前一次同步中途被 FinMind 配額擋掉），即使今天已經跑過一次，
+    # 也要讓使用者可以繼續點擊補齊，不能被這個旗標卡死（2026-08-10 實測發現的 bug）。
     today_str = datetime.date.today().isoformat()
-    if not force and db.get("last_full_sync_date") == today_str:
+    is_fully_covered = all(db["prices"].get(t) and db["chips"].get(t) for t in TICKERS)
+    if not force and is_fully_covered and db.get("last_full_sync_date") == today_str:
         return {
             "message": f"今天（{today_str}）已經完整同步過一次，資料已是最新的前一天盤後資料，不需要再重新抓取",
             "skipped": True
@@ -409,6 +413,7 @@ async def download_data(request: Request):
                 json.dump(db, f, ensure_ascii=False)
             
         # 2. Download FinMind Chips incrementally
+        chip_fetch_failures = []
         for i, t in enumerate(TICKERS):
             # Check if this stock already has chips for the requested range
             existing_chips = db["chips"].get(t, [])
@@ -459,18 +464,28 @@ async def download_data(request: Request):
                         json.dump(db, f, ensure_ascii=False)
                 else:
                     print(f"FinMind 籌碼抓取失敗 {t}: {res.get('msg')}")
+                    chip_fetch_failures.append(f"{t}（{res.get('msg', '未知錯誤')}）")
             except Exception as e:
-                pass
+                chip_fetch_failures.append(f"{t}（連線錯誤）")
 
             time.sleep(1.0) # Increased delay to prevent FinMind ban
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # 標記今天已經完整跑過一次同步，同一天內再次點擊會直接略過（見函式開頭的每日上限檢查）
-    db["last_full_sync_date"] = today_str
+    # 只有這次同步真的把全部股票都補齊了，才標記「今天已完整同步過」；只要還有任何一檔
+    # 籌碼抓取失敗（例如 FinMind 配額被擋），就不設這個旗標，讓使用者下次點擊還能繼續重試，
+    # 不會被「今天同步過了」卡住（呼應函式開頭的完整度檢查）
+    still_incomplete = any(not (db["prices"].get(t) and db["chips"].get(t)) for t in TICKERS)
+    if not still_incomplete:
+        db["last_full_sync_date"] = today_str
     with open(DB_PATH, 'w', encoding='utf-8') as f:
         json.dump(db, f, ensure_ascii=False)
+
+    if chip_fetch_failures:
+        preview = "、".join(chip_fetch_failures[:8])
+        more = f" 等共 {len(chip_fetch_failures)} 檔" if len(chip_fetch_failures) > 8 else ""
+        return {"message": f"同步完成，但有籌碼資料抓取失敗：{preview}{more}。常見原因是 FinMind API 配額用完，建議稍後（例如隔天配額重置後）再次點擊同步補齊。"}
 
     return {"message": "Data downloaded successfully"}
 
@@ -1279,42 +1294,6 @@ def get_trades(experiment_id: int):
     conn.close()
     
     return {"data": [dict(r) for r in rows]}
-
-@app.get("/api/analysis/trades_all_top")
-def get_all_top_trades():
-    """
-    只取報酬率最高的「單一」策略組合，把它的所有交易依買進日期排序回傳——
-    模擬「如果真的從頭到尾都照這一套規則下單，每天實際買賣了什麼」的交易日誌。
-    刻意不混合多組參數組合的交易（那些各自是獨立回測、不是同一條真實時間軸），
-    跨組合的報酬率比較留給下面的「7. 綜合策略排行榜」負責。
-    """
-    if not os.path.exists(SQLITE_PATH):
-        return {"data": []}
-
-    conn = sqlite3.connect(SQLITE_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT id, exit_strategy, max_positions, max_hold_days, total_return FROM experiments WHERE is_grid_trial = 0 OR is_grid_trial IS NULL ORDER BY total_return DESC LIMIT 1")
-    best_exp = c.fetchone()
-
-    if not best_exp:
-        conn.close()
-        return {"data": []}
-
-    hold_str = "無限制" if best_exp['max_hold_days'] == 999 else f"{best_exp['max_hold_days']}天"
-    label = f"方案 {best_exp['exit_strategy']}（{best_exp['max_positions']}檔／{hold_str}）"
-
-    c.execute("SELECT * FROM trades WHERE experiment_id = ? ORDER BY buy_date ASC", (best_exp['id'],))
-    t_rows = c.fetchall()
-    all_trades = []
-    for t in t_rows:
-        td = dict(t)
-        td['rank'] = 1
-        td['strategy_label'] = label
-        all_trades.append(td)
-
-    conn.close()
-    return {"data": all_trades}
 
 SNAPSHOT_PATH = os.path.join(DIR_PATH, "published_snapshot.json")
 SNAPSHOT_CSV_PATH = os.path.join(DIR_PATH, "published_leaderboard.csv")
