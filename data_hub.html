@@ -45,6 +45,26 @@
             transition: opacity 0.2s;
         }
         .btn-action:hover { opacity: 0.9; }
+
+        /* 交易明細表格/CSV 欄位說明：滑鼠移到 i 圖示上顯示 */
+        .info-tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+        .info-tooltip-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(148, 163, 184, 0.2); color: var(--text-sub);
+            font-size: 0.8rem; font-weight: bold; cursor: help; user-select: none;
+            border: 1px solid var(--border-color);
+        }
+        .info-tooltip-box {
+            display: none; position: absolute; z-index: 50; top: 28px; left: 0;
+            width: 360px; max-width: 80vw; background: #0f172a; border: 1px solid var(--accent-blue);
+            border-radius: 10px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            font-size: 0.78rem; color: var(--text-main); text-align: left; line-height: 1.5;
+        }
+        .info-tooltip-wrap:hover .info-tooltip-box { display: block; }
+        .info-tooltip-box table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .info-tooltip-box th, .info-tooltip-box td { border: 1px solid var(--border-color); padding: 5px 7px; text-align: left; vertical-align: top; }
+        .info-tooltip-box th { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
     </style>
 </head>
 <body>
@@ -72,7 +92,7 @@
 
     <div class="report-section" id="customExportSection">
         <h2>2. 自訂條件匯出：查看單筆完整交易紀錄</h2>
-        <p>從排行榜挑選任何一筆結果（不限前 10 名），查看它實際買賣了哪些股票、進出場時間，以及重建出來的權益曲線。每次都是即時查詢本機資料庫，不會用到快取或舊資料。</p>
+        <p>預設自動顯示報酬率最高的策略組合，依買進日期排序的完整交易明細；也可以從下拉選單改選排行榜上任何一筆結果，查看它實際買賣了哪些股票、進出場時間，以及重建出來的權益曲線。每次都是即時查詢本機資料庫，不會用到快取或舊資料。</p>
         <div id="customExportLocalOnly" style="display:none; color: var(--text-sub); font-size: 0.9rem;">🔒 此功能只能在管理者電腦端使用（需要即時查詢本機的完整回測資料庫）。</div>
         <div id="customExportControls" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom: 20px;">
             <select id="expPicker" style="flex: 1; min-width: 280px; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; border-radius: 8px; font-family: inherit;">
@@ -80,6 +100,22 @@
             </select>
             <button id="btnRefreshExpList" onclick="loadExperimentPicker()" class="btn-action" style="background: #334155;">🔄 重新整理清單</button>
             <button id="btnExportSingleExp" onclick="exportSingleExperimentCSV()" class="btn-action" style="background: #059669;">📑 匯出這筆交易明細 (CSV)</button>
+            <span class="info-tooltip-wrap">
+                <span class="info-tooltip-icon">i</span>
+                <div class="info-tooltip-box">
+                    <div style="font-weight:bold; color:#f0f6fc; margin-bottom:4px;">欄位意思與排序方式</div>
+                    <table>
+                        <tr><th>欄位</th><th>意思</th></tr>
+                        <tr><td>股票代碼／名稱</td><td>買賣的是哪一檔股票</td></tr>
+                        <tr><td>買進日期／買進價</td><td>這筆交易的進場日期與價格</td></tr>
+                        <tr><td>賣出日期／賣出價</td><td>出場日期與價格</td></tr>
+                        <tr><td>持倉天數</td><td>買進到賣出總共抱了幾天</td></tr>
+                        <tr><td>平倉原因</td><td>為什麼賣出，例如「觸發停損」「時間到期」</td></tr>
+                        <tr><td>損益率／損益金額(TWD)</td><td>這筆交易賺賠多少</td></tr>
+                    </table>
+                    <div style="margin-top:8px; color: var(--text-sub);">排序方式：依買進日期由舊到新排序，呈現「如果從頭到尾都照這套策略操作，每天實際會買賣什麼」的交易日誌。</div>
+                </div>
+            </span>
         </div>
         <div id="customExportResult" style="display:none;">
             <div id="customExportSummary" style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-sub);"></div>
@@ -314,6 +350,13 @@ async function loadExperimentPicker() {
             const label = `#${idx + 1} 方案${exp.exit_strategy} ${exp.max_positions}檔/${holdStr} (${exp.start_date}~${exp.end_date}) +${exp.total_return.toFixed(2)}%`;
             return `<option value="${exp.id}">${label}</option>`;
         }).join('');
+
+        // 預設自動帶出報酬率最高的那一筆，開頁就能直接看到「最佳策略」的完整交易明細，
+        // 不用每次都手動選一次（取代原本 backtest.html「6. 個股買賣交易明細」的角色）
+        if (list.length > 0) {
+            picker.value = list[0].id;
+            loadSingleExperimentDetail(list[0].id);
+        }
     } catch (e) {
         console.error('載入排行榜清單失敗', e);
         picker.innerHTML = '<option value="">載入失敗，請點「重新整理清單」重試</option>';
@@ -342,12 +385,9 @@ async function loadSingleExperimentDetail(experimentId) {
         const data = await res.json();
         let trades = data.data || [];
 
-        // 跟其他明細表格/CSV 同一套排序邏輯：依損益金額(TWD)由高到低
-        trades.sort((a, b) => {
-            const pnlA = a.pnl !== undefined ? a.pnl : (a.pnl_amount !== undefined ? a.pnl_amount : 0);
-            const pnlB = b.pnl !== undefined ? b.pnl : (b.pnl_amount !== undefined ? b.pnl_amount : 0);
-            return pnlB - pnlA;
-        });
+        // 依買進日期由舊到新排序，呈現「如果從頭到尾都照這套策略操作，每天實際會買賣什麼」
+        // 的交易日誌（跟 backtest.html 的個股買賣交易明細採用同一套排序邏輯）
+        trades.sort((a, b) => (a.buy_date || '').localeCompare(b.buy_date || ''));
         currentSingleExpTrades = trades;
         currentSingleExpLabel = exp ? `#${idx + 1}_方案${exp.exit_strategy}_${exp.max_positions}檔_${exp.max_hold_days}天` : `experiment_${experimentId}`;
 
