@@ -572,6 +572,25 @@
         <h3>結論</h3>
         <p><strong>使用者的直覺方向不成立，不建議把「連續同買天數」做成硬性進場濾網。</strong>三層驗證（去重後per-trade分析、逐年拆解、真實投資組合回測）方向一致：這不是一個穩定、可靠、能改善績效的訊號。這個結論延續個案①「乖離率不該當硬性懲罰項」的發現模式——直覺上合理的「過熱/時機」類指標，在系統化驗證後往往站不住腳，「連續同買天數」也加入這份名單。</p>
         <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓</strong>：<code>backtest_logs.db</code>裡677組實驗共用同一份歷史資料，任何要用<code>trades</code>表做per-trade統計分析的研究，都必須先確認樣本有沒有被「同一訊號被多組實驗重複買進」嚴重放大——這次的第一版分析正是活生生的示範案例，去重前後結論完全相反。</p>
+
+        <h3>補充驗證：能不能依regime（多空）動態調整偏好天數？——樣本量不足，暫不建議</h3>
+        <p>使用者提出一個合理的延伸假設：既然Regime自動切換（個案⑤⑦⑧）已經驗證「依市況動態調整參數」這個大方向是有效的，「連續同買天數」的最佳解會不會也隨多空regime而不同？依年度拆開看的表格確實顯示2022空頭年「同買第6天以上」表現最好（+0.76%、勝率55.8%），看起來像是個線索。</p>
+        <p>📎 <a href="research_data/case9_cobuy_dedup_by_year.csv" download style="color:#ec4899; font-weight:500;">下載去重後逐年逐筆資料 (CSV，3,459筆)</a>　——無需登入即可下載。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>但這個線索本身也是同一種統計假象</strong>：前面「依年度拆開」那張表用的是<strong>未去重</strong>的514,735筆資料，跟第一版全樣本分析犯的是同一種錯。重新用去重後的唯一訊號拆解2022年：「同買第6天以上」真正獨立的訊號<strong>只剩9筆</strong>，報酬轉為<strong>-0.28%</strong>，勝率44.4%——跟其他天數一樣糟，完全不是「表現最好」。原本的「規律」同樣是重複計數放大出來的假象。
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>2022年（去重後）</th><th>唯一訊號數</th><th>平均報酬</th><th>勝率</th></tr></thead>
+            <tbody>
+                <tr><td>第1天</td><td>207</td><td>-0.68%</td><td>42.0%</td></tr>
+                <tr><td>第3天（最不差）</td><td>36</td><td>-0.26%</td><td>41.7%</td></tr>
+                <tr><td>第6天以上（原本以為最好）</td><td><strong>9</strong></td><td>-0.28%</td><td>44.4%</td></tr>
+            </tbody>
+        </table>
+        <p>問題的根本在樣本量：126檔股票、5.5年，去重後同買訊號一年大約只有550~680筆，再切成6個天數分桶×6個年度，每一格平均只剩幾十筆，部分格甚至個位數（2021年第6天以上n=4、2022年n=9、2025年n=5）。<strong>這個粒度的資料量，不足以支撐任何regime-conditional的細分規則</strong>——不是規律不存在，是現有5.5年、126檔AI概念股的樣本量，還不足以可靠分辨「真規律」與「巧合」。這跟Regime自動切換用的TAIEX訊號（市場級、一年365天、每個regime狀態下有數千筆交易可驗證）完全不是同一個資料量級。</p>
+        <div class="quote-box">
+            📌 <strong>「穩健核心模型+依市況動態調整的靈活參數」這個設計方向本身是對的（Regime自動切換就是成功案例），但不是每個候選參數都有足夠資料支撐做成regime-conditional規則。</strong>「連續同買天數」目前資料量不夠，暫不建議往這個方向做，需要更長歷史或更大股票池累積更多獨立訊號後才適合重新檢驗——已記錄提醒，待未來資料量足夠時重新評估。
+        </div>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>
