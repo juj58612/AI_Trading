@@ -116,13 +116,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // 「發布快照」「清空所有紀錄」現在後端一律要求管理者驗證（未登入點了只會看到
-    // 403 錯誤），乾脆比照首頁「🔐 帳號管理」連結的做法，沒登入管理者身分就直接不
-    // 顯示這兩個按鈕，不要讓看不能用的人看到「好像可以點」的按鈕
+    // 403 錯誤）。沒登入管理者身分時維持看得到、但變灰鎖住不能點，讓使用者知道
+    // 這個功能存在、只是需要管理者身分，而不是直接整個消失
     if (!isAdminLoggedIn()) {
         const clearBtn = document.getElementById('btnClearLeaderboard');
-        if (clearBtn) clearBtn.style.display = 'none';
+        if (clearBtn) { clearBtn.disabled = true; clearBtn.style.opacity = '0.5'; clearBtn.style.cursor = 'not-allowed'; clearBtn.title = '僅限管理者使用'; }
         const publishBtn = document.getElementById('btnPublishSnapshot');
-        if (publishBtn) publishBtn.style.display = 'none';
+        if (publishBtn) { publishBtn.disabled = true; publishBtn.style.opacity = '0.5'; publishBtn.style.cursor = 'not-allowed'; publishBtn.title = '僅限管理者使用'; }
     }
 
     initDateDropdowns('Start', '2021-01-01');
