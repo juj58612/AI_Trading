@@ -1,6 +1,8 @@
 import os
 import json
 import time
+import base64
+import secrets
 import requests
 import datetime
 import uvicorn
@@ -16,6 +18,12 @@ from fastapi import FastAPI, APIRouter, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+
+# 跟 main.py 讀同一組管理者帳密環境變數，用來保護下面會寫入/清空資料庫、
+# 觸發網路連線或跑重運算的 API（這支檔案是獨立的 FastAPI app，不會共用
+# main.py 裡已經定義好的 authenticate()，所以在這裡自己重做一份同樣邏輯）
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "cyc58612")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 app = FastAPI()
 router = APIRouter()
@@ -126,6 +134,30 @@ def init_db():
     conn.close()
 
 init_db()
+
+def require_local_or_admin(request: Request):
+    """
+    會寫入/清空本機資料庫、觸發網路連線（yfinance/FinMind）、或跑重運算的 API，
+    原本完全沒有任何驗證機制（2026-08-11 資安檢查發現，任何人知道網址就能直接
+    呼叫，不需要透過前端畫面）。修正為：本機（127.0.0.1）呼叫維持原本免登入的
+    無摩擦操作體驗；非本機（例如正式站）呼叫則需要帶管理者帳密（跟 main.py 的
+    Basic Auth 同一組），驗證失敗一律 403，避免任何訪客觸發運算、消耗 Render
+    資源/FinMind 額度，或覆蓋掉正式站正在提供給訪客看的 published_snapshot.json。
+    """
+    client_host = request.client.host if request.client else None
+    if client_host in ("127.0.0.1", "::1", "localhost"):
+        return
+
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Basic "):
+        try:
+            decoded = base64.b64decode(auth[6:].strip()).decode("utf-8")
+            user, pwd = decoded.split(":", 1)
+            if ADMIN_PASSWORD and secrets.compare_digest(user, ADMIN_USERNAME) and secrets.compare_digest(pwd, ADMIN_PASSWORD):
+                return
+        except Exception:
+            pass
+    raise HTTPException(status_code=403, detail="此操作僅限本機或管理者身分執行")
 
 # Stock List
 STOCK_NAMES = {
@@ -332,6 +364,7 @@ async def get_db_status():
 
 @app.post("/api/backtest/download")
 async def download_data(request: Request):
+    require_local_or_admin(request)
     payload = await request.json()
     start_date = payload.get("start_date", "2025-01-01")
     end_date = payload.get("end_date", "2026-12-31")
@@ -605,6 +638,7 @@ async def get_buyhold_db_status():
 
 @app.post("/api/buyhold/sync")
 async def sync_buyhold_db(request: Request):
+    require_local_or_admin(request)
     payload = await request.json()
     force = payload.get("force", False)
 
@@ -789,7 +823,11 @@ class BacktestRequest(BaseModel):
     is_grid_trial: bool = False
 
 @app.post("/api/backtest/run")
-async def run_backtest(req: BacktestRequest):
+async def run_backtest(req: BacktestRequest, request: Request = None):
+    # request 只有真的透過 HTTP 呼叫這支 API 時才會有值；被 grid_search/mega_grid
+    # 內部直接當一般函式呼叫（不是走 HTTP）時 request 是 None，不需要也不能重複檢查
+    if request is not None:
+        require_local_or_admin(request)
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=400, detail="請先同步歷史資料庫")
         
@@ -1183,7 +1221,8 @@ class GridSearchRequest(BaseModel):
     end_date: str
 
 @app.post("/api/backtest/grid_search")
-async def run_bayesian_optimization(req: GridSearchRequest):
+async def run_bayesian_optimization(req: GridSearchRequest, request: Request):
+    require_local_or_admin(request)
     # Optuna study
     study = optuna.create_study(direction="maximize")
     
@@ -1252,7 +1291,8 @@ async def run_bayesian_optimization(req: GridSearchRequest):
     return {"status": "success", "message": "Bayesian Optimization Complete", "best_params": best_params}
 
 @app.post("/api/analysis/clear_db")
-def clear_experiments_db():
+def clear_experiments_db(request: Request):
+    require_local_or_admin(request)
     try:
         if os.path.exists(SQLITE_PATH):
             conn = sqlite3.connect(SQLITE_PATH)
@@ -1315,7 +1355,7 @@ def _build_leaderboard_csv(experiments: list) -> str:
     return "".join(lines)
 
 @app.post("/api/backtest/publish_snapshot")
-async def publish_snapshot():
+async def publish_snapshot(request: Request):
     """
     把本機跑完的排行榜結果打包成一份精簡的靜態快照，寫到專案目錄下的
     published_snapshot.json + published_leaderboard.csv。使用者手動 git commit + push
@@ -1326,6 +1366,7 @@ async def publish_snapshot():
     很小（幾百筆、不到 200KB），值得額外附上，讓正式站的一般使用者至少能看到並下載
     最佳策略的完整交易明細，不用只看排行榜摘要數字。
     """
+    require_local_or_admin(request)
     status_data = await get_db_status()
     experiments_data = get_experiments()
     attribution_data = get_attribution()
@@ -1432,7 +1473,8 @@ async def run_mega_grid_task(req: MegaGridRequest, combos: list, skipped_count: 
     mega_grid_status["message"] = f"大數據網格運算完成！共成功跑完 {mega_grid_status['current']} 組組合。{skip_suffix}"
 
 @app.post("/api/backtest/mega_grid")
-async def start_mega_grid(req: MegaGridRequest, background_tasks: BackgroundTasks):
+async def start_mega_grid(req: MegaGridRequest, background_tasks: BackgroundTasks, request: Request):
+    require_local_or_admin(request)
     global mega_grid_status
     if mega_grid_status["running"]:
         raise HTTPException(status_code=400, detail="已有大數據運算正在進行中")
