@@ -135,19 +135,15 @@ def init_db():
 
 init_db()
 
-def require_local_or_admin(request: Request):
+def require_admin(request: Request):
     """
-    會寫入/清空本機資料庫、觸發網路連線（yfinance/FinMind）、或跑重運算的 API，
+    會寫入/清空資料庫、觸發網路連線（yfinance/FinMind）、或跑重運算的 API，
     原本完全沒有任何驗證機制（2026-08-11 資安檢查發現，任何人知道網址就能直接
-    呼叫，不需要透過前端畫面）。修正為：本機（127.0.0.1）呼叫維持原本免登入的
-    無摩擦操作體驗；非本機（例如正式站）呼叫則需要帶管理者帳密（跟 main.py 的
-    Basic Auth 同一組），驗證失敗一律 403，避免任何訪客觸發運算、消耗 Render
-    資源/FinMind 額度，或覆蓋掉正式站正在提供給訪客看的 published_snapshot.json。
+    呼叫，不需要透過前端畫面）。修正為一律要求管理者帳密（跟 main.py 的 Basic
+    Auth 同一組），不管是本機還是正式站呼叫都要驗證——2026-08-11 稍後拿掉了
+    原本「本機請求自動放行」的例外，因為使用者想在本機用一般使用者帳號測試
+    這些頁面實際看到/能操作的畫面，「本機=管理者」的假設會讓這種測試失真。
     """
-    client_host = request.client.host if request.client else None
-    if client_host in ("127.0.0.1", "::1", "localhost"):
-        return
-
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Basic "):
         try:
@@ -157,7 +153,7 @@ def require_local_or_admin(request: Request):
                 return
         except Exception:
             pass
-    raise HTTPException(status_code=403, detail="此操作僅限本機或管理者身分執行")
+    raise HTTPException(status_code=403, detail="此操作僅限管理者身分執行")
 
 # Stock List
 STOCK_NAMES = {
@@ -364,7 +360,7 @@ async def get_db_status():
 
 @app.post("/api/backtest/download")
 async def download_data(request: Request):
-    require_local_or_admin(request)
+    require_admin(request)
     payload = await request.json()
     start_date = payload.get("start_date", "2025-01-01")
     end_date = payload.get("end_date", "2026-12-31")
@@ -638,7 +634,7 @@ async def get_buyhold_db_status():
 
 @app.post("/api/buyhold/sync")
 async def sync_buyhold_db(request: Request):
-    require_local_or_admin(request)
+    require_admin(request)
     payload = await request.json()
     force = payload.get("force", False)
 
@@ -827,7 +823,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
     # request 只有真的透過 HTTP 呼叫這支 API 時才會有值；被 grid_search/mega_grid
     # 內部直接當一般函式呼叫（不是走 HTTP）時 request 是 None，不需要也不能重複檢查
     if request is not None:
-        require_local_or_admin(request)
+        require_admin(request)
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=400, detail="請先同步歷史資料庫")
         
@@ -1222,7 +1218,7 @@ class GridSearchRequest(BaseModel):
 
 @app.post("/api/backtest/grid_search")
 async def run_bayesian_optimization(req: GridSearchRequest, request: Request):
-    require_local_or_admin(request)
+    require_admin(request)
     # Optuna study
     study = optuna.create_study(direction="maximize")
     
@@ -1292,7 +1288,7 @@ async def run_bayesian_optimization(req: GridSearchRequest, request: Request):
 
 @app.post("/api/analysis/clear_db")
 def clear_experiments_db(request: Request):
-    require_local_or_admin(request)
+    require_admin(request)
     try:
         if os.path.exists(SQLITE_PATH):
             conn = sqlite3.connect(SQLITE_PATH)
@@ -1366,7 +1362,7 @@ async def publish_snapshot(request: Request):
     很小（幾百筆、不到 200KB），值得額外附上，讓正式站的一般使用者至少能看到並下載
     最佳策略的完整交易明細，不用只看排行榜摘要數字。
     """
-    require_local_or_admin(request)
+    require_admin(request)
     status_data = await get_db_status()
     experiments_data = get_experiments()
     attribution_data = get_attribution()
@@ -1474,7 +1470,7 @@ async def run_mega_grid_task(req: MegaGridRequest, combos: list, skipped_count: 
 
 @app.post("/api/backtest/mega_grid")
 async def start_mega_grid(req: MegaGridRequest, background_tasks: BackgroundTasks, request: Request):
-    require_local_or_admin(request)
+    require_admin(request)
     global mega_grid_status
     if mega_grid_status["running"]:
         raise HTTPException(status_code=400, detail="已有大數據運算正在進行中")
