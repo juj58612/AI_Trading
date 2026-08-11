@@ -152,15 +152,76 @@ def evaluate_entry(today_price: pd.Series, inst_last2_days: list, strategy: str,
         
     return None
 
-def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today_chip: dict, strategy: str, max_hold_days: int, current_date: pd.Timestamp) -> tuple:
+def _evaluate_regime_exit(p: dict, close: float, today_chip: dict, is_bull: bool) -> tuple:
+    """
+    'R'（Regime自動切換，研究版）專屬出場判斷，card-line規則組合依當日regime動態切換
+    （每天重新判斷，不是凍結在進場當下的regime）。跟A/B/C/D/E共用的吊燈式ATR停損／
+    固定15%停利是兩套完全不同的機制，不共用、不疊加。
+
+    多頭（is_bull=True）：關防線A，防線B／高點打折鎖利／保本停利(調整模式)維持。
+    空頭（is_bull=False）：防線A/防線B/高點打折鎖利全關，只留保本停利(調整模式)+土洋雙賣。
+
+    這是 case_studies.html 個案⑤⑦⑧、research_report.html 驗證出的最終配置
+    （48組窮舉冠軍，經巨觀風控開/關交叉驗證後配置不變）。
+
+    p 需要的欄位：buy_price（成本）、supp（進場當下的20日低點，防線B用）、
+    high（自進場以來最高收盤，函式內自動維護）、tp_locked/tp_floor（保本停利狀態，函式內自動維護）。
+    """
+    cost = p['buy_price']
+    high = max(p.get('high', cost), close)
+    p['high'] = high
+
+    if is_bull:
+        use_a, use_b, use_trail, use_dualsell = False, True, True, False
+    else:
+        use_a, use_b, use_trail, use_dualsell = False, False, False, True
+
+    if use_dualsell:
+        # today_chip 可能是dict、pandas Series或{}，一律用.get()取值，不對today_chip本身做
+        # 真假值判斷（pandas Series的bool()是ambiguous，會直接丟例外）
+        foreign = today_chip.get('foreign', 0) if today_chip is not None else 0
+        trust = today_chip.get('trust', 0) if today_chip is not None else 0
+        if foreign < 0 and trust < 0:
+            return "土洋雙賣", p
+
+    if use_b and close < p.get('supp', 0):
+        return "防線B(破支撐)", p
+
+    if use_a and close <= cost * 0.92:
+        return "防線A(-8%停損)", p
+
+    if use_trail and high > cost:
+        effective_high = high * 0.95
+        if close <= effective_high * 0.92:
+            return "高點打折鎖利", p
+
+    if not p.get('tp_locked') and close >= cost * 1.15:
+        p['tp_locked'] = True
+        p['tp_floor'] = cost * 1.05
+    if p.get('tp_locked') and close < p['tp_floor']:
+        return "保本停利(防守線回落)", p
+
+    return None, p
+
+def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today_chip: dict, strategy: str, max_hold_days: int, current_date: pd.Timestamp, is_bull_regime: bool = None) -> tuple:
     """
     統一出場邏輯
     p: 該筆持倉紀錄
+    is_bull_regime: 僅 strategy='R' 使用，當日TAIEX收盤 vs 20日均線的多空判斷，由呼叫端算好傳入
+    （strategy_core 本身不抓即時資料，避免跟 main.py/backtest_engine.py 循環引用）。
     回傳: (sell_reason, updated_p) 或 (None, updated_p)
     """
     close = today_price['close']
     sell_reason = None
-    
+
+    # Check Time limit（所有方案共用的持倉天數上限，含'R'）
+    days_held = (current_date - pd.Timestamp(p['buy_date'])).days
+    if days_held >= max_hold_days:
+        return "時間到期", p
+
+    if strategy == 'R':
+        return _evaluate_regime_exit(p, close, today_chip, bool(is_bull_regime))
+
     # 華爾街升級：吊燈停損法進階版 (Adaptive Chandelier Exit)
     # 當持倉獲利超過 12% 進主升段時，自動將 ATR 乘數收緊至 1.25x，緊貼價格鎖死獲利
     unrealized_pnl_pct = (close - p['buy_price']) / p['buy_price']
@@ -175,13 +236,7 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         p['trailing_stop'] = close - (current_mult * atr_val)
     if close < p['lowest_price']:
         p['lowest_price'] = close
-        
-    # Check Time limit
-    days_held = (current_date - pd.Timestamp(p['buy_date'])).days
-    if days_held >= max_hold_days:
-        sell_reason = "時間到期"
-        return sell_reason, p
-        
+
     # Check Stop Loss (Trailing or Fixed)
     if close < p['trailing_stop']:
         sell_reason = "觸發停損"

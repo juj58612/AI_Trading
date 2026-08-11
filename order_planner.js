@@ -59,8 +59,11 @@ async function loadPlannerData() {
         prevAutoByTicker[o.ticker] = { checked: o.checked, price: o.price, shares: o.shares, userEdited: !!o.userEdited };
     });
 
+    const useRegimeToggle = document.getElementById('useRegimeToggle');
+    const useRegime = useRegimeToggle ? useRegimeToggle.checked : false;
+
     try {
-        const res = await fetch(`${API_BASE_URL}/api/planner/recommendations?cash=${cashForAuto}`, {
+        const res = await fetch(`${API_BASE_URL}/api/planner/recommendations?cash=${cashForAuto}&use_regime=${useRegime}`, {
             headers: { 'Authorization': getAuthHeader() }
         });
         
@@ -90,7 +93,31 @@ async function loadPlannerData() {
                     weatherBanner.innerHTML = `當前市況：${data.market_status} (AI 族群健康度：${data.health_ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：${data.market_advice}</span>`;
                     weatherBanner.style.display = 'block';
                 }
-                
+
+                // Regime自動切換（研究版，2026-08-12起已預設套用）：顯示這次算出的結果，
+                // 或使用者主動取消勾選、改回傳統方案D+固定30/30/40分批時的提示
+                const regimeNote = document.getElementById('regimeUsedNote');
+                const regimeOffNote = document.getElementById('regimeOffNote');
+                if (regimeNote) {
+                    if (data.regime_used && data.regime_is_bull !== null && data.regime_is_bull !== undefined) {
+                        const label = data.regime_is_bull ? '多頭' : '空頭';
+                        const advice = data.regime_is_bull
+                            ? '新標的建議一次買滿100%，出場只關防線A'
+                            : '新標的維持30/30/40分批，出場只留保本停利(調整模式)+土洋雙賣';
+                        regimeNote.style.display = 'block';
+                        regimeNote.textContent = `🧭 Regime自動切換已套用：目前判定「${label}」— ${advice}（研究版，詳見個案研究⑧）`;
+                        if (regimeOffNote) regimeOffNote.style.display = 'none';
+                    } else if (data.regime_used) {
+                        regimeNote.style.display = 'block';
+                        regimeNote.textContent = '🧭 已套用Regime自動切換，但這次無法取得regime判斷，本次自動退回傳統分批邏輯。';
+                        if (regimeOffNote) regimeOffNote.style.display = 'none';
+                    } else {
+                        regimeNote.style.display = 'none';
+                        regimeNote.textContent = '';
+                        if (regimeOffNote) regimeOffNote.style.display = 'block';
+                    }
+                }
+
                 // 1. Process Auto Orders (保留勾選狀態；只有使用者手動編輯過的價量才保留舊值，
                 //    否則一律採用後端剛算好的新股數，確保 A 的預算縮減會真的反映出來)
                 autoOrders = [];
@@ -111,7 +138,8 @@ async function loadPlannerData() {
                         atr: b.atr,
                         live_price: b.live_price,
                         gap_amount: b.gap_amount,
-                        gap_atr_ratio: b.gap_atr_ratio
+                        gap_atr_ratio: b.gap_atr_ratio,
+                        exit_strategy: b.exit_strategy || 'D'
                     });
                 });
                 // Add sell orders
@@ -608,7 +636,8 @@ async function commitExecutedOrders() {
             price: o.price,
             shares: o.shares, // float 張
             type: o.type,
-            reason: o.reason || o.stage || "實戰下單"
+            reason: o.reason || o.stage || "實戰下單",
+            exit_strategy: o.exit_strategy || 'D'
         }))
     };
     
