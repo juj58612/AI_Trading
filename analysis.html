@@ -113,19 +113,19 @@
     <!-- KPI 總覽 -->
     <div class="kpi-grid">
         <div class="kpi-card">
-            <div class="kpi-title">🏆 冠軍策略總報酬率</div>
+            <div class="kpi-title">🥇 目前排名第一總報酬率</div>
             <div class="kpi-value" id="kpiReturn">+122.14%</div>
-            <div class="kpi-sub">5.5 年波段累積資產翻倍以上</div>
+            <div class="kpi-sub">僅單一組合，詳見下方「前30名綜合分析」判斷是否具代表性</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-title">🛡️ 冠軍策略最大回撤 (MDD)</div>
+            <div class="kpi-title">🛡️ 該組合最大回撤 (MDD)</div>
             <div class="kpi-value" style="color: #4ade80;" id="kpiMDD">14.11%</div>
-            <div class="kpi-sub">成功抵抗 2022 空頭大震盪</div>
+            <div class="kpi-sub">單一組合數字，非全體平均</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-title">⏱️ 黃金持倉天數甜點</div>
+            <div class="kpi-title">⏱️ 該組合持倉天數</div>
             <div class="kpi-value" style="color: #38bdf8;" id="kpiHold">30 天</div>
-            <div class="kpi-sub">精確鎖定 25 ~ 35 天飆股主升段</div>
+            <div class="kpi-sub">實際偏好天數請看下方參數共同特徵</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">📊 跑完總排列組合數</div>
@@ -150,9 +150,16 @@
         </div>
     </div>
 
+    <!-- 前 30 名綜合分析：避免只看排名第一，誤以為單一極端結果就是「最好的」 -->
+    <div class="report-section">
+        <h2>📝 前 30 名綜合分析報告 <span>Top 30 Overview</span></h2>
+        <p style="color: var(--text-sub); font-size: 0.85rem; margin-top: -8px; margin-bottom: 15px;">上面 KPI 卡片顯示的「目前排名第一」只是單一組合，可能只是眾多測試中運氣特別好的極端值。這裡改看報酬率前 30 名整體的分佈與參數規律，用來判斷排名第一是不是有代表性、還是孤例。</p>
+        <div id="top30ReportContainer"></div>
+    </div>
+
     <!-- 圖表區 -->
     <div class="report-section">
-        <h2>📈 Top 冠軍策略累積資產成長曲線 (Equity Curves)</h2>
+        <h2>📈 前 5 名策略累積資產成長曲線 (Equity Curves)</h2>
         <div style="height: 380px; position: relative;">
             <canvas id="analysisChart"></canvas>
         </div>
@@ -309,6 +316,7 @@ async function loadAnalysisData() {
 
             renderTable(list);
             renderChart(list.slice(0, 5));
+            renderTop30Report(list);
         }
 
         if (attrData && attrData.decisions && attrData.decisions.length > 0) {
@@ -332,6 +340,92 @@ function calcCAGR(row) {
     } catch(err) {
         return 0;
     }
+}
+
+function median(nums) {
+    const s = nums.slice().sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function mean(nums) {
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function stddev(nums) {
+    const m = mean(nums);
+    return Math.sqrt(mean(nums.map(n => (n - m) ** 2)));
+}
+
+// 統計某個欄位在這 30 組裡最常出現的值，及佔比——佔比越高代表這個參數選擇
+// 在高績效組合裡越穩健一致，不是單一極端值的偶然結果
+function dominantValue(top30, field, formatter) {
+    const counts = {};
+    top30.forEach(r => {
+        const key = formatter ? formatter(r[field]) : r[field];
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const [value, count] = sorted[0];
+    return { value, count, pct: (count / top30.length * 100).toFixed(0), distinctCount: sorted.length };
+}
+
+function renderTop30Report(list) {
+    const container = document.getElementById('top30ReportContainer');
+    if (!container) return;
+    const n = Math.min(30, list.length);
+    const top30 = list.slice(0, n);
+    if (top30.length === 0) { container.innerHTML = '<p style="color:var(--text-sub);">尚無資料。</p>'; return; }
+
+    const returns = top30.map(r => r.total_return);
+    const mdds = top30.map(r => r.mdd);
+    const retMin = Math.min(...returns), retMax = Math.max(...returns);
+    const retMedian = median(returns), retMean = mean(returns), retStd = stddev(returns);
+    const mddMin = Math.min(...mdds), mddMax = Math.max(...mdds);
+
+    const stratDom = dominantValue(top30, 'exit_strategy');
+    const posDom = dominantValue(top30, 'max_positions');
+    const holdDom = dominantValue(top30, 'max_hold_days', v => v === 999 ? '無限制' : `${v}天`);
+
+    // 排名第一 vs 前30名中位數的差距，用來判斷排名第一是不是明顯偏離其他組合的極端值
+    const top1Return = list[0].total_return;
+    const gapFromMedian = top1Return - retMedian;
+    const isOutlier = retStd > 0 && (top1Return - retMean) / retStd > 1.5;
+
+    const concentrationNote = stratDom.pct >= 50
+        ? `策略方案分布集中（「方案 ${stratDom.value}」單一方案就佔了前 ${n} 名的 ${stratDom.pct}%），顯示這個方案本身穩健有效，不是單一組合僥倖勝出。`
+        : `策略方案分布比較分散（前 ${n} 名裡出現了 ${stratDom.distinctCount} 種不同方案，最常見的「方案 ${stratDom.value}」也只佔 ${stratDom.pct}%），代表高報酬不特別依賴單一方案，多種方案在對的參數搭配下都有機會表現不錯。`;
+
+    const outlierNote = isOutlier
+        ? `⚠️ 需要留意：目前排名第一的總報酬率（+${top1Return.toFixed(2)}%）明顯高於前 ${n} 名的平均水準（超過 1.5 個標準差），統計上比較像極端值，實戰中不宜只依賴這一組參數，建議參考下方「穩健參數」的共同特徵。`
+        : `目前排名第一的總報酬率（+${top1Return.toFixed(2)}%）跟前 ${n} 名的整體水準差距不大（僅高出中位數 ${gapFromMedian.toFixed(1)} 個百分點），代表這個結果落在合理範圍內、不是孤立的極端值，可信度較高。`;
+
+    container.innerHTML = `
+        <div class="kpi-grid" style="margin-bottom: 18px;">
+            <div class="kpi-card">
+                <div class="kpi-title">📊 前 ${n} 名報酬率範圍</div>
+                <div class="kpi-value" style="font-size:1.3rem;">+${retMin.toFixed(1)}% ~ +${retMax.toFixed(1)}%</div>
+                <div class="kpi-sub">中位數 +${retMedian.toFixed(1)}%｜平均 +${retMean.toFixed(1)}%｜標準差 ${retStd.toFixed(1)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">🛡️ 前 ${n} 名最大回撤範圍</div>
+                <div class="kpi-value" style="color:#4ade80; font-size:1.3rem;">${mddMin.toFixed(1)}% ~ ${mddMax.toFixed(1)}%</div>
+                <div class="kpi-sub">數字越小代表回撤越輕</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">🎯 最常見持倉檔數</div>
+                <div class="kpi-value" style="color:#38bdf8; font-size:1.3rem;">${posDom.value} 檔</div>
+                <div class="kpi-sub">前 ${n} 名中出現 ${posDom.count} 次（${posDom.pct}%）</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">⏱️ 最常見持倉天數</div>
+                <div class="kpi-value" style="color:#c084fc; font-size:1.3rem;">${holdDom.value}</div>
+                <div class="kpi-sub">前 ${n} 名中出現 ${holdDom.count} 次（${holdDom.pct}%）</div>
+            </div>
+        </div>
+        <div class="insight-card" style="margin-bottom:10px;">📐 <b>穩健度判讀</b>：${outlierNote}</div>
+        <div class="insight-card">🧩 <b>參數共同特徵</b>：${concentrationNote}前 ${n} 名最常見的持倉檔數是 <b>${posDom.value} 檔</b>（${posDom.pct}%），持倉天數多落在 <b>${holdDom.value}</b>（${holdDom.pct}%）附近——這些共同特徵比單一排名第一的組合更值得參考。</div>
+    `;
 }
 
 function renderTable(list) {
