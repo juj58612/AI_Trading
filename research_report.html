@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研究報告：Regime自動切換策略模型的建構與驗證 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .doc-container {
+            max-width: 960px;
+            margin: 30px auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+            line-height: 1.85;
+        }
+        .doc-header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-purple);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .doc-header h1 {
+            font-size: 1.8rem;
+            color: #ec4899;
+            margin-bottom: 8px;
+        }
+        .doc-header p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        .meta-box {
+            background: #0f172a;
+            border-left: 4px solid #ec4899;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            font-size: 0.92rem;
+            color: #cbd5e1;
+        }
+        .toc {
+            background: rgba(139,92,246,0.08);
+            border: 1px solid rgba(139,92,246,0.4);
+            border-radius: 10px;
+            padding: 18px 22px;
+            margin-bottom: 30px;
+        }
+        .toc h3 { margin-top: 0; color: #c084fc; font-size: 1rem; }
+        .toc ol { margin: 8px 0 0 0; padding-left: 22px; }
+        .toc a { color: #cbd5e1; text-decoration: none; }
+        .toc a:hover { color: #ec4899; text-decoration: underline; }
+        .doc-section { margin-bottom: 44px; padding-top: 10px; border-top: 1px dashed #334155; }
+        .doc-section:first-of-type { border-top: none; }
+        .doc-section h2 {
+            font-size: 1.4rem; color: var(--accent-blue);
+            border-bottom: 1px solid #334155; padding-bottom: 8px;
+            margin-top: 10px; margin-bottom: 15px;
+        }
+        .doc-section h3 { font-size: 1.1rem; color: #c084fc; margin-top: 22px; margin-bottom: 10px; }
+        .doc-section h4 { font-size: 1rem; color: #93c5fd; margin-top: 16px; margin-bottom: 8px; }
+        .quote-box {
+            background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b;
+            padding: 15px; border-radius: 6px; margin: 15px 0; font-weight: bold; color: #fef08a;
+        }
+        .limit-box {
+            background: rgba(239,68,68,0.1); border-left: 4px solid #ef4444;
+            padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 0.9rem; color: #fca5a5;
+        }
+        .doc-table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #0f172a; border-radius: 8px; overflow: hidden; font-size: 0.92rem; }
+        .doc-table th, .doc-table td { padding: 9px 12px; border: 1px solid #334155; text-align: left; }
+        .doc-table th { background: #1e293b; color: var(--accent-blue); font-weight: bold; }
+        .data-link { color: #ec4899; text-decoration: none; font-weight: 500; }
+        .data-link:hover { text-decoration: underline; }
+        .data-link::before { content: "📎 "; }
+        code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+        .btn-top {
+            position: fixed; bottom: 30px; right: 30px; background: #ec4899; color: #0f172a;
+            padding: 10px 18px; border-radius: 30px; font-weight: bold; text-decoration: none;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+        }
+        .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+        .step-list li { counter-increment: step; margin-bottom: 10px; padding-left: 34px; position: relative; }
+        .step-list li::before {
+            content: counter(step); position: absolute; left: 0; top: 0;
+            background: rgba(236,72,153,0.2); color: #f472b6; border: 1px solid #ec4899;
+            width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="doc-container">
+    <div class="doc-header" style="position: relative;">
+        <a href="case_studies.html" style="position: absolute; right: 0; top: 0; background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-purple);">📂 返回個案研究</a>
+        <h1>📑 Regime自動切換策略模型的建構與驗證</h1>
+        <p>從單一持股排名疑問出發，到7個獨立子研究收斂出的統一策略設計原則<br>2026-08-10 ～ 2026-08-11</p>
+    </div>
+
+    <div class="meta-box">
+        <strong>本報告性質</strong>：這是把 <a href="case_studies.html" style="color:#c084fc;">個案研究①～⑦</a> 的原始發現，依研究邏輯重新整理成的完整敘事文件——說明「為什麼要做這個測試」「怎麼做的」「發現了什麼」「這個發現如何導向下一個問題」，而不只是條列結果。所有提到數據的地方都附上原始資料檔案連結，可自行下載驗證。<strong>交易成本說明</strong>：全文報酬率皆已扣除交易摩擦成本，統一採用回測實驗室「單邊交易成本0.3%（來回0.6%）－真實嚴苛」預設值，依白皮書定義涵蓋手續費、證交稅、高價股零股滑價懲罰。
+    </div>
+
+    <div class="toc">
+        <h3>目錄</h3>
+        <ol>
+            <li><a href="#sec1">研究動機</a></li>
+            <li><a href="#sec2">資料與方法</a></li>
+            <li><a href="#sec3">研究發現：七個子研究的完整敘事</a></li>
+            <li><a href="#sec4">方法論教訓</a></li>
+            <li><a href="#sec5">局限性</a></li>
+            <li><a href="#sec6">結論與後續方向</a></li>
+            <li><a href="#sec7">附錄：資料檔案總覽</a></li>
+        </ol>
+    </div>
+
+    <!-- 1 研究動機 -->
+    <div class="doc-section" id="sec1">
+        <h2>1. 研究動機</h2>
+        <p>本研究系列的起點是一個具體的觀察：使用者發現首頁「AI籌碼深度掃描」推薦順位第一名是 6213 聯茂，但這支股票在此之前經歷了 -37.8%（07/10~07/30）的崩跌，又在隨後7個交易日內急拉 +62.5%。這引出一連串遞進的問題：</p>
+        <ul>
+            <li>系統的法人籌碼積分模型（<code>strategy_core.py</code> 的 <code>calculate_chip_score</code>，見 <a href="doc.html" style="color:#c084fc;">白皮書2.2節</a>）完全不考慮「已經漲了多少」「連續漲停幾天」這類過熱因子，這是設計疏漏還是刻意為之？</li>
+            <li>系統標語宣稱的「3:3:4分批進場、3:4:3分批出場」機制，實際上有沒有被驗證過真的比一次性建倉/固定出場更好？</li>
+            <li>如果進場、出場的最佳做法都會隨市場處於多頭或空頭而改變，模型該不該具備「依當下狀況自動判斷、給出最佳建議」的能力？</li>
+        </ul>
+        <p>這三個問題彼此扣連，最終收斂成一個核心研究目標：<strong>能否設計並驗證一個「即時可算、不使用未來資訊」的市場regime判斷機制，讓策略模型的進場方式與出場規則能隨多頭／空頭狀態動態切換，且經得起系統化的交叉驗證？</strong></p>
+    </div>
+
+    <!-- 2 資料與方法 -->
+    <div class="doc-section" id="sec2">
+        <h2>2. 資料與方法</h2>
+
+        <h3>2.1 資料來源</h3>
+        <ul>
+            <li><strong>股票池</strong>：現行126檔AI概念股與相關ETF固定名單。</li>
+            <li><strong>股價與法人籌碼</strong>：本地 <code>backtest_database.json</code>，由「同步歷史資料庫」功能透過 yfinance（股價）與 FinMind（法人買賣超）批次同步，涵蓋 2021-01-04 至今，回測時直接讀取本地快取，不即時連線。</li>
+            <li><strong>大盤指數與巨觀風控三指標</strong>（外資期貨淨空單、台幣匯率、外資現貨買賣超）：原本每次回測都即時呼叫 FinMind/yfinance，本研究過程中發現這是穩健性風險（見<a href="#sec4">第4節</a>），已修復為本地快取，涵蓋 2021-01-04 至 2026-08-11 共1,377個交易日。</li>
+        </ul>
+
+        <h3>2.2 回測方法</h3>
+        <p>兩種方式並用，依研究問題選擇：</p>
+        <ol>
+            <li><strong>直接呼叫正式引擎</strong>：凡是測試現有 <code>strategy_core.py</code>／<code>backtest_engine.py</code> 已支援的機制（例如比較方案A/B/C/D/E的原生表現），一律直接呼叫正式 <code>run_backtest</code> 函式，確保跟系統實際行為100%一致，結果同步存入 <code>backtest_logs.db</code>。</li>
+            <li><strong>忠實複製核心邏輯的獨立研究腳本</strong>：凡是現有回測引擎不支援的機制（例如3:3:4跨天分批加碼、regime自動切換），另外撰寫研究腳本，但邏輯上忠實複製 <code>strategy_core.py</code> 裡已經明確定義的規則（<code>evaluate_entry</code>／<code>evaluate_exit</code>），不自行發明新規則。腳本本身不修改任何正式程式碼。</li>
+        </ol>
+
+        <h3>2.3 統一參數</h3>
+        <table class="doc-table">
+            <thead><tr><th>參數</th><th>值</th></tr></thead>
+            <tbody>
+                <tr><td>初始資金</td><td>新台幣 1,000,000 元</td></tr>
+                <tr><td>持股上限</td><td>3檔（早期研究）→ 8檔（樣本擴大後的標準設定）</td></tr>
+                <tr><td>單邊交易成本</td><td>0.3%（來回0.6%），高價股（≥1,000元）額外+0.2%零股滑價懲罰</td></tr>
+                <tr><td>回測區間</td><td>全期間 2021-01-01～2026-08-07；獨立年份驗證另取 2022（空頭）、2024（多頭）</td></tr>
+                <tr><td>持股池</td><td>現行126檔AI概念股</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 3 研究發現 -->
+    <div class="doc-section" id="sec3">
+        <h2>3. 研究發現：七個子研究的完整敘事</h2>
+
+        <h3>3.1 起點：籌碼積分模型該不該懲罰「過熱」？</h3>
+        <p>動能因子的經典文獻（Jegadeesh &amp; Titman, 1993；George &amp; Hwang, 2004 的52週高點動能效應）指出，強勢股票傾向延續強勢而非均值回歸，直接挑戰「漲多了就該扣分」的直覺。為了不只憑理論猜測，取用A、D兩方案各4組表現前段的回測實驗，合計 <a href="research_data/case1_bias_momentum_trades.csv" class="data-link">4,217筆交易</a>，逐筆重算進場當下的乖離率、距60日低點漲幅、進場前連續漲停天數。</p>
+        <div class="quote-box">乖離率越高，勝率與平均報酬不降反升（0~5%組勝率42.6%，&gt;20%組勝率48.7%），跟52週高點動能效應一致——直接把乖離率當硬性過濾器，會砍掉表現最好的一批交易。</div>
+        <p>但這不代表「漲多完全沒風險」：距60日低點漲幅超過100%的分組明顯轉差，且<strong>只在方案A成立</strong>，方案D的自適應吊燈鎖利機制已自行吸收這段風險。這是本系列研究第一次發現「風險訊號的有效性依方案而異」，是後續整個regime研究方向的伏筆。（完整方法與數據見 <a href="case_studies.html#case1" style="color:#c084fc;">個案①</a>）</p>
+
+        <h3>3.2 3:3:4分批進場：從未被驗證過的宣稱</h3>
+        <p>查證發現首頁標語宣稱的「3:3:4分批進場」機制，雖然在 <code>get_planner_recommendations</code> 裡有明確的規則定義（訊號重新出現才加碼下一批），但 <code>backtest_engine.py</code> 全文沒有任何分批邏輯——過去所有回測數字全部是「一次買滿」跑出來的。這是本系列研究第一次發現「文案宣稱的機制」與「實際被驗證過的行為」之間的落差，這個模式後續在出場機制（3.3節）也重複出現。</p>
+        <p>取現行126檔股池、8檔持股，一次買完直接呼叫正式引擎，分批進場依規則另撰腳本，全期間 <a href="research_data/case3_staged_vs_lumpsum_trades.csv" class="data-link">839筆一次買完＋895筆分批進場交易</a>：</p>
+        <table class="doc-table">
+            <thead><tr><th>期間</th><th>一次買完</th><th>3:3:4分批</th><th>結論</th></tr></thead>
+            <tbody>
+                <tr><td>全期間（多頭占多數）</td><td>314.29%</td><td>119.17%</td><td>一次買完勝出</td></tr>
+                <tr><td>2022空頭年</td><td>-23.94%</td><td><strong>-5.49%</strong></td><td>分批明顯勝出</td></tr>
+                <tr><td>2024多頭年</td><td><strong>63.29%</strong></td><td>11.42%</td><td>一次買完明顯勝出</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">3:3:4分批沒有「絕對比較好」，取決於市場階段——多頭適合積極（一次買完），空頭適合保守（分批）。這是本系列研究第一次完整驗證出的「regime依賴性」現象。</div>
+        <p>（完整方法與數據見 <a href="case_studies.html#case3" style="color:#c084fc;">個案③</a>，單股示範見 <a href="case_studies.html#case2" style="color:#c084fc;">個案②</a>）</p>
+
+        <h3>3.3 出場機制：同樣的regime依賴性，同樣的落差</h3>
+        <p>白皮書描述的「3:4:3階梯出場」（防線A、防線B、保本停利、高點打折鎖利），查證後同樣發現是「我的操盤室」卡片的純顯示警示邏輯，從未接進回測引擎，跟真正驅動回測的 <code>evaluate_exit</code> 是兩套不同系統——與3.2節的3:3:4進場是同一種狀況。用<a href="research_data/case4_exit_mechanism_summary.csv" class="data-link">全期間8組配置對照＋5組配置×3個期間的regime隔離結果</a>驗證：</p>
+        <table class="doc-table">
+            <thead><tr><th>方案（防線A）</th><th>2022空頭年</th><th>2024多頭年</th></tr></thead>
+            <tbody>
+                <tr><td>保留（基準）</td><td>-19.93%</td><td>33.65%</td></tr>
+                <tr><td>拿掉</td><td><strong>-20.28%（更差）</strong></td><td><strong>34.8%（更好）</strong></td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">防線A的角色在多空頭年完全相反：空頭年保留較好，多頭年拿掉較好。全期間測出的「拿掉防線A較好」其實只反映多頭年占多數的偏誤——跟3.2節的進場方式regime依賴性完全同構。</div>
+        <p>（完整方法與數據見 <a href="case_studies.html#case4" style="color:#c084fc;">個案④</a>）</p>
+
+        <h3>3.4 Regime自動切換：把依賴性變成解方</h3>
+        <p>3.2、3.3節兩個獨立子研究得出同一個結論——「依市況調整」而非固定死一套規則——這正是白皮書2.6節「三合一巨觀風控熔斷保險絲」原則的自然延伸，只是原本只用在「要不要買、買多少」，沒擴大到「怎麼買、怎麼賣」。設計regime訊號：<strong>當天TAIEX收盤價 vs 20日均線</strong>（每天可算，不使用未來資訊），多頭模式沿用一次買完＋關掉防線A（2024年實測最佳），空頭模式沿用3:3:4分批＋card-line組合（2022年實測最佳）。</p>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th></tr></thead>
+            <tbody>
+                <tr><td>靜態基準</td><td>298.72%</td><td>22.97%</td><td>48.02%</td></tr>
+                <tr><td>靜態最佳單一改動</td><td>394.38%</td><td>21.68%</td><td>49.7%</td></tr>
+                <tr><td><strong>Regime自動切換</strong></td><td><strong>522.18%</strong></td><td>22.25%</td><td><strong>53.11%</strong></td></tr>
+            </tbody>
+        </table>
+        <p>為排除「湊巧選對兩個主場年」的疑慮，額外檢查沒被用來挑規則的年份（2021/2023/2025/2026）：全部正報酬，勝率50~63%；唯一用來挑空頭規則的2022年反而是六年裡勝率最低的（40.5%）——顯示整體表現不是靠兩個主場年撐起來的。完整逐筆交易見 <a href="research_data/case5_regime_v1_trades.csv" class="data-link">case5_regime_v1_trades.csv（273筆）</a>。（詳見 <a href="case_studies.html#case5" style="color:#c084fc;">個案⑤</a>）</p>
+
+        <h3>3.5 五方案全面比較：確認A是對的選擇，但也發現B的空頭優勢</h3>
+        <p>個案⑤只用了方案A當多頭基底，還沒跟B/C/D/E比較過。取A/B/C/D/E五方案在同樣條件下對照（<a href="research_data/case6_all_strategies_summary.csv" class="data-link">case6_all_strategies_summary.csv，15列</a>）：</p>
+        <div class="quote-box">方案A在全期間與2024多頭年都是五方案中表現最好、風險最低的，確認個案⑤的選擇正確。但2022空頭年最強的其實是方案B（虧損最少、MDD最低），方案A在空頭年只是中段班。</div>
+
+        <h3>3.6 嘗試整合方案B：一次失敗、一次成功、一次窮舉找到更好的答案</h3>
+        <p>依3.5節發現，嘗試把方案B整合進regime模型的空頭端，經歷三個階段：</p>
+        <ol class="step-list">
+            <li><strong>整套替換（失敗）</strong>：把空頭端整個換成方案B的原生出場邏輯，結果 162.67%，遠低於個案⑤原版的522.18%，甚至輸給「全程只用方案A」（251.51%）。<a href="research_data/case7_strategyB_fullswap_failed_trades.csv" class="data-link">完整891筆交易明細</a>。個別最強的積木，湊在一起不保證整體最強。</li>
+            <li><strong>疊加而非替換（部分成功）</strong>：查證發現方案A/B/C/E的進場篩選邏輯其實完全相同（<code>evaluate_entry</code> 只有方案D有額外濾網），方案B真正的差異只在出場端一條規則——「土洋雙賣」（外資與投信同日都賣超即出清）。把這條規則疊加進個案⑤原本的空頭組合：468.71% / MDD 17.48%（比原版22.25%更低）。<a href="research_data/case7_strategyB_dualsell_overlay_trades.csv" class="data-link">完整465筆交易明細</a>。是報酬換防守的取捨，不是單純勝出。</li>
+            <li><strong>系統化窮舉（找到新冠軍）</strong>：與其手動挑組合，把空頭端5個開關（防線A／防線B／高點打折鎖利 各on/off、保本停利 off/adjust/sell、土洋雙賣 on/off）全部排列，共48組，逐一跑滿5.5年（<a href="research_data/case7_bear_exhaustive_48combos.csv" class="data-link">完整48組結果</a>）。冠軍：<strong>防線A、防線B、高點打折鎖利全關，只留保本停利(adjust)+土洋雙賣</strong>，總報酬 <strong>692.64%</strong>，MDD 24.17%——比個案⑤原版高約33%。</li>
+        </ol>
+        <p><strong>交叉驗證</strong>：上述48組全部是在巨觀風控fail-open狀態下跑出來的。修好本地快取後（見<a href="#sec4">第4節</a>），用「風控真正生效」的狀態重跑全部48組（<a href="research_data/case7_bear_exhaustive_48combos_macroON.csv" class="data-link">完整結果</a>）：</p>
+        <table class="doc-table">
+            <thead><tr><th></th><th>總報酬</th><th>MDD</th><th>配置</th></tr></thead>
+            <tbody>
+                <tr><td>fail-open版</td><td>692.64%</td><td>24.17%</td><td>A/B/高點鎖利全關，保本adjust，+土洋雙賣</td></tr>
+                <tr><td><strong>風控生效版</strong></td><td><strong>488.17%</strong></td><td><strong>19.98%</strong></td><td><strong>完全相同的配置</strong></td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">冠軍配置完全沒變——這是本系列研究最重要的穩健性驗證：這個組合是靠規則本身贏，不是資料完整度不足的僥倖。絕對報酬下降、MDD進一步改善，都是風控生效的預期效果。（詳見<a href="case_studies.html#case7" style="color:#c084fc;">個案⑦</a>）</div>
+
+        <h3>3.7 擴大檢驗：C/D/E方案的regime組合網格</h3>
+        <p>最後把C/D/E也納入regime組合網格（5×5=25組，各方案原生出場邏輯），確認沒有任何純方案配對打贏3.6節的card-line微調版：最高的E多頭+C空頭僅244.83%，D多頭+A空頭雖有234.29%但風控表現最好（MDD 28.72%）。<strong>結論：真正拉開差距的不是「選哪個內建方案」，是針對性微調過的規則細節</strong>——這回應了整份報告的核心命題：好的策略設計不是選擇題，是持續實證驗證出來的工程。</p>
+    </div>
+
+    <!-- 4 方法論教訓 -->
+    <div class="doc-section" id="sec4">
+        <h2>4. 方法論教訓</h2>
+        <p>本研究過程中發生過幾次需要自我修正的方法論錯誤，如實記錄，因為這些教訓跟結論本身一樣重要：</p>
+
+        <h4>4.1 結果不可重現的陷阱</h4>
+        <p>早期研究腳本每次執行都即時呼叫 yfinance／FinMind，同一支腳本、同樣參數，兩次執行因外部API當下狀態不同（尤其FinMind常逾時）得到不同結果（一次200.54%、一次162.67%）。修正做法：先把外部資料固定抓一次存成本地快取，之後所有重跑一律讀取同一份快取。<strong>教訓：任何依賴即時外部API的研究腳本，執行前都該先驗證「同一份設定跑兩次是否得到同一個答案」，否則無法判斷結論是規則本身的效果、還是外部資料當下狀態的雜訊。</strong></p>
+
+        <h4>4.2 用連續回測分段代替真正獨立年份的謬誤</h4>
+        <p>第一版空頭年驗證，是把5.5年連續回測的交易依進場當下的大盤狀態貼標籤分組，得出「空頭震盪期一次買完領先幅度反而更大」。這個方法被2022年真正獨立跑一次的完整回測推翻——連續回測裡，空頭期的部位與資金狀態會延續自之前的多頭期，不是乾淨的獨立樣本。<strong>教訓：要驗證「某個時期的表現如何」，必須真正獨立鎖定該時期跑一次完整模擬，不能從連續回測裡挑分段冒充。</strong></p>
+
+        <h4>4.3 沒有精確定義的機制，不能自行發明</h4>
+        <p>「3:4:3分批出場」在文案裡沒有明確定義（不像3:3:4進場在程式碼裡有清楚規則），一度差點直接用研究者自己的判斷去設計模擬。經提醒後改為：先查證程式碼裡實際存在的機制（發現對應的是卡片顯示邏輯），並在動手模擬前先跟使用者確認範圍與定義。<strong>教訓：機制沒有精確定義時，先問或先提出市場常見定義並取得確認，再動手模擬，不要自行發明後才呈現結果。</strong></p>
+
+        <h4>4.4 巨觀風控資料從未被本地快取</h4>
+        <p>三合一巨觀風控的三個指標（外資期貨淨空單、台幣匯率、外資現貨買賣超）從來沒被「同步歷史資料庫」流程存進本地資料庫，跟股價/籌碼是分開的兩條路，每次回測都要即時打3支FinMind API，逾時或配額用完就整批fail-open（風控悄悄沒套用，沒有任何錯誤提示）。已修復 <code>backtest_engine.py</code>：優先讀本地快取，只有快取沒涵蓋查詢範圍才退回即時抓取，抓到的資料也會寫回快取；「同步歷史資料庫」按鈕現在也會主動同步這三個指標。修復後實測：空快取全範圍抓取9.5秒、1,377筆存入本地；重複查詢降到0.225秒。<strong>這是本次研究過程中唯一真正修改正式程式碼（而非研究腳本）的地方。</strong></p>
+    </div>
+
+    <!-- 5 局限性 -->
+    <div class="doc-section" id="sec5">
+        <h2>5. 局限性</h2>
+        <div class="limit-box">
+            <ul style="margin:0;">
+                <li><strong>樣本年限受限於題材本身歷史</strong>：股票池全部是AI概念股，AI題材本身只有約5年爆發期可回測，乾淨的多頭年（2024）與空頭年（2022）各只有一個完整年份，無法驗證「多個獨立牛熊週期」的穩定性，這是真實世界的資料上限，非研究方法的缺陷。</li>
+                <li><strong>Regime判斷的訊號本身尚未做敏感度分析</strong>：TAIEX收盤 vs 20日均線是目前唯一測過的regime訊號，其他窗口長度（例如10日、60日均線）或其他訊號（例如族群健康度）尚未比較。</li>
+                <li><strong>3.7節的C/D/E網格只測了原生出場邏輯</strong>，沒有針對C/D/E各自再做card-line式的細節微調，不能排除某個方案微調後表現超越目前的規則組合。</li>
+                <li><strong>本報告全部結論均為研究階段產出，尚未套用到 <code>strategy_core.py</code> 或任何正式頁面／即時模型中</strong>，實際導入前應再累積更多年份資料、並與現行方案D的實戰預設值做更完整的並行比較。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 6 結論 -->
+    <div class="doc-section" id="sec6">
+        <h2>6. 結論與後續方向</h2>
+        <p>本系列研究從一個具體的排名疑問出發，逐步發現：①現行籌碼積分模型不納入過熱因子是有實證支持的設計，不是疏漏；②白皮書宣稱的3:3:4進場與3:4:3出場機制過去從未被回測引擎驗證過；③無論進場方式或出場規則，最佳選擇都會隨市場處於多頭或空頭而系統性反轉；④把這個「依市況判斷」的原則做成即時可算的regime自動切換模型，確實贏過任何測過的單一固定方案，且通過了樣本外年份與巨觀風控開關兩種獨立的交叉驗證。</p>
+        <p><strong>目前最佳的regime模型設定</strong>：多頭模式（TAIEX站上20日均線）採一次買完＋關閉防線A；空頭模式（TAIEX跌破20日均線）採3:3:4分批＋關閉防線A/防線B/高點打折鎖利、保留保本停利(adjust)、加上土洋雙賣。</p>
+        <p><strong>後續建議方向</strong>（優先順序由高到低）：</p>
+        <ol>
+            <li>累積更多獨立的空頭年樣本（等待時間推移或尋找可比對的其他市場歷史數據），降低「只有一個空頭年」的過度配適疑慮。</li>
+            <li>把 <code>backtest_engine.py</code> 的巨觀風控快取修復（本報告唯一動到的正式程式碼）納入下次commit，讓正式回測系統長期受益，不受FinMind穩定性影響。</li>
+            <li>正式導入前，先與使用者討論明確的導入範圍（研究/選配功能 vs. 直接覆蓋現有預設行為），並比對現行方案D的實戰預設值。</li>
+        </ol>
+    </div>
+
+    <!-- 7 附錄 -->
+    <div class="doc-section" id="sec7">
+        <h2>7. 附錄：資料檔案總覽</h2>
+        <table class="doc-table">
+            <thead><tr><th>檔案</th><th>對應章節</th><th>內容</th></tr></thead>
+            <tbody>
+                <tr><td><a href="research_data/case1_bias_momentum_trades.csv" class="data-link" style="padding-left:0;">case1_bias_momentum_trades.csv</a></td><td>3.1</td><td>4,217筆逐筆交易，含乖離率/距低點漲幅/連續漲停天數</td></tr>
+                <tr><td><a href="research_data/case2_6213_entry_timing.csv" class="data-link" style="padding-left:0;">case2_6213_entry_timing.csv</a></td><td>3.2</td><td>6213單股5進場點示範，10列</td></tr>
+                <tr><td><a href="research_data/case3_staged_vs_lumpsum_trades.csv" class="data-link" style="padding-left:0;">case3_staged_vs_lumpsum_trades.csv</a></td><td>3.2</td><td>2,351筆逐筆交易，三組期間×兩種進場方式</td></tr>
+                <tr><td><a href="research_data/case4_exit_mechanism_summary.csv" class="data-link" style="padding-left:0;">case4_exit_mechanism_summary.csv</a></td><td>3.3</td><td>23列彙總指標，出場機制對照</td></tr>
+                <tr><td><a href="research_data/case5_regime_v1_trades.csv" class="data-link" style="padding-left:0;">case5_regime_v1_trades.csv</a></td><td>3.4</td><td>273筆逐筆交易，regime自動切換原版</td></tr>
+                <tr><td><a href="research_data/case6_all_strategies_summary.csv" class="data-link" style="padding-left:0;">case6_all_strategies_summary.csv</a></td><td>3.5</td><td>15列彙總指標，A/B/C/D/E五方案對照</td></tr>
+                <tr><td><a href="research_data/case7_strategyB_fullswap_failed_trades.csv" class="data-link" style="padding-left:0;">case7_strategyB_fullswap_failed_trades.csv</a></td><td>3.6①</td><td>891筆，整套換方案B失敗版</td></tr>
+                <tr><td><a href="research_data/case7_strategyB_dualsell_overlay_trades.csv" class="data-link" style="padding-left:0;">case7_strategyB_dualsell_overlay_trades.csv</a></td><td>3.6②</td><td>465筆，疊加土洋雙賣版</td></tr>
+                <tr><td><a href="research_data/case7_bear_exhaustive_48combos.csv" class="data-link" style="padding-left:0;">case7_bear_exhaustive_48combos.csv</a></td><td>3.6③</td><td>48列，窮舉搜尋（fail-open）</td></tr>
+                <tr><td><a href="research_data/case7_bear_exhaustive_48combos_macroON.csv" class="data-link" style="padding-left:0;">case7_bear_exhaustive_48combos_macroON.csv</a></td><td>3.6交叉驗證</td><td>48列，窮舉搜尋（風控生效）</td></tr>
+            </tbody>
+        </table>
+        <p style="color:#94a3b8; font-size:0.88rem;">每個檔案的欄位定義、產生腳本與生成日期，詳見 <code>research_data/README.md</code>。完整討論脈絡（含逐日對話紀錄與方法論修正過程）見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。個案研究的原始逐案陳述見 <a href="case_studies.html" style="color:#c084fc;">case_studies.html</a>。</p>
+    </div>
+
+    <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本報告為研究階段文件，會隨新的驗證持續增補修正。</p>
+</div>
+
+<a href="#" class="btn-top" onclick="window.scrollTo({top:0, behavior:'smooth'}); return false;">⬆ 回頂端</a>
+
+</body>
+</html>

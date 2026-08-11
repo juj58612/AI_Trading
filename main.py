@@ -1323,7 +1323,19 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 個案研究附帶的原始資料檔 (無需登入即可下載，跟其他靜態頁面一致；白名單防止路徑穿越)
 @app.get("/research_data/{filename}")
 def serve_research_data(filename: str):
-    allowed = {"case3_staged_vs_lumpsum_trades.csv", "README.md"}
+    allowed = {
+        "README.md",
+        "case1_bias_momentum_trades.csv",
+        "case2_6213_entry_timing.csv",
+        "case3_staged_vs_lumpsum_trades.csv",
+        "case4_exit_mechanism_summary.csv",
+        "case5_regime_v1_trades.csv",
+        "case6_all_strategies_summary.csv",
+        "case7_strategyB_fullswap_failed_trades.csv",
+        "case7_strategyB_dualsell_overlay_trades.csv",
+        "case7_bear_exhaustive_48combos.csv",
+        "case7_bear_exhaustive_48combos_macroON.csv",
+    }
     filepath = os.path.join("research_data", filename)
     if filename not in allowed or not os.path.exists(filepath):
         raise HTTPException(status_code=404)
@@ -1332,7 +1344,7 @@ def serve_research_data(filename: str):
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html", "research_report.html"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
