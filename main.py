@@ -156,41 +156,91 @@ def fetch_yfinance_history(ticker: str, period: str = "1mo"):
     suffixes = [".TWO", ".TW"] if is_known_otc else [".TW", ".TWO"]
 
     hist = None
+    matched_symbol = None
     for suffix in suffixes:
         stock = yf.Ticker(f"{ticker}{suffix}", session=_yf_session)
         hist = stock.history(period=period)
         if not hist.empty:
+            matched_symbol = f"{ticker}{suffix}"
             break
 
-    if not hist.empty:
+    if hist is not None and not hist.empty and pd.isna(hist['Close'].iloc[-1]):
+        # yfinance的歷史K棒最新一列常常只有成交量、OHLC還沒回填（資料源本身的延遲，
+        # 不是我們的bug），直接用notna()濾掉這列會讓程式悄悄退回前一個交易日的舊收盤價，
+        # 卻沒有任何提示說這其實是舊資料。改用 fast_info（近即時報價，不是歷史K棒）補上，
+        # 這個管道通常比歷史K棒早回補到當天實際成交價。
+        try:
+            fi = yf.Ticker(matched_symbol, session=_yf_session).fast_info
+            last_price = fi.last_price
+            if last_price:
+                last_idx = hist.index[-1]
+                hist.loc[last_idx, 'Close'] = last_price
+                if pd.isna(hist.loc[last_idx, 'Open']):
+                    hist.loc[last_idx, 'Open'] = fi.open or last_price
+                if pd.isna(hist.loc[last_idx, 'High']):
+                    hist.loc[last_idx, 'High'] = fi.day_high or last_price
+                if pd.isna(hist.loc[last_idx, 'Low']):
+                    hist.loc[last_idx, 'Low'] = fi.day_low or last_price
+        except Exception as e:
+            print(f"補齊{ticker}最新報價失敗（fast_info），沿用歷史K棒最後一筆有效資料: {e}")
+
+    if hist is not None and not hist.empty:
         yf_cache[cache_key] = (hist, now)
-        
+
     return hist
 
-chip_cache = {}
+CHIP_CACHE_FILE = "chip_cache.json"
 
-def fetch_chip_data_from_finmind(ticker, lookback_days=45):
+def _load_chip_cache_file():
+    if os.path.exists(CHIP_CACHE_FILE):
+        try:
+            with open(CHIP_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_chip_cache_file(data):
+    try:
+        with open(CHIP_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception as e:
+        print("Error saving chip_cache.json:", e)
+
+# 改成存磁碟、按「交易日」為單位快取（不是1小時輪替的TTL）：使用者反映「首頁掃描過的籌碼
+# 資料，其他頁面(操盤室)應該直接沿用，不用再抓一次」——同一天內任何頁面第一次成功抓到某檔
+# 的籌碼資料後，當天其他頁面/其他次呼叫都直接吃這份，不再重打FinMind，也不會因為程式重啟
+# （開發階段常發生）就把快取全部清空、逼所有股票重新抓一輪、白白浪費FinMind每日額度。
+chip_cache = _load_chip_cache_file()
+
+def fetch_chip_data_from_finmind(ticker, lookback_days=45, _retry=True):
     cache_key = f"{ticker}_{lookback_days}"
-    now = time.time()
+    today_str = datetime.now().strftime('%Y-%m-%d')
     if cache_key in chip_cache:
-        cached_data, timestamp = chip_cache[cache_key]
-        if now - timestamp < CACHE_TTL:
-            return cached_data["inst_list"], cached_data["margin_list"], cached_data["is_mock"]
+        cached_entry = chip_cache[cache_key]
+        if cached_entry.get("date") == today_str and not cached_entry.get("is_mock"):
+            return cached_entry["inst_list"], cached_entry["margin_list"], cached_entry["is_mock"]
 
     token = os.getenv("FINMIND_API_TOKEN", "")  # 必須由環境變數提供，不在原始碼中寫死金鑰
     start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
-    
+
     inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id={ticker}&start_date={start_date}&token={token}"
     margin_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMarginPurchaseShortSale&data_id={ticker}&start_date={start_date}&token={token}"
-    
+
     inst_list = []
     margin_list = []
     is_mock = False
-    
+
     try:
         inst_res = requests.get(inst_url, timeout=8).json()
         margin_res = requests.get(margin_url, timeout=8).json()
-        
+
+        if inst_res.get("msg") != "success" or margin_res.get("msg") != "success":
+            # 常見情況是FinMind額度用盡（HTTP 402 "Requests reach the upper limit"），
+            # 這種情況重試沒有用（額度不會在幾毫秒內恢復），印出實際原因方便之後判斷是
+            # 額度問題還是真的連線問題，不要一律顯示成語意不明的「FinMind Error」。
+            print(f"FinMind非success回應 ({ticker}): inst_msg={inst_res.get('msg')}, margin_msg={margin_res.get('msg')}")
+
         if inst_res.get("msg") == "success":
             inst_dict = {}
             for row in inst_res.get("data", []):
@@ -199,14 +249,14 @@ def fetch_chip_data_from_finmind(ticker, lookback_days=45):
                 net = int((row.get("buy", 0) - row.get("sell", 0)) / 1000)
                 if date not in inst_dict:
                     inst_dict[date] = {"date": date, "foreign": 0, "trust": 0, "dealer": 0, "total": 0}
-                
+
                 if name in ["Foreign_Investor", "Foreign_Dealer_Self"]:
                     inst_dict[date]["foreign"] += net
                 elif name == "Investment_Trust":
                     inst_dict[date]["trust"] += net
                 elif name in ["Dealer_self", "Dealer_Hedging"]:
                     inst_dict[date]["dealer"] += net
-                    
+
             sorted_dates = sorted(inst_dict.keys())
             for d in sorted_dates:
                 item = inst_dict[d]
@@ -224,17 +274,28 @@ def fetch_chip_data_from_finmind(ticker, lookback_days=45):
                 })
             if lookback_days <= 45:
                 margin_list = margin_list[-30:]
-            
+
     except Exception as e:
         print("FinMind Error:", e)
+        # FinMind常常是暫時性逾時，重試一次；重試也失敗才真的視為失敗
+        if _retry:
+            return fetch_chip_data_from_finmind(ticker, lookback_days, _retry=False)
         is_mock = True
-        
+
     if not inst_list or not margin_list:
         is_mock = True
-        
+
     if not is_mock:
-        chip_cache[cache_key] = ({"inst_list": inst_list, "margin_list": margin_list, "is_mock": is_mock}, now)
-        
+        chip_cache[cache_key] = {"inst_list": inst_list, "margin_list": margin_list, "is_mock": is_mock, "date": today_str}
+        _save_chip_cache_file(chip_cache)
+    else:
+        # 即時抓取失敗（含重試後）：優先沿用這檔股票上一次真正抓到的資料當備援，即使是更早之前
+        # 交易日抓到的，也比顯示「全部歸零」的假資料更真實——籌碼掛零看起來像「沒有法人動作」，
+        # 但實際上是「不知道」，兩者意義完全不同，不該用假資料混淆使用者判斷。
+        if cache_key in chip_cache:
+            stale_data = chip_cache[cache_key]
+            return stale_data["inst_list"], stale_data["margin_list"], True
+
     return inst_list, margin_list, is_mock
 
 def calc_atr(hist):
@@ -478,6 +539,73 @@ def get_scan_all_status():
     pool_size = len(load_ai_stock_list())
     today_data = cache_db.get(today_str, [])
     return {"data": today_data, "cached": bool(today_data), "cache_date": today_str, "pool_size": pool_size}
+
+REGIME_CACHE_FILE = "regime_status_cache.json"
+
+def get_regime_cache():
+    if os.path.exists(REGIME_CACHE_FILE):
+        try:
+            with open(REGIME_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_regime_cache(cache_data):
+    try:
+        with open(REGIME_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving regime cache: {e}")
+
+@app.get("/api/regime/status")
+def get_regime_status():
+    """研究版即時regime判斷（尚未寫入 strategy_core.py 正式邏輯，系統實際下單建議仍是單一固定模型）。
+    訊號：當天TAIEX收盤 vs 20日均線，逐日動態判斷、不使用未來資訊，跟研究腳本
+    regime_adaptive_v3_add_dualsell.py 的 is_bull() 定義一致。快取一天，避免每次
+    使用者載入首頁都即時打 yfinance（見 feedback_yfinance_rate_limit 記憶規則）。
+    對應研究：research_report.html 3.5~3.6節、case_studies.html 個案⑤⑥⑦。"""
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    cache = get_regime_cache()
+    if cache.get("date") == today_str and cache.get("result"):
+        return cache["result"]
+
+    try:
+        taiex_df = backtest_engine.fetch_taiex_history(start="2024-01-01")
+        if taiex_df.empty:
+            raise ValueError("empty taiex data")
+        last = taiex_df.iloc[-1]
+        close = float(last["close"])
+        ma20 = last["MA20"]
+        if pd.isna(ma20):
+            raise ValueError("MA20 not available yet")
+        ma20 = float(ma20)
+        is_bull = close > ma20
+        result = {
+            "regime": "多頭" if is_bull else "空頭",
+            "taiex_close": round(close, 2),
+            "taiex_ma20": round(ma20, 2),
+            "taiex_date": last["date"],
+            "bias_pct": round((close - ma20) / ma20 * 100, 2),
+            "recommendation": {
+                "entry": "一次買完（Lump-sum）" if is_bull else "3:3:4 分批進場",
+                "exit": "防線A（-8%停損）關閉，其餘防線（防線B／高點打折鎖利／保本停利）維持"
+                        if is_bull else
+                        "防線A／防線B／高點打折鎖利全關，只留保本停利（調整模式，非直接出清）＋土洋雙賣",
+            },
+            "note": "研究版建議，依「TAIEX收盤 vs 20日均線」逐日動態判斷；系統實際下單建議目前仍採單一固定模型，未套用此regime切換邏輯，僅供參考。",
+            "report_url": "research_report.html",
+            "case_url": "case_studies.html#case5",
+        }
+        save_regime_cache({"date": today_str, "result": result})
+        return result
+    except Exception as e:
+        stale = cache.get("result")
+        if stale:
+            stale = dict(stale)
+            stale["note"] = stale.get("note", "") + "（今日即時抓取失敗，顯示上次快取結果）"
+            return stale
+        return {"error": f"無法取得regime狀態：{e}"}
 
 @app.post("/api/scan_all")
 async def scan_all_stocks(request: Request):
@@ -740,11 +868,30 @@ async def save_portfolio(request: Request, user: str = Depends(authenticate)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def _simulate_holding_exit_signal(p: dict) -> dict:
+def get_taiex_regime_df():
+    """
+    給 strategy='R'（Regime自動切換，研究版）逐日重播用：一份 date-indexed 的TAIEX歷史，
+    含 is_bull 欄位（當日收盤 vs 20日均線），跟 /api/regime/status 及研究腳本 is_bull() 用
+    同一個定義。直接沿用 backtest_engine.fetch_taiex_history，不重複實作抓取邏輯；每次呼叫
+    即時抓取一次，不做額外快取——跟這個函式的呼叫者（sell_check批次計算）本來就是逐次即時
+    運算的既有設計一致（同一批次內只抓一次，不是每個持倉各抓一次）。
+    """
+    df = backtest_engine.fetch_taiex_history(start="2020-01-01")
+    if df.empty:
+        return df
+    df = df.copy()
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+    df['is_bull'] = df['close'] > df['MA20']
+    return df
+
+def _simulate_holding_exit_signal(p: dict, regime_df=None) -> dict:
     """
     針對單一持倉，從 buy_date 逐日重播 strategy_core.evaluate_exit()，算出「依回測驗證出的
     出場邏輯」現在該不該賣。跟 backtest_engine.py 的逐日出場檢查迴圈共用同一套 evaluate_exit，
     確保實戰持倉的賣出提醒跟回測驗證邏輯不再脫節（見 STRATEGY_ANALYSIS_NOTES.md）。
+    regime_df: strategy='R'時用，由呼叫端算好一次傳入（見 get_taiex_regime_df），避免同一批次
+    重複抓取TAIEX。
     """
     ticker = p.get('ticker')
     name = p.get('name', ticker)
@@ -789,6 +936,7 @@ def _simulate_holding_exit_signal(p: dict) -> dict:
     price_df.index = price_df.index.tz_localize(None).normalize()
     price_df = price_df[~price_df.index.duplicated(keep='last')].sort_index()
     price_df = strategy_core.calculate_indicators(price_df)
+    price_df['Low20'] = price_df['low'].rolling(window=20).min()
 
     if buy_date_ts < price_df.index.min():
         notes.append("股價歷史資料未涵蓋到買入日，起始防線計算可能不準確")
@@ -830,7 +978,22 @@ def _simulate_holding_exit_signal(p: dict) -> dict:
         "lowest_price": buy_price,
         "trailing_stop": buy_price - (mult * atr_at_buy),
         "atr_multiplier": mult,
+        "high": buy_price,
     }
+
+    if exit_strategy == 'R':
+        supp_at_buy = None
+        if buy_date_ts in price_df.index:
+            supp_at_buy = price_df.loc[buy_date_ts]['Low20']
+        if supp_at_buy is None or pd.isna(supp_at_buy):
+            prior = price_df[price_df.index <= buy_date_ts]
+            supp_at_buy = prior.iloc[-1]['Low20'] if (not prior.empty and not pd.isna(prior.iloc[-1]['Low20'])) else buy_price * 0.9
+            notes.append("進場當下20日低點資料不完整，防線B支撐價為概估值")
+        p_sim['supp'] = float(supp_at_buy)
+        if regime_df is None or regime_df.empty:
+            regime_df = get_taiex_regime_df()
+        if regime_df is None or regime_df.empty:
+            notes.append("無法取得TAIEX歷史資料，regime判斷本次無法計算，賣出訊號可能不準確")
 
     first_trigger = None
     last_date = None
@@ -840,8 +1003,17 @@ def _simulate_holding_exit_signal(p: dict) -> dict:
         yesterday_close = price_df.iloc[idx - 1]['close'] if idx > 0 else None
         chip_row = chip_df.loc[current_date] if (not chip_df.empty and current_date in chip_df.index) else {}
 
+        is_bull_today = None
+        if exit_strategy == 'R' and regime_df is not None and not regime_df.empty:
+            if current_date in regime_df.index:
+                is_bull_today = bool(regime_df.loc[current_date]['is_bull'])
+            else:
+                prior_regime = regime_df[regime_df.index <= current_date]
+                is_bull_today = bool(prior_regime.iloc[-1]['is_bull']) if not prior_regime.empty else True
+
         sell_reason, p_sim = strategy_core.evaluate_exit(
-            p_sim, today_price, yesterday_close, chip_row, exit_strategy, max_hold_days, current_date
+            p_sim, today_price, yesterday_close, chip_row, exit_strategy, max_hold_days, current_date,
+            is_bull_regime=is_bull_today
         )
         if sell_reason and first_trigger is None:
             first_trigger = {
@@ -852,6 +1024,15 @@ def _simulate_holding_exit_signal(p: dict) -> dict:
         last_date = current_date
 
     latest_close = float(price_df.loc[last_date]['close'])
+    if exit_strategy == 'R':
+        defense_line_label = "防線B支撐價(進場當下20日低點)"
+        defense_line_value = round(float(p_sim.get('supp', 0)), 2)
+        highest_price_since_buy = round(float(p_sim.get('high', buy_price)), 2)
+    else:
+        defense_line_label = "移動停損價"
+        defense_line_value = round(float(p_sim['trailing_stop']), 2)
+        highest_price_since_buy = round(float(p_sim['highest_price']), 2)
+
     return {
         "ticker": ticker,
         "name": name,
@@ -862,8 +1043,9 @@ def _simulate_holding_exit_signal(p: dict) -> dict:
         "latest_price": round(latest_close, 2),
         "latest_data_date": last_date.strftime('%Y-%m-%d'),
         "days_held": (last_date - buy_date_ts).days,
-        "current_trailing_stop": round(float(p_sim['trailing_stop']), 2),
-        "highest_price_since_buy": round(float(p_sim['highest_price']), 2),
+        "current_trailing_stop": defense_line_value,
+        "defense_line_label": defense_line_label,
+        "highest_price_since_buy": highest_price_since_buy,
         "unrealized_pnl_pct": round((latest_close - buy_price) / buy_price * 100, 2),
         "sell_signal": first_trigger is not None,
         "sell_reason": first_trigger['reason'] if first_trigger else None,
@@ -888,10 +1070,12 @@ def check_portfolio_sell_signals(user: str = Depends(authenticate)):
         except Exception:
             portfolio = []
 
+    regime_df = get_taiex_regime_df() if any(p.get('exit_strategy') == 'R' for p in portfolio) else None
+
     results = []
     for p in portfolio:
         try:
-            results.append(_simulate_holding_exit_signal(p))
+            results.append(_simulate_holding_exit_signal(p, regime_df=regime_df))
         except Exception as e:
             results.append({"ticker": p.get('ticker'), "name": p.get('name', p.get('ticker')), "error": f"計算失敗: {e}"})
 
@@ -944,12 +1128,13 @@ class CommitOrder(BaseModel):
     shares: float  # in units of '張' (e.g. 1.25張 = 1250股)
     type: str  # 'buy' or 'sell'
     reason: str = ""
+    exit_strategy: str = "D"
 
 class CommitRequest(BaseModel):
     orders: List[CommitOrder]
 
 @app.get("/api/planner/recommendations")
-def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authenticate)):
+def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, user: str = Depends(authenticate)):
     cash_twd = cash * 10000.0
     username = user
     portfolio_file = get_user_portfolio_file(username)
@@ -1008,8 +1193,16 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
     else:
         tickers = load_ai_stock_list()
         if tickers:
-            scan_results = run_scan(tickers)
-            if scan_results:
+            fresh_results = run_scan(tickers)
+            if fresh_results:
+                # 跟 /api/scan_all 用同一套「合併不覆蓋」邏輯：FinMind/yfinance 不穩時，
+                # 這裡自己觸發的即時掃描每次成功的檔位可能不一樣，直接整批覆蓋當日快取
+                # 會讓健康度/市況警語在同一天內每次重新整理都不一樣（使用者回報過的現象）。
+                # 改成合併，讓當日快取只會越補越完整，不會被較差的一次結果蓋掉。
+                merged = {s['ticker']: s for s in cache_db.get(today_str, [])}
+                for r in fresh_results:
+                    merged[r['ticker']] = r
+                scan_results = list(merged.values())
                 cache_db[today_str] = scan_results
                 save_daily_scan_cache(cache_db)
                 try:
@@ -1080,7 +1273,19 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
     # 2-Stage Pyramiding & Risk Parity Protection Selection Logic
     potential_buys = []
     portfolio_dict = {p.get('ticker'): p for p in portfolio if p.get('ticker')}
-    
+
+    # Regime自動切換（研究版「R」策略，opt-in）：多頭時建議直接買滿100%（不分批），
+    # 空頭時沿用系統既有的30/30/40分批機制（本來就跟研究驗證的3:3:4分批進場相符）。
+    # 只有使用者在下單建議頁主動勾選才會套用，沒勾選時完全是今天以前的行為。
+    regime_is_bull = None
+    if use_regime:
+        try:
+            regime_info = get_regime_status()
+            regime_is_bull = (regime_info.get("regime") == "多頭") if not regime_info.get("error") else None
+        except Exception as e:
+            print("regime判斷失敗，下單建議退回既有分批邏輯:", e)
+            regime_is_bull = None
+
     scan_results.sort(key=lambda x: (x.get('chip_score', 0), x.get('momentum', 0)), reverse=True)
 
     for item in (scan_results if not macro_status.get("veto_buy") else []):
@@ -1089,7 +1294,8 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
 
         if chip_score < 1:
             continue
-            
+
+        buy_exit_strategy = "R" if (use_regime and regime_is_bull is not None) else "D"
         held_item = portfolio_dict.get(t)
         if held_item:
             # Check current stage (1 = 30%, 2 = 60%, 3 = 100% full allocation)
@@ -1099,37 +1305,61 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 elif '60%' in current_stage or '2' in current_stage: current_stage = 2
                 elif '100%' in current_stage or '3' in current_stage: current_stage = 3
                 else: current_stage = 1
-                
+
             if current_stage < 3:
-                # 【情況 A】：尚未買滿！允許順勢右側加碼 Stage 2 (30%) 或 Stage 3 (40%)！
-                next_stage_num = current_stage + 1
-                next_stage_label = "加碼 30%" if next_stage_num == 2 else "滿額 40%"
+                if use_regime and regime_is_bull:
+                    # Regime多頭：跳過分批，直接建議一次補到100%（研究驗證：多頭一次買完+關防線A）
+                    next_stage_num = 3
+                    signal_text = "Regime多頭：一次買滿100%（研究版）"
+                    stage_text = "補滿 100%（Regime多頭）"
+                else:
+                    # 【情況 A】：尚未買滿！允許順勢右側加碼 Stage 2 (30%) 或 Stage 3 (40%)！
+                    next_stage_num = current_stage + 1
+                    next_stage_label = "加碼 30%" if next_stage_num == 2 else "滿額 40%"
+                    signal_text = f"右側順勢加碼 (第 {next_stage_num} 階段)"
+                    stage_text = f"第 {next_stage_num} 批 {next_stage_label}"
                 potential_buys.append({
                     "ticker": t,
                     "name": item.get('name', t),
                     "price": item.get('latest_close'),
                     "atr": item.get('atr', 0),
                     "score": chip_score,
-                    "signal": f"右側順勢加碼 (第 {next_stage_num} 階段)",
-                    "stage": f"第 {next_stage_num} 批 {next_stage_label}",
-                    "stage_num": next_stage_num
+                    "signal": signal_text,
+                    "stage": stage_text,
+                    "stage_num": next_stage_num,
+                    "exit_strategy": buy_exit_strategy
                 })
             else:
                 # 【情況 B】：已經買滿 (Stage 3 滿額)！觸發 Risk Parity 避險機制，自動跳過，留資金給新黑馬！
                 continue
         else:
-            # 【情況 C】：尚未持有的全新黑馬標的 ➔ 建倉第 1 階段試探盤 (30%)
-            potential_buys.append({
-                "ticker": t,
-                "name": item.get('name', t),
-                "price": item.get('latest_close'),
-                "atr": item.get('atr', 0),
-                "score": chip_score,
-                "signal": item.get('signal', 'S1 止跌/右側試探盤'),
-                "stage": "首批 30%",
-                "stage_num": 1
-            })
-            
+            if use_regime and regime_is_bull:
+                # 【情況 C-多頭】：Regime多頭，新標的第一次就建議買滿100%，不分批
+                potential_buys.append({
+                    "ticker": t,
+                    "name": item.get('name', t),
+                    "price": item.get('latest_close'),
+                    "atr": item.get('atr', 0),
+                    "score": chip_score,
+                    "signal": "Regime多頭：一次買滿100%（研究版）",
+                    "stage": "首批 100%（Regime多頭）",
+                    "stage_num": 3,
+                    "exit_strategy": buy_exit_strategy
+                })
+            else:
+                # 【情況 C】：尚未持有的全新黑馬標的 ➔ 建倉第 1 階段試探盤 (30%)
+                potential_buys.append({
+                    "ticker": t,
+                    "name": item.get('name', t),
+                    "price": item.get('latest_close'),
+                    "atr": item.get('atr', 0),
+                    "score": chip_score,
+                    "signal": item.get('signal', 'S1 止跌/右側試探盤'),
+                    "stage": "首批 30%",
+                    "stage_num": 1,
+                    "exit_strategy": buy_exit_strategy
+                })
+
     # Apply Budget Filter: Divide cash dynamically among top recommendations (up to 5 stocks)
     num_targets = max(1, min(len(potential_buys), 5))
     alloc_per_stock = cash_twd / float(num_targets)
@@ -1154,7 +1384,8 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "cost": needed_cost,
                 "score": b['score'],
                 "stage": b['stage'],
-                "stage_num": b.get('stage_num', 1)
+                "stage_num": b.get('stage_num', 1),
+                "exit_strategy": b.get('exit_strategy', 'D')
             })
             current_used_cash += needed_cost
         else:
@@ -1167,7 +1398,8 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
                 "cost": needed_cost,
                 "score": b['score'],
                 "stage": b['stage'],
-                "stage_num": b.get('stage_num', 1)
+                "stage_num": b.get('stage_num', 1),
+                "exit_strategy": b.get('exit_strategy', 'D')
             })
 
     # 跳空/ATR比警示：recommendations 裡的 price 是「掃描當下(通常是前一天收盤)」的價格，
@@ -1207,7 +1439,9 @@ def get_planner_recommendations(cash: float = 100.0, user: str = Depends(authent
         "buys": buys,
         "sells": sells,
         "filtered_buys": filtered_buys,
-        "warning": (scan_warning + "<br>" + macro_warning) if (scan_warning and macro_warning) else (scan_warning or macro_warning)
+        "warning": (scan_warning + "<br>" + macro_warning) if (scan_warning and macro_warning) else (scan_warning or macro_warning),
+        "regime_used": use_regime,
+        "regime_is_bull": regime_is_bull
     }
 
 @app.post("/api/planner/commit")
@@ -1250,14 +1484,27 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                 atr_val = o.price * 0.04
                 mult = 2.2
                 trailing_stop = o.price - (mult * atr_val)
-                
+
+                supp_price = o.price * 0.95
+                if o.exit_strategy == 'R':
+                    # R（Regime自動切換）防線B用的是進場當下20日低點，不是這裡其他方案
+                    # 用的「成本價打95折」估算值，抓一次真實股價history算準一點。
+                    try:
+                        hist = fetch_yfinance_history(o.ticker, period="2mo")
+                        if not hist.empty and len(hist) >= 5:
+                            low20 = hist['Low'].tail(20).min()
+                            if not pd.isna(low20):
+                                supp_price = float(low20)
+                    except Exception as e:
+                        print(f"計算 {o.ticker} 20日低點失敗，改用估算值:", e)
+
                 new_item = {
                     "name": o.name,
                     "ticker": o.ticker,
                     "closePrice": o.price,
                     "cost": o.price,
                     "shares": o.shares,
-                    "supp": o.price * 0.95,
+                    "supp": supp_price,
                     "high": o.price,
                     "sigClass": "sig-right",
                     "signal": "AI 實戰建倉",
@@ -1272,7 +1519,7 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                     "buy_date": today_str,
                     "trailing_stop": trailing_stop,
                     "atr_multiplier": mult,
-                    "exit_strategy": "D"
+                    "exit_strategy": o.exit_strategy or "D"
                 }
                 portfolio.append(new_item)
 
@@ -1335,6 +1582,10 @@ def serve_research_data(filename: str):
         "case7_strategyB_dualsell_overlay_trades.csv",
         "case7_bear_exhaustive_48combos.csv",
         "case7_bear_exhaustive_48combos_macroON.csv",
+        "case9_cobuy_pooled_flawed.csv",
+        "case9_cobuy_dedup_corrected.csv",
+        "case9_cobuy_by_year.csv",
+        "case9_cobuy_backtest_4way.csv",
     }
     filepath = os.path.join("research_data", filename)
     if filename not in allowed or not os.path.exists(filepath):

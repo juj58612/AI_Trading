@@ -162,6 +162,8 @@
         <a href="#case5">⑤ Regime自動切換：能否贏過任何單一固定方案？</a>
         <a href="#case6">⑥ A/B/C/D/E 五方案全面對照：哪個方案該當regime模型的基底？</a>
         <a href="#case7">⑦ 用方案B重新設計空頭端：一次不如預期的嘗試</a>
+        <a href="#case8">⑧ Regime自動切換策略模型的建構與驗證（總結）</a>
+        <a href="#case9">⑨ 該不該優先推薦「外資投信同買第一天」？（反證）</a>
     </div>
 
     <!-- 個案一 -->
@@ -460,6 +462,116 @@
             但第2~5名的排序有明顯變動，且風控生效版的第5名（428.78%）防線A是<strong>開啟</strong>的——先前「前5名一律關防線A」的規律不像想像中絕對，只有冠軍本身（#1）跨兩種風控狀態都穩定，其餘名次的規律解讀要更保守。唯一在fail-open與風控生效兩版的MDD最低前5名裡<strong>毫無例外都出現</strong>的開關是<strong>土洋雙賣（use_dualsell=True）</strong>——這是目前信心最高的單一發現。
         </div>
         <p><strong>最終結論</strong>：regime模型空頭端目前最佳、且經過風控開關交叉驗證仍然成立的設定是——<strong>防線A、防線B、高點打折鎖利全關，保本停利用adjust模式，加上土洋雙賣</strong>。<strong>尚未套用到 <code>strategy_core.py</code> 的即時模型中</strong>，仍是研究階段。</p>
+    </div>
+
+    <!-- 個案八：總結 -->
+    <div class="doc-section" id="case8">
+        <h2>⑧ Regime自動切換策略模型的建構與驗證<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>總結說明</strong>：個案⑤⑥⑦分別記錄了各自獨立的實驗過程，這裡把整個「從零建構到目前最佳驗證版本」的完整脈絡串成單一入口——想快速了解「regime自動切換模型現在長什麼樣子、為什麼是這樣、驗證到什麼程度」，看這個個案即可；想看每一步的詳細數據與方法論細節，再回頭查⑤⑥⑦。</p>
+
+        <h3>建構過程（依時間順序）</h3>
+        <ol style="padding-left: 20px; line-height: 1.9;">
+            <li><strong>Step 1　訊號定義</strong>（個案⑤）：TAIEX當日收盤 vs 20日均線，即時可算、不使用未來資訊，站上＝多頭、跌破＝空頭。</li>
+            <li><strong>Step 2　子規則來源</strong>（個案⑤）：多頭子規則取自2024多頭年獨立回測的最佳配置，空頭子規則取自2022空頭年獨立回測的最佳配置——分開挑選，不是同一組參數硬套兩種市況。</li>
+            <li><strong>Step 3　驗證切換有效</strong>（個案⑤）：全期間522.18%，贏過任何一個靜態單一方案；且沒被用來挑規則的四個年份（2021/2023/2025/2026）全數正報酬，排除「巧合湊出兩個好年份」的疑慮。</li>
+            <li><strong>Step 4　基底方案驗證</strong>（個案⑥）：把A/B/C/D/E五個方案攤開比較，確認多頭端用方案A是有實證支持的最佳選擇；同時發現方案B才是2022空頭年單獨最強的方案，指出下一步優化方向。</li>
+            <li><strong>Step 5　嘗試失敗＋方法論修正</strong>（個案⑦）：整套換成方案B原生邏輯反而讓表現變差（522%→163%），同時抓到「結果不可重現」的重大方法論問題（TAIEX／巨觀風控即時抓取導致同一支腳本兩次結果不同），修正為本地固定快取後才能真正比較。</li>
+            <li><strong>Step 6　疊加而非替換</strong>（個案⑦）：查證發現方案B真正的差異只有一條規則（土洋雙賣），改成疊加進原本組合而非整套替換，得到報酬換防守的取捨版本（522%→469%，MDD 22.25%→17.48%）。</li>
+            <li><strong>Step 7　系統化窮舉</strong>（個案⑦）：不再手動挑組合，把空頭端5個開關全部排列（48組）逐一跑滿全期間，找到目前最佳配置：防線A／B／高點打折鎖利全關，只留保本停利(adjust)＋土洋雙賣，692.64%、MDD 24.17%，比手動挑選的版本再高出約33%。</li>
+            <li><strong>Step 8　交叉驗證</strong>（個案⑦）：修好巨觀風控本地快取後，在「風控真正生效」狀態下重跑同樣48組——冠軍配置完全沒變，總報酬488.17%（風控生效後的預期效果）、MDD進一步降到19.98%。這是整個系列研究裡最重要的穩健性證據：贏的是規則本身，不是資料不完整的僥倖。</li>
+        </ol>
+
+        <h3>目前驗證通過的最終配置</h3>
+        <table class="doc-table">
+            <thead><tr><th>市況</th><th>進場</th><th>出場</th></tr></thead>
+            <tbody>
+                <tr><td>多頭（TAIEX站上20MA）</td><td>一次買完</td><td>關防線A，其餘（防線B／高點打折鎖利／保本停利）維持</td></tr>
+                <tr><td>空頭（TAIEX跌破20MA）</td><td>3:3:4分批</td><td>防線A／防線B／高點打折鎖利全關，只留保本停利(adjust)＋土洋雙賣</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 全期間績效：<strong>692.64% / MDD 24.17%</strong>（巨觀風控fail-open）、<strong>488.17% / MDD 19.98%</strong>（巨觀風控真正生效，配置完全相同）——兩種風控狀態下冠軍組合一致，是目前信心最高的研究結果。
+        </div>
+
+        <h3>驗證程度與局限性（誠實列出，不誇大）</h3>
+        <ul>
+            <li>✅ 贏過所有測過的靜態單一方案（個案⑤⑥）、贏過整套替換方案B的嘗試（個案⑦）、贏過手動疊加版（個案⑦）、通過巨觀風控開/關的交叉驗證（個案⑦）。</li>
+            <li>✅ 沒被用來挑規則的年份（2021/2023/2025/2026）全數正報酬，降低過度配適疑慮。</li>
+            <li>⚠️ 樣本仍只涵蓋5.5年，空頭年樣本本質上只有2022一個完整年度可用（AI概念股題材本身只有約5年爆發期可回測，非刻意縮小範圍）。</li>
+            <li>⚠️ 48組窮舉的第2~5名排序在風控開/關兩種狀態下有變動，只有冠軍本身（#1）跨兩種狀態都穩定——結論的信心集中在「這一組配置」，不是「這一類規律」都同樣可靠。</li>
+            <li>⚠️ C/D/E三個方案只測過各自原生出場邏輯，尚未針對它們做card-line式的細節微調，不能排除某個方案微調後表現超越目前組合。</li>
+        </ul>
+
+        <h3>目前狀態</h3>
+        <p>此配置<strong>尚未寫入 <code>strategy_core.py</code> 正式邏輯</strong>，系統實際下單建議仍是單一固定模型（方案A/B/C/D原生邏輯，不隨市況切換）。目前唯一的正式落地是首頁新增的<strong>「研究版市況面板」</strong>（advisory-only，不影響現有AI推薦排名或下單建議，僅顯示即時regime判斷與研究建議的進出場方式供參考）——這是把研究成果導入正式系統的第一階段，後續是否進一步整合仍需與使用者討論確認。完整方法論、逐節數據連結見<a href="research_report.html" style="color:#c084fc;">📑 完整研究報告</a>。</p>
+    </div>
+
+    <!-- 個案九 -->
+    <div class="doc-section" id="case9">
+        <h2>⑨ 該不該優先推薦「外資投信同買第一天」的標的？<span class="status-tag status-solid">通用驗證（反證）</span></h2>
+        <p><strong>起因</strong>：使用者觀察到，模型推薦的標的常常已經連漲好幾天，直覺認為「應該優先推薦外資投信同買的第一天，越早進場越好」，並問目前模型有沒有做到這件事。查證<code>strategy_core.py</code>的<code>calculate_chip_score</code>後確認：籌碼積分只看「今天」跟「昨天」兩天的法人買賣超，完全沒有「這波同買訊號已經連續幾天」的概念——第1天同買跟第10天同買，只要當天訊號一樣，積分完全相同。這個案研究的是：如果幫模型加上這個概念，會不會讓推薦更好？</p>
+
+        <h3>第一版分析：方法論陷阱（僅供對照，結論有誤）</h3>
+        <p>把資料庫裡677組實驗（含Optuna grid trial）共514,881筆交易全部pool在一起，依進場當下「外資投信連續同買天數」分桶算平均報酬，結果顯示同買第1天平均報酬1.22%、是所有天數裡最高，看起來支持使用者的直覺。</p>
+        <p>📎 <a href="research_data/case9_cobuy_pooled_flawed.csv" download style="color:#ec4899; font-weight:500;">下載第一版分桶結果 (CSV，僅供對照，結論有誤)</a>　——無需登入即可下載。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>關鍵瑕疵</strong>：677組實驗只是同一份5.5年歷史資料的677種不同參數排列組合（max_positions／持倉天數／出場方案不同），<strong>同一個真實訊號（同一檔股票同一天）會被幾百種參數組合各自「買一次」，重複計入</strong>。這不是獨立樣本，是同一件事被講了幾百遍。
+        </div>
+
+        <h3>修正版：唯一訊號去重後，結論完全改變</h3>
+        <p>用唯一<code>(ticker, buy_date)</code>去重，只留下每個真實訊號各一筆代表。樣本從514,735筆暴減到<strong>只剩3,459筆真正獨立的訊號</strong>（去重前後放大倍數約148倍）。</p>
+        <p>📎 <a href="research_data/case9_cobuy_dedup_corrected.csv" download style="color:#ec4899; font-weight:500;">下載去重修正版結果 (CSV)</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>進場時機</th><th>訊號數(去重後)</th><th>平均報酬%</th><th>勝率</th></tr></thead>
+            <tbody>
+                <tr><td>非同買日進場</td><td>1,108</td><td>0.26%</td><td>45.1%</td></tr>
+                <tr><td>同買第1天</td><td>1,282</td><td>0.15%</td><td>45.6%</td></tr>
+                <tr><td><strong>同買第2天</strong></td><td>630</td><td><strong>0.31%（最高）</strong></td><td>46.8%</td></tr>
+                <tr><td>同買第3天</td><td>232</td><td>-0.12%</td><td>46.1%</td></tr>
+                <tr><td>同買第4~5天</td><td>156</td><td>-0.43%</td><td>36.5%</td></tr>
+                <tr><td>同買第6天以上</td><td>51</td><td>-0.81%</td><td>45.1%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 去重後排序完全改變：<strong>同買第2天的平均報酬反而最高，第1天並不特別突出</strong>——原本「第1天最好」的結論，主要是同一訊號被重複計入好幾百次造成的統計假象，不是真實效應。
+        </div>
+
+        <h3>依年度拆開看：方向甚至會整個反轉</h3>
+        <p>📎 <a href="research_data/case9_cobuy_by_year.csv" download style="color:#ec4899; font-weight:500;">下載逐年分桶結果 (CSV，36列)</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>表現最好的進場天數</th><th>備註</th></tr></thead>
+            <tbody>
+                <tr><td>2021</td><td>第1天（僅相對最好，仍為小幅正報酬）</td><td>-</td></tr>
+                <tr><td><strong>2022（空頭年）</strong></td><td><strong>第6天以上（+0.76%，勝率55.8%）</strong></td><td>第1天反而最差（-0.76%，勝率28.7%），完全反轉</td></tr>
+                <tr><td>2023</td><td>第2天（僅微幅領先第1天）</td><td>-</td></tr>
+                <tr><td>2024</td><td>第1天</td><td>-</td></tr>
+                <tr><td>2025</td><td>第4~5天（勝率62.3%）</td><td>-</td></tr>
+                <tr><td>2026（年度未完）</td><td>第4~5天（勝率66.3%）</td><td>-</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 「越早越好」這個方向在不同年份甚至會整個反過來——尤其2022空頭年，同買訊號拖得越久（第6天以上）反而表現最好、勝率最高，第1天是六個分組裡最差的。這不是一個穩定的規律，是隨市況變動的雜訊。
+        </div>
+
+        <h3>決定性驗證：真的把它寫成進場濾網，跑完整投資組合回測</h3>
+        <p>Per-trade平均報酬沒辦法回答「這樣做整體績效會不會更好」，因為沒考慮到濾掉訊號後資金會轉去買別的標的、或閒置的機會成本。這裡用strategy A、8檔持股、5.5年全期間（跟個案⑥方案A基準314.29%同一組參數設定），真的把「連續同買天數」做成硬性進場濾網，四組對照：</p>
+        <p>📎 <a href="research_data/case9_cobuy_backtest_4way.csv" download style="color:#ec4899; font-weight:500;">下載四組回測結果 (CSV)</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>進場濾網</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
+            <tbody>
+                <tr><td><strong>不限制（現行系統真實行為）</strong></td><td><strong>232.06%</strong></td><td>30.57%</td><td>42.59%</td><td><strong>1.58</strong></td><td>965</td></tr>
+                <tr><td>只准同買第1~2天進場</td><td>211.02%</td><td>35.30%（更差）</td><td>40.21%（更差）</td><td>1.43</td><td>950</td></tr>
+                <tr><td>只准同買第1天進場</td><td>220.74%</td><td>27.11%（較佳）</td><td>39.67%（更差）</td><td>1.35</td><td>915</td></tr>
+                <tr><td>只准第3天以上進場（反向對照）</td><td>97.81%（大幅更差）</td><td>39.02%</td><td>41.40%</td><td>1.35</td><td>314</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>不限制進場天數（現行系統的真實行為）在總報酬與獲利因子上都是四組裡最好的</strong>。限定只准第1天或前兩天進場，總報酬反而變差（211~221% vs 232%），只有MDD在「只准第1天」版本略為改善。完全排除頭兩天（反向對照組）報酬腰斬且交易數大減——把好標的濾掉的機會成本，遠大於「避開已經漲一段」帶來的好處。
+        </div>
+
+        <h3>結論</h3>
+        <p><strong>使用者的直覺方向不成立，不建議把「連續同買天數」做成硬性進場濾網。</strong>三層驗證（去重後per-trade分析、逐年拆解、真實投資組合回測）方向一致：這不是一個穩定、可靠、能改善績效的訊號。這個結論延續個案①「乖離率不該當硬性懲罰項」的發現模式——直覺上合理的「過熱/時機」類指標，在系統化驗證後往往站不住腳，「連續同買天數」也加入這份名單。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓</strong>：<code>backtest_logs.db</code>裡677組實驗共用同一份歷史資料，任何要用<code>trades</code>表做per-trade統計分析的研究，都必須先確認樣本有沒有被「同一訊號被多組實驗重複買進」嚴重放大——這次的第一版分析正是活生生的示範案例，去重前後結論完全相反。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

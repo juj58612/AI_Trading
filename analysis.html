@@ -175,6 +175,24 @@
         <h3 class="report-h3">五、結論與實戰建議</h3>
         <div id="reportConclusion"></div>
         <p class="report-p" style="color: var(--text-sub); font-size: 0.82rem; margin-top: 15px; border-top: 1px dashed #334155; padding-top: 12px;">⚠️ <b>方法論限制</b>：以上全部為歷史資料回測結果，不代表未來績效；回測未完全模擬滑價、委託成交機率與極端流動性事件，實戰摩擦成本可能高於回測假設。台股總體環境（法規、資金結構、AI 產業週期）可能隨時間改變，建議定期（例如每季）用最新資料重新執行本報告的統計流程，而不是套用一次結果長期不變。</p>
+
+        <h3 class="report-h3">六、延伸研究：Regime（多空狀態）自動切換能否贏過任何單一固定方案？</h3>
+        <p class="report-p">以上第一至五節的排行榜與統計，全部建立在同一個前提上：<b>整個 5.5 年回測期間套用同一組固定參數（同一個出場方案、同一個持倉檔數／天數上限）</b>，不論大盤當時是多頭、空頭或盤整，進出場規則都不會改變。這個前提本身值得挑戰——2022 年空頭年跟 2024 年多頭年，真的適合用同一套規則嗎？</p>
+        <p class="report-p">另一系列獨立研究（完整過程見 <a href="research_report.html" target="_blank" style="color:#c084fc;">📄 Regime自動切換策略模型研究報告</a>，摘要版見 <a href="case_studies.html#case5" target="_blank" style="color:#c084fc;">個案研究⑤～⑦</a>）針對這個問題做了系統化驗證：以「TAIEX 當日收盤 vs 20 日均線」作為即時、不使用未來資訊的多空判斷訊號——多頭時採一次買完＋關閉固定 8% 停損防線，空頭時改採 3:3:4 分批進場＋收緊出場組合（防線A／防線B／高點打折鎖利全關，只留保本停利調整模式＋土洋雙賣）。這組空頭端配置是把 5 個開關全部排列組合（48 組）逐一跑滿全期間篩出的冠軍，並在「巨觀風控真正生效」的狀態下重跑做交叉驗證，結果如下：</p>
+        <div class="kpi-grid" style="margin: 14px 0;">
+            <div class="kpi-card">
+                <div class="kpi-title">Regime自動切換（巨觀風控 fail-open）</div>
+                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+692.64%</div>
+                <div class="kpi-sub">MDD 24.17%｜2021-01～2026-08</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Regime自動切換（巨觀風控真正生效）</div>
+                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+488.17%</div>
+                <div class="kpi-sub">MDD 19.98%｜完全相同配置，交叉驗證冠軍不變</div>
+            </div>
+        </div>
+        <div class="insight-card">📌 <b>與本報告排行榜的關係</b>：第四節的排行榜是「單一固定方案」下的最佳結果；上方數字是「依市況動態切換方案」的結果，測試用的股票池、期間、手續費假設完全一致，可直接對照。但目前 Regime 判斷邏輯<b>尚未寫入正式系統（<code>strategy_core.py</code>）</b>，只在首頁以「研究版advisory面板」顯示供參考，實際下單建議仍是本報告分析的單一固定模型，需要更長期樣本驗證後才會考慮正式導入。</div>
+        <div class="insight-card" style="border-left-color:#f59e0b;">🔬 <b>方法論說明</b>：此系列研究過程中修正過兩個曾經導致錯誤結論的陷阱——① 用「連續回測內逐筆標記regime」取代「真正單一年度隔離回測」，會得到反向的錯誤結論；② 巨觀風控歷史資料過去沒有本地快取，FinMind逾時會靜默fail-open（風控形同虛設）卻不會有任何警示訊息。完整修正過程見<a href="research_report.html#sec4" target="_blank" style="color:#c084fc;">研究報告 4.方法論教訓</a>。</div>
     </div>
 
     <!-- 圖表區 -->

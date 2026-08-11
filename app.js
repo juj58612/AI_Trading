@@ -38,7 +38,39 @@ const AI_STOCKS_CONFIG = [
     { ticker: "2455", name: "2455 全新", price: 180 }, { ticker: "3163", name: "3163 波若威", price: 400 },
     { ticker: "3363", name: "3363 上詮", price: 600 }, { ticker: "6442", name: "6442 光聖", price: 500 },
     { ticker: "3380", name: "3380 明泰", price: 90 }, { ticker: "6830", name: "6830 汎銓", price: 700 },
-    { ticker: "3587", name: "3587 閎康", price: 300 }, { ticker: "3289", name: "3289 宜特", price: 150 }
+    { ticker: "3587", name: "3587 閎康", price: 300 }, { ticker: "3289", name: "3289 宜特", price: 150 },
+    // 2026-08-09 新增：AI硬體供應鏈六大類擴充（晶片設計/晶圓封測/關鍵材料/伺服器/散熱電力/軟體）
+    // 修正：這批56檔先前只寫進了 ai_stock_list.txt / backtest_engine.py，沒同步加進這裡，
+    // 導致首頁掃描永遠只送70檔（AI_STOCKS_CONFIG舊長度）給後端，「強制重新掃描」不管按幾次
+    // 都補不滿126檔，是這個bug的真正原因，不是連線不穩定。
+    { ticker: "1503", name: "1503 士林電機", price: 197 }, { ticker: "1513", name: "1513 中興電工", price: 160.5 },
+    { ticker: "1514", name: "1514 亞力電機", price: 102 }, { ticker: "1519", name: "1519 華城電機", price: 703 },
+    { ticker: "1560", name: "1560 中砂科技", price: 687 }, { ticker: "1609", name: "1609 大亞電線電纜", price: 37.15 },
+    { ticker: "2301", name: "2301 光寶科技", price: 268.5 }, { ticker: "2337", name: "2337 旺宏電子", price: 132.5 },
+    { ticker: "2355", name: "2355 敬鵬工業", price: 42.5 }, { ticker: "2385", name: "2385 群光電子", price: 104.5 },
+    { ticker: "2404", name: "2404 漢唐集成", price: 1150 }, { ticker: "2412", name: "2412 中華電信", price: 136 },
+    { ticker: "2436", name: "2436 偉詮電子", price: 67 }, { ticker: "2458", name: "2458 義隆電子", price: 145.5 },
+    { ticker: "2480", name: "2480 敦陽科技", price: 153 }, { ticker: "2492", name: "2492 華新科技", price: 300.5 },
+    { ticker: "3005", name: "3005 神基科技", price: 114.5 }, { ticker: "3413", name: "3413 京鼎精密", price: 305.5 },
+    { ticker: "3532", name: "3532 台勝科", price: 284 }, { ticker: "4755", name: "4755 三福化工", price: 119 },
+    { ticker: "4958", name: "4958 臻鼎-KY", price: 490 }, { ticker: "5388", name: "5388 中磊電子", price: 91.1 },
+    { ticker: "5434", name: "5434 崇越科技", price: 522 }, { ticker: "6166", name: "6166 凌華科技", price: 136 },
+    { ticker: "6183", name: "6183 關貿網路", price: 93.5 }, { ticker: "6196", name: "6196 帆宣系統", price: 510 },
+    { ticker: "6202", name: "6202 盛群半導體", price: 64.3 }, { ticker: "6206", name: "6206 Flytech", price: 143 },
+    { ticker: "6214", name: "6214 精誠資訊", price: 143 }, { ticker: "6239", name: "6239 力成科技", price: 282.5 },
+    { ticker: "6257", name: "6257 矽格科技", price: 204.5 }, { ticker: "6269", name: "6269 台郡科技", price: 67.4 },
+    { ticker: "6285", name: "6285 啟碁科技", price: 254 }, { ticker: "6412", name: "6412 群光電能", price: 78.8 },
+    { ticker: "6415", name: "6415 矽力*-KY", price: 466.5 }, { ticker: "6438", name: "6438 迅得機械", price: 145 },
+    { ticker: "6533", name: "6533 晶心科技", price: 250 }, { ticker: "6719", name: "6719 力智電子", price: 206.5 },
+    { ticker: "6770", name: "6770 力積電", price: 67 }, { ticker: "8081", name: "8081 致新科技", price: 270 },
+    { ticker: "8114", name: "8114 振樺電子", price: 211.5 }, { ticker: "3227", name: "3227 原相科技", price: 209 },
+    { ticker: "3374", name: "3374 精材科技", price: 334 }, { ticker: "3438", name: "3438 類比科技", price: 59.8 },
+    { ticker: "3680", name: "3680 家登精密", price: 445 }, { ticker: "4979", name: "4979 LuxNet", price: 510 },
+    { ticker: "4991", name: "4991 GCS Holdings", price: 481 }, { ticker: "5227", name: "5227 立凱-KY", price: 34.45 },
+    { ticker: "5347", name: "5347 世界先進", price: 158 }, { ticker: "5483", name: "5483 中美矽晶", price: 168.5 },
+    { ticker: "6182", name: "6182 合晶科技", price: 94 }, { ticker: "6223", name: "6223 旺矽科技", price: 6315 },
+    { ticker: "6488", name: "6488 環球晶圓", price: 849 }, { ticker: "6510", name: "6510 中華精測", price: 2800 },
+    { ticker: "8050", name: "8050 廣積科技", price: 61.6 }, { ticker: "8086", name: "8086 宏捷科", price: 116.5 }
 ];
 
 const stockPool = AI_STOCKS_CONFIG.map(s => ({
@@ -582,6 +614,7 @@ function updateStaleDataBanner(scanResult, totalRequested) {
 
     const count = (scanResult && scanResult.data) ? scanResult.data.length : 0;
     const total = (scanResult && scanResult.pool_size) || totalRequested || count;
+    const cacheDate = (scanResult && scanResult.cache_date) || '';
 
     if (scanResult && scanResult.fallback) {
         banner.style.display = 'block';
@@ -595,25 +628,25 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日 (${scanResult.cache_date || ''}) 快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
+        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日${cacheDate ? ` (${cacheDate})` : ''} 快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
     } else if (scanResult && scanResult.cached) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(59, 130, 246, 0.12)';
         banner.style.borderColor = 'var(--accent-blue)';
         banner.style.color = 'var(--accent-blue)';
-        banner.textContent = `⚡ 已使用今日 (${scanResult.cache_date || ''}) 快取資料，共 ${count} 檔，無需重新連線。`;
+        banner.textContent = `⚡ 已使用今日${cacheDate ? ` (${cacheDate})` : ''} 快取資料，共 ${count} 檔，無需重新連線。`;
     } else if (total > 0 && count < total * 0.8) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.textContent = `⚠️ 本次即時掃描（${scanResult.cache_date || ''}）僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
+        banner.textContent = `⚠️ 本次即時掃描${cacheDate ? `（${cacheDate}）` : ''}僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
     } else if (total > 0) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(16, 185, 129, 0.12)';
         banner.style.borderColor = '#10b981';
         banner.style.color = '#10b981';
-        banner.textContent = `✅ 掃描成功（${scanResult.cache_date || ''}），取得 ${count}/${total} 檔最新盤後資料。`;
+        banner.textContent = `✅ 掃描成功${cacheDate ? `（${cacheDate}）` : ''}，取得 ${count}/${total} 檔最新盤後資料。`;
     } else {
         banner.style.display = 'none';
         banner.textContent = '';
@@ -998,6 +1031,7 @@ sellPriceRange.addEventListener('change', () => renderSellCards(sellCountInput.v
 window.addEventListener('DOMContentLoaded', () => {
     loadPortfolioFromStorage();
     loadScanCacheStatus();
+    loadRegimeStatus();
 });
 
 async function loadScanCacheStatus() {
@@ -1009,4 +1043,77 @@ async function loadScanCacheStatus() {
     } catch (e) {
         console.warn('讀取掃描快取狀態失敗:', e);
     }
+}
+
+// Stage 1（研究版advisory面板）：顯示即時regime判斷與研究建議的進出場方式，
+// 純參考用途，不影響上方AI推薦排名或下單建議，系統實際運作仍是單一固定模型。
+// Stage 2：面板本身可收合／展開，偏好存 localStorage，不影響AI推薦卡片的任何顯示或排序。
+const REGIME_PANEL_HIDDEN_KEY = 'regimePanelHidden';
+let regimeStatusData = null;
+
+async function loadRegimeStatus() {
+    const panel = document.getElementById('regimePanel');
+    const collapsed = document.getElementById('regimePanelCollapsed');
+    if (!panel || !collapsed) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/regime/status`);
+        if (!res.ok) return;
+        const s = await res.json();
+        if (s.error) { console.warn('regime狀態讀取失敗:', s.error); return; }
+        regimeStatusData = s;
+        renderRegimePanel();
+    } catch (e) {
+        console.warn('讀取regime狀態失敗:', e);
+    }
+}
+
+function renderRegimePanel() {
+    const panel = document.getElementById('regimePanel');
+    const collapsed = document.getElementById('regimePanelCollapsed');
+    const s = regimeStatusData;
+    if (!panel || !collapsed || !s) return;
+
+    const isBull = s.regime === '多頭';
+    const accentColor = isBull ? '#dc2626' : '#10b981';
+    const isHidden = localStorage.getItem(REGIME_PANEL_HIDDEN_KEY) === 'true';
+
+    if (isHidden) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        collapsed.style.display = 'block';
+        collapsed.innerHTML = `<a href="javascript:void(0)" id="regimePanelShowBtn" style="color:${accentColor}; font-size:0.85rem; text-decoration:none; border:1px dashed ${accentColor}; padding:6px 14px; border-radius:20px; display:inline-block;">🧭 研究版市況面板（目前：${s.regime}，已隱藏）點此顯示 →</a>`;
+        document.getElementById('regimePanelShowBtn').addEventListener('click', () => {
+            localStorage.setItem(REGIME_PANEL_HIDDEN_KEY, 'false');
+            renderRegimePanel();
+        });
+        return;
+    }
+
+    collapsed.style.display = 'none';
+    collapsed.innerHTML = '';
+    panel.style.display = 'block';
+    panel.style.background = isBull ? 'rgba(220, 38, 38, 0.10)' : 'rgba(16, 185, 129, 0.10)';
+    panel.style.borderColor = accentColor;
+
+    panel.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div>
+                <div style="font-weight:bold; font-size:1.05rem; color:${accentColor};">
+                    🧭 研究版市況面板：目前判定為「${s.regime}」
+                    <span style="font-weight:normal; font-size:0.85rem; color: var(--text-sub);">（加權指數 ${s.taiex_close} vs 20日均線 ${s.taiex_ma20}，乖離 ${s.bias_pct > 0 ? '+' : ''}${s.bias_pct}%，${s.taiex_date}收盤）</span>
+                </div>
+                <div style="margin-top:8px; font-size:0.92rem; color: var(--text-main, #e5e7eb); line-height:1.7;">
+                    依研究結果，此regime下建議的進場方式：<b>${s.recommendation.entry}</b>；建議的出場防線組合：<b>${s.recommendation.exit}</b>
+                </div>
+                <div style="margin-top:6px; font-size:0.82rem; color: var(--text-sub);">
+                    ⚠️ ${s.note}　<a href="${s.report_url}" target="_blank" style="color:${accentColor};">查看完整研究報告 →</a>　<a href="${s.case_url}" target="_blank" style="color:${accentColor};">個案研究 →</a>
+                </div>
+            </div>
+            <button id="regimePanelHideBtn" style="background:none; border:1px solid ${accentColor}; color:${accentColor}; border-radius:6px; padding:4px 10px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">✕ 隱藏</button>
+        </div>
+    `;
+    document.getElementById('regimePanelHideBtn').addEventListener('click', () => {
+        localStorage.setItem(REGIME_PANEL_HIDDEN_KEY, 'true');
+        renderRegimePanel();
+    });
 }

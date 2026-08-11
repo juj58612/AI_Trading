@@ -924,6 +924,11 @@ class BacktestRequest(BaseModel):
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest, request: Request = None):
+    # exit_strategy='R'（Regime自動切換，研究版）已知落差：這裡只接上「出場card-line規則
+    # 依regime切換」，進場仍跟其他方案一樣是單筆一次到位；研究驗證的692.64%/488.17%用的是
+    # 空頭端3:3:4分批進場，這個engine目前對所有方案都沒有分批機制（不是R專屬的缺口），
+    # 所以這裡跑出來的R數字會比研究報告的數字保守，兩者不能直接拿來對比。要重現分批效果，
+    # 仍需參考 case_studies.html 個案⑤⑦⑧ 對應的 research_data/ CSV 或原始研究腳本。
     # request 只有真的透過 HTTP 呼叫這支 API 時才會有值；被 grid_search/mega_grid
     # 內部直接當一般函式呼叫（不是走 HTTP）時 request 是 None，不需要也不能重複檢查
     if request is not None:
@@ -963,6 +968,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                 (df['low'] - df['close'].shift(1)).abs()
             ], axis=1).max(axis=1)
             df['ATR'] = df['TR'].rolling(14).mean()
+            df['Low20'] = df['low'].rolling(20).min()  # strategy='R'（Regime自動切換）防線B用
             prices_df[t] = df
             
         if t in db["chips"] and len(db["chips"][t]) > 0:
@@ -1007,11 +1013,18 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
             
             yesterday_idx = df.index.get_loc(current_date) - 1 if current_date in df.index and df.index.get_loc(current_date) > 0 else -1
             yesterday_close = df.iloc[yesterday_idx]['close'] if yesterday_idx >= 0 else None
-            
+
+            is_bull_today = None
+            if req.exit_strategy == 'R' and not taiex_df.empty and current_date in taiex_df.index:
+                t_idx = taiex_df.loc[current_date]
+                if not pd.isna(t_idx['MA20']):
+                    is_bull_today = t_idx['close'] > t_idx['MA20']
+
             sell_reason, p = strategy_core.evaluate_exit(
-                p, today_price, yesterday_close, 
-                cdf.loc[current_date] if current_date in cdf.index else {}, 
-                req.exit_strategy, req.max_hold_days, current_date
+                p, today_price, yesterday_close,
+                cdf.loc[current_date] if current_date in cdf.index else {},
+                req.exit_strategy, req.max_hold_days, current_date,
+                is_bull_regime=is_bull_today
             )
 
             if sell_reason:
@@ -1135,6 +1148,14 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                 else:
                     mult = 3.0
                 
+                supp_at_buy = None
+                if req.exit_strategy == 'R':
+                    df_buy = prices_df[buy_target['ticker']]
+                    if current_date in df_buy.index and not pd.isna(df_buy.loc[current_date]['Low20']):
+                        supp_at_buy = float(df_buy.loc[current_date]['Low20'])
+                    else:
+                        supp_at_buy = buy_target['price'] * 0.9
+
                 portfolio.append({
                     "ticker": buy_target['ticker'],
                     "buy_date": day_str,
@@ -1144,6 +1165,8 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                     "lowest_price": buy_target['price'],
                     "trailing_stop": buy_target['price'] - (mult * buy_target['atr']),
                     "atr_multiplier": mult,
+                    "supp": supp_at_buy,
+                    "high": buy_target['price'],
                     "buy_score": buy_target['score'],
                     "buy_momentum": buy_target['momentum'],
                     "buy_atr": buy_target['atr']
