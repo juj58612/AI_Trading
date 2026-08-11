@@ -8,6 +8,17 @@ const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.locatio
     ? "http://127.0.0.1:58888"
     : window.location.origin;
 
+// 會寫入/清空資料庫、跑重運算的 backtest_engine API 現在要求非本機呼叫必須帶管理者
+// 憑證（見 backtest_engine.py 的 require_local_or_admin）；本機不需要，這裡回傳的
+// header 在本機情境下就算是空字串也不影響，後端只有非 127.0.0.1 才會檢查這個值
+function getAuthHeader() {
+    try {
+        const saved = localStorage.getItem('ai_trading_user');
+        if (saved) return (JSON.parse(saved).authHeader) || '';
+    } catch (e) {}
+    return '';
+}
+
 const btnSyncDB = document.getElementById('btnSyncDB');
 const dbDateStatus = document.getElementById('dbDateStatus');
 const btnRunBacktest = document.getElementById('btnRunBacktest');
@@ -135,7 +146,7 @@ btnSyncDB.addEventListener('click', async () => {
         
         const res = await fetch(`${BACKTEST_API_URL}/api/backtest/download`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': getAuthHeader() },
             body: JSON.stringify({ start_date: start, end_date: end })
         });
         
@@ -178,7 +189,7 @@ btnRunBacktest.addEventListener('click', async () => {
     try {
         const res = await fetch(`${BACKTEST_API_URL}/api/backtest/run`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': getAuthHeader() },
             body: JSON.stringify(payload)
         });
         
@@ -237,7 +248,7 @@ window.runGridSearch = async function() {
 
         const res = await fetch(`${BACKTEST_API_URL}/api/backtest/grid_search`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': getAuthHeader() },
             body: JSON.stringify(payload)
         });
 
@@ -482,8 +493,19 @@ if (document.getElementById('btnClearLeaderboard')) {
     document.getElementById('btnClearLeaderboard').addEventListener('click', async () => {
         if (confirm('確定要清空排行榜與後端 SQLite 回測資料庫嗎？此動作無法復原！')) {
             try {
-                await fetch(`${BACKTEST_API_URL}/api/analysis/clear_db`, { method: 'POST' });
-            } catch (e) {}
+                const res = await fetch(`${BACKTEST_API_URL}/api/analysis/clear_db`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeader() }
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(`❌ 清空失敗：${err.detail || `HTTP ${res.status}`}`);
+                    return;
+                }
+            } catch (e) {
+                alert(`❌ 清空失敗：${e.message}`);
+                return;
+            }
             leaderboardData = [];
             renderLeaderboard();
             updateLeaderboardTimestampInfo();
@@ -499,12 +521,15 @@ if (document.getElementById('btnPublishSnapshot')) {
         btn.disabled = true;
         btn.textContent = '⏳ 產生快照中...';
         try {
-            const res = await fetch(`${BACKTEST_API_URL}/api/backtest/publish_snapshot`, { method: 'POST' });
+            const res = await fetch(`${BACKTEST_API_URL}/api/backtest/publish_snapshot`, {
+                method: 'POST',
+                headers: { 'Authorization': getAuthHeader() }
+            });
             const data = await res.json();
             if (res.ok && data.status === 'success') {
                 alert(`✅ ${data.message}\n\n下一步：請自行在終端機執行 git add / commit / push（或請 Claude 幫忙），推上 GitHub 後 Render 才會真正顯示這份快照。`);
             } else {
-                alert(`❌ 產生快照失敗：${data.message || '未知錯誤'}`);
+                alert(`❌ 產生快照失敗：${data.message || data.detail || '未知錯誤'}`);
             }
         } catch (e) {
             alert(`❌ 無法連線至本機回測引擎：${e.message}`);
@@ -596,7 +621,7 @@ window.runMegaGrid = async function() {
     try {
         const res = await fetch(`${BACKTEST_API_URL}/api/backtest/mega_grid`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': getAuthHeader() },
             body: JSON.stringify(payload)
         });
         
