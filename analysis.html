@@ -87,6 +87,12 @@
             transition: opacity 0.2s;
         }
         .btn-action:hover { opacity: 0.9; }
+
+        .report-h3 { font-size: 1.1rem; color: #f0f6fc; margin-top: 26px; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid var(--accent-blue); }
+        .report-h3:first-of-type { margin-top: 4px; }
+        .report-p { font-size: 0.92rem; color: #cbd5e1; line-height: 1.9; margin-bottom: 12px; }
+        .report-ul { margin: 0 0 14px 0; padding-left: 22px; color: #cbd5e1; font-size: 0.92rem; line-height: 1.9; }
+        .report-ul li { margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -113,19 +119,19 @@
     <!-- KPI 總覽 -->
     <div class="kpi-grid">
         <div class="kpi-card">
-            <div class="kpi-title">🏆 冠軍策略總報酬率</div>
+            <div class="kpi-title">🥇 目前排名第一總報酬率</div>
             <div class="kpi-value" id="kpiReturn">+122.14%</div>
-            <div class="kpi-sub">5.5 年波段累積資產翻倍以上</div>
+            <div class="kpi-sub">僅單一組合，詳見下方「前30名綜合分析」判斷是否具代表性</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-title">🛡️ 冠軍策略最大回撤 (MDD)</div>
+            <div class="kpi-title">🛡️ 該組合最大回撤 (MDD)</div>
             <div class="kpi-value" style="color: #4ade80;" id="kpiMDD">14.11%</div>
-            <div class="kpi-sub">成功抵抗 2022 空頭大震盪</div>
+            <div class="kpi-sub">單一組合數字，非全體平均</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-title">⏱️ 黃金持倉天數甜點</div>
+            <div class="kpi-title">⏱️ 該組合持倉天數</div>
             <div class="kpi-value" style="color: #38bdf8;" id="kpiHold">30 天</div>
-            <div class="kpi-sub">精確鎖定 25 ~ 35 天飆股主升段</div>
+            <div class="kpi-sub">實際偏好天數請看下方參數共同特徵</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-title">📊 跑完總排列組合數</div>
@@ -134,25 +140,46 @@
         </div>
     </div>
 
-    <!-- AI 歸因分析決策報告 -->
-    <div class="report-section">
-        <h2>💡 AI 大數據戰略決策與歸因分析報告 <span>AI Insights</span></h2>
-        <div id="aiAttributionContainer">
-            <div class="insight-card">
-                💡 <b>持倉天數黃金區間</b>：數據顯示，最優持倉期限為 <b>30 天</b> (平均總報酬 +122.14%)；但若考量 2022 年空頭防禦性，建議真實模型期限設定在 <b>25 ~ 35 天</b>，為抗震與爆發力最佳平衡區間。
-            </div>
-            <div class="insight-card">
-                🛡️ <b>資金分散防護力</b>：將持倉上限由 3 檔提高至 5 檔時，平均最大回撤 (MDD) 由 41.55% 降低至 14.11% (<b>風險降低了 27.44%</b>)。建議採用 3 ~ 5 檔配置進行 Risk Parity 資金均分。
-            </div>
-            <div class="insight-card">
-                🏆 <b>策略方案抉擇</b>：<b>方案 D (華爾街 5D 自適應吊燈鎖利)</b> 的平均總報酬與獲利因子顯著超越方案 C，能夠在獲利達 12% 時自動收緊停損乘數至 1.25x ATR，鎖死頂部 85% 以上獲利。
-            </div>
-        </div>
+    <!-- 專業分析報告：方法論、統計依據、結果判讀、結論建議，全部依當下資料庫即時算出 -->
+    <div class="report-section" id="fullReportSection">
+        <h2>📄 大數據回測量化分析報告 <span>Full Report</span></h2>
+
+        <h3 class="report-h3">一、研究目的與資料範圍</h3>
+        <p class="report-p">本報告分析「AI 概念股通用交易策略控制台」在歷史資料上的回測績效，目的是找出穩健、可實戰採用的參數設定，而不是單純展示單一最佳結果。股票池涵蓋 <b id="rpPoolSize">126</b> 檔台股 AI 概念股與相關 ETF，歷史資料期間為 <b id="rpDateRange">2021-01 ~ 2026-08</b>（約 5.5 年，涵蓋 2021 台股狂熱、2022 空頭、2023~2025 多空交替等不同市況）。截至本次分析，資料庫累積 <b id="rpExpCount">677</b> 組正式回測實驗（不含網格最佳化過程中的訓練期試跑），總計模擬 <b id="rpTradeCount">418,887</b> 筆個股買賣交易。</p>
+
+        <h3 class="report-h3">二、測試方法論</h3>
+        <p class="report-p"><b>進場邏輯（所有方案共用）</b>：以「三大法人籌碼積分矩陣」為核心——投信今日買超 +2 分、連續買超(≥2日) 額外 +1 分、外資今日買超 +1 分、跌破 5 日均線 -2 分強制扣分，並要求站上 VWMA5（成交量加權均線）才視為「真突破」，過濾無量誘多。進場資金依 Risk Parity 逆波動率模型分配（波動度越高的股票配置越少），並套用「三合一巨觀風控熔斷保險絲」（外資期貨淨空單過高或匯率大貶時，一票否決新建多單）。四種方案的進場規則完全相同，差異只在賣出（出場）邏輯。</p>
+        <p class="report-p"><b>測試的出場方案（本次報告涵蓋方案 A~D，方案 E 為實驗性質、預設不納入正式統計）</b>：</p>
+        <ul class="report-ul">
+            <li><b>方案 A（固定 % 停損）</b>：以固定百分比停損/停利，邏輯最單純，作為其他方案的比較基準。</li>
+            <li><b>方案 B（關鍵支撐破位）</b>：以技術面關鍵支撐價位是否跌破作為出場判斷。</li>
+            <li><b>方案 C（動態收縮防線）</b>：停損防線隨獲利提高動態收縮，但觸發門檻較寬鬆。</li>
+            <li><b>方案 D（自適應吊燈鎖利）</b>：ATR 停損乘數依大盤趨勢動態調整（多頭 2.2x／空頭 1.5x），獲利達 12% 後自動收緊至 1.25x ATR 鎖利，是唯一沒有固定停利上限的方案。</li>
+        </ul>
+        <p class="report-p"><b>測試變數（網格參數）</b>：最大持倉檔數（1~10 檔）、最大持倉天數（2~360 天）、出場方案（A~D）、資金與手續費設定。測試工具分兩種：<b>「大數據回測」</b>對所有勾選的參數組合做完整排列組合（Full Grid Permutation），每組都是完整區間（例如 2021-01-01～2026-08-10）的正式回測；<b>「AI 網格最佳化」</b>則用 Optuna 貝氏優化在較小的搜索空間內快速嘗試，並將資料切成前 70% 訓練期（In-Sample）／後 30% 樣本外測試期（Out-of-Sample），避免針對訓練期過度擬合——這批訓練期試跑資料刻意跟正式排行榜、本報告的統計分開，不會混進以下的分析。</p>
+
+        <h3 class="report-h3">三、統計分析方法與理論依據</h3>
+        <p class="report-p">量化策略研究裡有個經典陷阱——「多重比較問題」（Multiple Comparisons Problem）：當你測試幾百組參數組合，排名第一的那組，報酬率本來就會因為統計上的運氣成分被推得比真實水準更高（這跟「丟一百次硬幣，一定會有某一次連續正面特別多次」是同一個道理），單獨看它容易誤判成「這套參數特別厲害」。因此本報告採用以下統計方法，而不是只看單一最佳解：</p>
+        <ul class="report-ul">
+            <li><b>分布統計</b>：計算前 30 名（而非僅第 1 名）報酬率與最大回撤的最小值、最大值、中位數、平均值、標準差，藉此看出「高績效」整體落在什麼範圍，而不是被單一極端值誤導。</li>
+            <li><b>極端值判定（Z-score）</b>：若排名第一的報酬率超出前 30 名平均值 1.5 個標準差以上，統計上視為潛在極端值，提示使用者不宜只依賴這一組參數。</li>
+            <li><b>眾數／頻率分析</b>：統計前 30 名裡策略方案、持倉檔數、持倉天數的出現頻率——如果某個參數選擇在高績效組合裡反覆出現，代表它的有效性不是單一組合的偶然，而是具有一致性的穩健訊號，這比單一最佳解更值得作為實戰依據。</li>
+            <li><b>全樣本分組平均（Attribution）</b>：針對全部 <b id="rpExpCount2">677</b> 組實驗（不限前 30 名），依持倉天數、持倉檔數、出場方案分組取平均報酬率／MDD，觀察參數對績效的邊際影響方向是否一致。</li>
+        </ul>
+
+        <h3 class="report-h3">四、結果與判讀</h3>
+        <div id="top30ReportContainer"></div>
+        <h4 style="font-size:1rem; color:#f0f6fc; margin-bottom:10px; margin-top:22px;">4.2　全樣本分組平均分析（依持倉天數／檔數／方案分組）</h4>
+        <div id="aiAttributionContainer"></div>
+
+        <h3 class="report-h3">五、結論與實戰建議</h3>
+        <div id="reportConclusion"></div>
+        <p class="report-p" style="color: var(--text-sub); font-size: 0.82rem; margin-top: 15px; border-top: 1px dashed #334155; padding-top: 12px;">⚠️ <b>方法論限制</b>：以上全部為歷史資料回測結果，不代表未來績效；回測未完全模擬滑價、委託成交機率與極端流動性事件，實戰摩擦成本可能高於回測假設。台股總體環境（法規、資金結構、AI 產業週期）可能隨時間改變，建議定期（例如每季）用最新資料重新執行本報告的統計流程，而不是套用一次結果長期不變。</p>
     </div>
 
     <!-- 圖表區 -->
     <div class="report-section">
-        <h2>📈 Top 冠軍策略累積資產成長曲線 (Equity Curves)</h2>
+        <h2>📈 前 5 名策略累積資產成長曲線 (Equity Curves)</h2>
         <div style="height: 380px; position: relative;">
             <canvas id="analysisChart"></canvas>
         </div>
@@ -241,6 +268,11 @@ async function loadDataFreshness() {
         const isComplete = covered >= pool;
         const dateRange = (data.date_start && data.date_end) ? `${data.date_start} ~ ${data.date_end}` : '未知';
 
+        const rpPool = document.getElementById('rpPoolSize');
+        if (rpPool) rpPool.textContent = pool;
+        const rpDate = document.getElementById('rpDateRange');
+        if (rpDate) rpDate.textContent = dateRange;
+
         if (isComplete) {
             banner.style.background = 'rgba(16, 185, 129, 0.12)';
             banner.style.border = '1px solid #10b981';
@@ -296,19 +328,29 @@ async function loadAnalysisData() {
             document.getElementById('kpiMDD').textContent = `${top.mdd.toFixed(2)}%`;
             document.getElementById('kpiHold').textContent = `${top.max_hold_days} 天`;
 
+            const totalTrades = list.reduce((sum, e) => sum + (e.total_trades || 0), 0);
+            ['rpExpCount', 'rpExpCount2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = list.length;
+            });
+            const rpTrades = document.getElementById('rpTradeCount');
+            if (rpTrades) rpTrades.textContent = totalTrades.toLocaleString();
+
             const expTsEl = document.getElementById('expTimestampInfo');
             if (expTsEl) {
                 const timestamps = list.map(e => e.timestamp).filter(Boolean).sort();
                 if (timestamps.length > 0) {
                     const earliest = timestamps[0];
                     const latest = timestamps[timestamps.length - 1];
-                    expTsEl.textContent = `🕒 以上 KPI／AI Insights／權益曲線／排行榜，統計基於 ${list.length} 筆實驗紀錄，執行區間 ${earliest} ~ ${latest}`;
+                    expTsEl.textContent = `🕒 以上 KPI／分析報告／權益曲線／排行榜，統計基於 ${list.length} 筆實驗紀錄，執行區間 ${earliest} ~ ${latest}`;
                     expTsEl.style.display = 'block';
                 }
             }
 
             renderTable(list);
             renderChart(list.slice(0, 5));
+            renderTop30Report(list);
+            renderReportConclusion(list);
         }
 
         if (attrData && attrData.decisions && attrData.decisions.length > 0) {
@@ -332,6 +374,129 @@ function calcCAGR(row) {
     } catch(err) {
         return 0;
     }
+}
+
+function median(nums) {
+    const s = nums.slice().sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function mean(nums) {
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function stddev(nums) {
+    const m = mean(nums);
+    return Math.sqrt(mean(nums.map(n => (n - m) ** 2)));
+}
+
+// 統計某個欄位在這 30 組裡最常出現的值，及佔比——佔比越高代表這個參數選擇
+// 在高績效組合裡越穩健一致，不是單一極端值的偶然結果
+function dominantValue(top30, field, formatter) {
+    const counts = {};
+    top30.forEach(r => {
+        const key = formatter ? formatter(r[field]) : r[field];
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const [value, count] = sorted[0];
+    return { value, count, pct: (count / top30.length * 100).toFixed(0), distinctCount: sorted.length };
+}
+
+// 前 30 名的分布統計＋參數頻率分析，renderTop30Report／renderReportConclusion 共用同一份計算，
+// 避免兩處各算一次、數字對不上
+function computeTop30Stats(list) {
+    const n = Math.min(30, list.length);
+    const top30 = list.slice(0, n);
+    if (top30.length === 0) return null;
+
+    const returns = top30.map(r => r.total_return);
+    const mdds = top30.map(r => r.mdd);
+    const retMin = Math.min(...returns), retMax = Math.max(...returns);
+    const retMedian = median(returns), retMean = mean(returns), retStd = stddev(returns);
+    const mddMin = Math.min(...mdds), mddMax = Math.max(...mdds);
+
+    const stratDom = dominantValue(top30, 'exit_strategy');
+    const posDom = dominantValue(top30, 'max_positions');
+    const holdDom = dominantValue(top30, 'max_hold_days', v => v === 999 ? '無限制' : `${v}天`);
+
+    // 排名第一 vs 前30名中位數的差距，用來判斷排名第一是不是明顯偏離其他組合的極端值
+    const top1Return = list[0].total_return;
+    const gapFromMedian = top1Return - retMedian;
+    const isOutlier = retStd > 0 && (top1Return - retMean) / retStd > 1.5;
+
+    return { n, top30, retMin, retMax, retMedian, retMean, retStd, mddMin, mddMax, stratDom, posDom, holdDom, top1Return, gapFromMedian, isOutlier };
+}
+
+function renderTop30Report(list) {
+    const container = document.getElementById('top30ReportContainer');
+    if (!container) return;
+    const s = computeTop30Stats(list);
+    if (!s) { container.innerHTML = '<p style="color:var(--text-sub);">尚無資料。</p>'; return; }
+    const { n, retMin, retMax, retMedian, retMean, retStd, mddMin, mddMax, stratDom, posDom, holdDom, top1Return, gapFromMedian, isOutlier } = s;
+
+    const concentrationNote = stratDom.pct >= 50
+        ? `策略方案分布集中（「方案 ${stratDom.value}」單一方案就佔了前 ${n} 名的 ${stratDom.pct}%），顯示這個方案本身穩健有效，不是單一組合僥倖勝出。`
+        : `策略方案分布比較分散（前 ${n} 名裡出現了 ${stratDom.distinctCount} 種不同方案，最常見的「方案 ${stratDom.value}」也只佔 ${stratDom.pct}%），代表高報酬不特別依賴單一方案，多種方案在對的參數搭配下都有機會表現不錯。`;
+
+    const outlierNote = isOutlier
+        ? `⚠️ 需要留意：目前排名第一的總報酬率（+${top1Return.toFixed(2)}%）明顯高於前 ${n} 名的平均水準（超過 1.5 個標準差），統計上比較像極端值，實戰中不宜只依賴這一組參數，建議參考下方「穩健參數」的共同特徵。`
+        : `目前排名第一的總報酬率（+${top1Return.toFixed(2)}%）跟前 ${n} 名的整體水準差距不大（僅高出中位數 ${gapFromMedian.toFixed(1)} 個百分點），代表這個結果落在合理範圍內、不是孤立的極端值，可信度較高。`;
+
+    container.innerHTML = `
+        <h4 style="font-size:1rem; color:#f0f6fc; margin-bottom:10px;">4.1　前 ${n} 名分布統計與穩健度判讀</h4>
+        <div class="kpi-grid" style="margin-bottom: 18px;">
+            <div class="kpi-card">
+                <div class="kpi-title">📊 前 ${n} 名報酬率範圍</div>
+                <div class="kpi-value" style="font-size:1.3rem;">+${retMin.toFixed(1)}% ~ +${retMax.toFixed(1)}%</div>
+                <div class="kpi-sub">中位數 +${retMedian.toFixed(1)}%｜平均 +${retMean.toFixed(1)}%｜標準差 ${retStd.toFixed(1)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">🛡️ 前 ${n} 名最大回撤範圍</div>
+                <div class="kpi-value" style="color:#4ade80; font-size:1.3rem;">${mddMin.toFixed(1)}% ~ ${mddMax.toFixed(1)}%</div>
+                <div class="kpi-sub">數字越小代表回撤越輕</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">🎯 最常見持倉檔數</div>
+                <div class="kpi-value" style="color:#38bdf8; font-size:1.3rem;">${posDom.value} 檔</div>
+                <div class="kpi-sub">前 ${n} 名中出現 ${posDom.count} 次（${posDom.pct}%）</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">⏱️ 最常見持倉天數</div>
+                <div class="kpi-value" style="color:#c084fc; font-size:1.3rem;">${holdDom.value}</div>
+                <div class="kpi-sub">前 ${n} 名中出現 ${holdDom.count} 次（${holdDom.pct}%）</div>
+            </div>
+        </div>
+        <div class="insight-card" style="margin-bottom:10px;">📐 <b>穩健度判讀</b>：${outlierNote}</div>
+        <div class="insight-card">🧩 <b>參數共同特徵</b>：${concentrationNote}前 ${n} 名最常見的持倉檔數是 <b>${posDom.value} 檔</b>（${posDom.pct}%），持倉天數多落在 <b>${holdDom.value}</b>（${holdDom.pct}%）附近——這些共同特徵比單一排名第一的組合更值得參考。</div>
+    `;
+}
+
+// 把前面統計出來的分布數字＋參數頻率，收斂成具體的實戰建議，而不是只丟數字給使用者自己判斷
+function renderReportConclusion(list) {
+    const container = document.getElementById('reportConclusion');
+    if (!container) return;
+    const s = computeTop30Stats(list);
+    if (!s) { container.innerHTML = ''; return; }
+    const { n, retMedian, mddMin, mddMax, stratDom, posDom, holdDom, isOutlier, top1Return } = s;
+
+    const holdLabel = String(holdDom.value).includes('無限制') ? '不設持倉天數上限' : `持倉天數上限設在 ${holdDom.value} 附近`;
+    const reliabilityLine = isOutlier
+        ? `目前排行榜第一名（+${top1Return.toFixed(2)}%）在統計上被判定為極端值，<b>不建議直接套用它的完整參數組合</b>；應以下方「穩健參數」為主要依據。`
+        : `目前排行榜第一名（+${top1Return.toFixed(2)}%）落在合理範圍內，其參數組合可以作為建議的起點，但仍建議搭配下方穩健參數交叉確認。`;
+
+    container.innerHTML = `
+        <div class="insight-card" style="border-left-color:#4ade80;">
+            ✅ <b>建議實戰參數方向</b>：綜合前 ${n} 名的共同特徵，建議以<b>「方案 ${stratDom.value}」</b>為出場邏輯主軸、<b>持倉上限約 ${posDom.value} 檔</b>、${holdLabel}，作為實戰設定的起始基準——這些是在多組高績效回測中反覆出現的選擇，而非單一運氣好的結果。預期最大回撤落在 <b>${mddMin.toFixed(1)}% ~ ${mddMax.toFixed(1)}%</b> 區間，總報酬率中位數水準約在 <b>+${retMedian.toFixed(1)}%</b>（5.5 年累積），可作為實戰績效的合理期望值，而不是以排名第一的數字作為期望基準。
+        </div>
+        <div class="insight-card">
+            📌 <b>排名第一的可信度</b>：${reliabilityLine}
+        </div>
+        <div class="insight-card">
+            🔁 <b>後續行動建議</b>：① 先用上述基準參數在小資金／模擬單上實測一段時間，確認實戰滑價與成交狀況跟回測假設的落差；② 每季重新執行一次本報告的統計流程，確認穩健參數是否隨市場結構改變而漂移；③ 若要進一步驗證，可在「AI 獨立回測實驗室」對穩健參數區間做更密集的網格測試，並用樣本外（Out-of-Sample）區間驗證，而不是只看訓練期表現。
+        </div>
+    `;
 }
 
 function renderTable(list) {

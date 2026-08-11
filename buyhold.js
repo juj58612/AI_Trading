@@ -402,7 +402,7 @@ window.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch(`${BACKTEST_API_URL}/api/buyhold/sync`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': getAuthHeader() },
                     body: JSON.stringify({})
                 });
                 if (res.ok) {
