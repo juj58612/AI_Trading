@@ -8,15 +8,24 @@ const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.locatio
     ? "http://127.0.0.1:58888"
     : window.location.origin;
 
-// 會寫入/清空資料庫、跑重運算的 backtest_engine API 現在要求非本機呼叫必須帶管理者
-// 憑證（見 backtest_engine.py 的 require_local_or_admin）；本機不需要，這裡回傳的
-// header 在本機情境下就算是空字串也不影響，後端只有非 127.0.0.1 才會檢查這個值
-function getAuthHeader() {
+// 會寫入/清空資料庫、跑重運算的 backtest_engine API 一律要求管理者憑證
+// （見 backtest_engine.py 的 require_admin），不管本機還是遠端都要驗證
+function getAuthCredentials() {
     try {
         const saved = localStorage.getItem('ai_trading_user');
-        if (saved) return (JSON.parse(saved).authHeader) || '';
+        if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return '';
+    return null;
+}
+
+function getAuthHeader() {
+    const creds = getAuthCredentials();
+    return creds ? (creds.authHeader || '') : '';
+}
+
+function isAdminLoggedIn() {
+    const creds = getAuthCredentials();
+    return !!(creds && creds.username === 'cyc58612');
 }
 
 const btnSyncDB = document.getElementById('btnSyncDB');
@@ -104,6 +113,16 @@ window.addEventListener('DOMContentLoaded', () => {
         if (buyholdDbStatusEl) buyholdDbStatusEl.innerHTML = '<span style="color:#94a3b8;">🔒 僅本機執行時可查詢</span>';
     } else {
         checkDbStatus();
+    }
+
+    // 「發布快照」「清空所有紀錄」現在後端一律要求管理者驗證（未登入點了只會看到
+    // 403 錯誤），乾脆比照首頁「🔐 帳號管理」連結的做法，沒登入管理者身分就直接不
+    // 顯示這兩個按鈕，不要讓看不能用的人看到「好像可以點」的按鈕
+    if (!isAdminLoggedIn()) {
+        const clearBtn = document.getElementById('btnClearLeaderboard');
+        if (clearBtn) clearBtn.style.display = 'none';
+        const publishBtn = document.getElementById('btnPublishSnapshot');
+        if (publishBtn) publishBtn.style.display = 'none';
     }
 
     initDateDropdowns('Start', '2021-01-01');
