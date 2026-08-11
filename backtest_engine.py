@@ -262,7 +262,37 @@ def fetch_macro_3in1_series(start_date, end_date):
     盤後計算歷史「三合一巨觀風控熔斷保險絲」逐日訊號 (strategy_core.evaluate_macro_3in1_status)，
     供回測引擎套用進場否決/減碼，讓回測跟 doc.html 宣稱的風控行為一致。
     回傳: {date_str: {'veto_buy': bool, 'pos_scale': float, ...}}
+
+    2026-08-11 修正：這三個巨觀指標過去從未被「同步歷史資料庫」快取過，每次回測都要即時打
+    3 支 FinMind API，FinMind 只要逾時/配額用完就整批 fail-open（等於巨觀風控完全沒套用，
+    卻不會有任何錯誤訊息提醒），而且同一支腳本兩次執行可能因為 API 當下狀態不同而得到不同
+    結果。現在優先讀本地 backtest_database.json 的 macro 欄位（由 /api/backtest/download
+    同步寫入），只有本地快取沒涵蓋到查詢範圍時才退回即時抓取；即時抓到的原始數值也會直接
+    寫回本地快取，讓下次呼叫不用再重抓。
     """
+    db = {}
+    if os.path.exists(DB_PATH):
+        try:
+            with open(DB_PATH, 'r', encoding='utf-8') as f:
+                db = json.load(f)
+        except Exception:
+            db = {}
+    macro_cache = db.get("macro", {})
+
+    if macro_cache:
+        all_cached_dates = sorted(macro_cache.keys())
+        covers_range = all_cached_dates[0] <= start_date and all_cached_dates[-1] >= end_date
+        if covers_range:
+            result = {}
+            for d, row in macro_cache.items():
+                if start_date <= d <= end_date:
+                    result[d] = strategy_core.evaluate_macro_3in1_status(
+                        foreign_spot_buy=row.get("foreign_spot_buy", 0),
+                        twd_rate_change_5d=row.get("twd_rate_change_5d", 0),
+                        foreign_futures_short=row.get("foreign_futures_short", 0),
+                    )
+            return result
+
     token = os.getenv("FINMIND_API_TOKEN", "")
     result = {}
     try:
@@ -290,6 +320,7 @@ def fetch_macro_3in1_series(start_date, end_date):
                 spot_by_date[row["date"]] = (row.get("buy", 0) - row.get("sell", 0)) / 1e8  # 換算億元
 
         all_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
+        raw_by_date = {}
         for d in all_dates:
             twd_change_5d = 0.0
             if d in fx_dates:
@@ -300,11 +331,22 @@ def fetch_macro_3in1_series(start_date, end_date):
                     if prev_rate and curr_rate:
                         twd_change_5d = (curr_rate - prev_rate) * 10  # 換算成「角」
 
-            result[d] = strategy_core.evaluate_macro_3in1_status(
-                foreign_spot_buy=spot_by_date.get(d, 0),
-                twd_rate_change_5d=twd_change_5d,
-                foreign_futures_short=fut_by_date.get(d, 0)
-            )
+            raw_by_date[d] = {
+                "foreign_spot_buy": spot_by_date.get(d, 0),
+                "twd_rate_change_5d": twd_change_5d,
+                "foreign_futures_short": fut_by_date.get(d, 0),
+            }
+            result[d] = strategy_core.evaluate_macro_3in1_status(**raw_by_date[d])
+
+        if raw_by_date and os.path.exists(DB_PATH):
+            try:
+                with open(DB_PATH, 'r', encoding='utf-8') as f:
+                    fresh_db = json.load(f)
+                fresh_db.setdefault("macro", {}).update(raw_by_date)
+                with open(DB_PATH, 'w', encoding='utf-8') as f:
+                    json.dump(fresh_db, f, ensure_ascii=False)
+            except Exception as e:
+                print(f"⚠️ 巨觀風控資料寫入本地快取失敗（不影響本次回測結果）: {e}")
     except Exception as e:
         print(f"⚠️ 三合一巨觀風控資料抓取失敗，本次回測不套用風控 (fail-open): {e}")
     return result
@@ -498,7 +540,63 @@ async def download_data(request: Request):
                 chip_fetch_failures.append(f"{t}（連線錯誤）")
 
             time.sleep(1.0) # Increased delay to prevent FinMind ban
-            
+
+        # 3. 三合一巨觀風控原始數據（外資期貨淨空單／台幣匯率／外資現貨買賣超）
+        # 過去這三個指標從未被存進本地資料庫，每次回測都要即時打 FinMind，逾時或配額用完
+        # 就整批 fail-open（風控悄悄沒套用）。這裡比照股價/籌碼的斷點續傳邏輯，涵蓋到查詢
+        # 範圍就跳過，不然只補抓缺的部分；只快取原始數值，veto/pos_scale 由呼叫端即時計算，
+        # 避免風控判斷邏輯以後調整時，舊快取的計算結果變成過期資料。
+        macro_fetch_failure = None
+        try:
+            existing_macro = db.get("macro", {})
+            macro_dates = sorted(existing_macro.keys())
+            macro_covered = bool(macro_dates) and macro_dates[0] <= start_date and macro_dates[-1] >= end_date
+            if not macro_covered:
+                macro_fetch_start = macro_dates[-1] if macro_dates and macro_dates[-1] < end_date else start_date
+                finmind_token = os.getenv("FINMIND_API_TOKEN", "")
+
+                fut_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanFuturesInstitutionalInvestors&data_id=TX&start_date={macro_fetch_start}&end_date={end_date}&token={finmind_token}"
+                fut_data = requests.get(fut_url, timeout=20).json().get("data", [])
+                fut_by_date = {}
+                for row in fut_data:
+                    if row.get("institutional_investors") == "外資":
+                        fut_by_date[row["date"]] = row.get("short_open_interest_balance_volume", 0) - row.get("long_open_interest_balance_volume", 0)
+
+                fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={macro_fetch_start}&end_date={end_date}&token={finmind_token}"
+                fx_data = requests.get(fx_url, timeout=20).json().get("data", [])
+                fx_dates = sorted([row["date"] for row in fx_data])
+                fx_rate_by_date = {row["date"]: row.get("spot_buy", 0) for row in fx_data}
+
+                inst_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockTotalInstitutionalInvestors&start_date={macro_fetch_start}&end_date={end_date}&token={finmind_token}"
+                inst_data = requests.get(inst_url, timeout=20).json().get("data", [])
+                spot_by_date = {}
+                for row in inst_data:
+                    if row.get("name") == "Foreign_Investor":
+                        spot_by_date[row["date"]] = (row.get("buy", 0) - row.get("sell", 0)) / 1e8
+
+                all_macro_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
+                if all_macro_dates:
+                    db.setdefault("macro", {})
+                    for d in all_macro_dates:
+                        twd_change_5d = 0.0
+                        if d in fx_dates:
+                            idx = fx_dates.index(d)
+                            if idx >= 5:
+                                prev_rate = fx_rate_by_date.get(fx_dates[idx - 5])
+                                curr_rate = fx_rate_by_date.get(d)
+                                if prev_rate and curr_rate:
+                                    twd_change_5d = (curr_rate - prev_rate) * 10
+                        db["macro"][d] = {
+                            "foreign_spot_buy": spot_by_date.get(d, 0),
+                            "twd_rate_change_5d": twd_change_5d,
+                            "foreign_futures_short": fut_by_date.get(d, 0),
+                        }
+                    with open(DB_PATH, 'w', encoding='utf-8') as f:
+                        json.dump(db, f, ensure_ascii=False)
+        except Exception as e:
+            macro_fetch_failure = str(e)
+            print(f"⚠️ 巨觀風控資料同步失敗（不影響股價/籌碼同步結果）: {e}")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -514,7 +612,13 @@ async def download_data(request: Request):
     if chip_fetch_failures:
         preview = "、".join(chip_fetch_failures[:8])
         more = f" 等共 {len(chip_fetch_failures)} 檔" if len(chip_fetch_failures) > 8 else ""
-        return {"message": f"同步完成，但有籌碼資料抓取失敗：{preview}{more}。常見原因是 FinMind API 配額用完，建議稍後（例如隔天配額重置後）再次點擊同步補齊。"}
+        msg = f"同步完成，但有籌碼資料抓取失敗：{preview}{more}。常見原因是 FinMind API 配額用完，建議稍後（例如隔天配額重置後）再次點擊同步補齊。"
+        if macro_fetch_failure:
+            msg += f" 巨觀風控資料同步也失敗（{macro_fetch_failure}），下次同步會自動重試。"
+        return {"message": msg}
+
+    if macro_fetch_failure:
+        return {"message": f"股價與籌碼同步完成，但巨觀風控資料同步失敗（{macro_fetch_failure}），下次同步會自動重試，這段期間回測仍會照舊即時抓取（可能因此fail-open）。"}
 
     return {"message": "Data downloaded successfully"}
 
