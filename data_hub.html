@@ -367,7 +367,6 @@ async function loadExperimentPicker() {
 async function loadSingleExperimentDetail(experimentId) {
     const resultBox = document.getElementById('customExportResult');
     const summaryEl = document.getElementById('customExportSummary');
-    const body = document.getElementById('customExportBody');
     if (!experimentId) {
         if (resultBox) resultBox.style.display = 'none';
         return;
@@ -377,49 +376,80 @@ async function loadSingleExperimentDetail(experimentId) {
     const idx = expPickerList.findIndex(e => String(e.id) === String(experimentId));
     if (summaryEl) summaryEl.textContent = '⏳ 載入交易明細中...';
     if (resultBox) resultBox.style.display = 'block';
-    if (body) body.innerHTML = '';
 
     try {
         const res = await fetch(`${BACKTEST_API_URL}/api/analysis/trades/${experimentId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        let trades = data.data || [];
-
-        // 依買進日期由舊到新排序，呈現「如果從頭到尾都照這套策略操作，每天實際會買賣什麼」
-        // 的交易日誌（跟 backtest.html 的個股買賣交易明細採用同一套排序邏輯）
-        trades.sort((a, b) => (a.buy_date || '').localeCompare(b.buy_date || ''));
-        currentSingleExpTrades = trades;
-        currentSingleExpLabel = exp ? `#${idx + 1}_方案${exp.exit_strategy}_${exp.max_positions}檔_${exp.max_hold_days}天` : `experiment_${experimentId}`;
-
-        if (trades.length === 0) {
-            if (summaryEl) summaryEl.textContent = '這筆結果沒有交易紀錄。';
-            return;
-        }
-
-        if (summaryEl && exp) {
-            const holdStr = exp.max_hold_days === 999 ? '無限制' : `${exp.max_hold_days}天`;
-            summaryEl.textContent = `#${idx + 1} 方案${exp.exit_strategy}｜持倉 ${exp.max_positions} 檔｜期限 ${holdStr}｜期間 ${exp.start_date} ~ ${exp.end_date}｜共 ${trades.length} 筆交易｜總報酬率 +${exp.total_return.toFixed(2)}%`;
-        }
-
-        body.innerHTML = trades.map(t => {
-            const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
-            const pnlColor = pnlVal >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
-            return `<tr>
-                <td>${t.ticker}</td><td>${t.name}</td>
-                <td>${t.buy_date}</td><td>${t.buy_price}</td><td>${t.sell_date}</td><td>${t.sell_price}</td>
-                <td>${t.hold_days || '-'}</td><td>${t.reason || '平倉'}</td>
-                <td style="color:${pnlColor}">${(t.pnl_pct || 0).toFixed(2)}%</td>
-                <td style="color:${pnlColor}">${Math.round(pnlVal).toLocaleString()}</td>
-            </tr>`;
-        }).join('');
-
-        renderStatsGrid(trades);
-        renderEquityDrawdownChart(trades, exp);
-        renderYearlyChart(exp);
-        renderReasonBreakdown(trades);
-        renderTickerBreakdown(trades);
+        renderSingleExperimentDetail(exp, idx, data.data || [], `experiment_${experimentId}`);
     } catch (e) {
         console.error('載入交易明細失敗', e);
+        if (summaryEl) summaryEl.textContent = '❌ 載入失敗，請重試';
+    }
+}
+
+// 本機即時查詢（loadSingleExperimentDetail）跟正式站靜態快照（loadTopTradeFromSnapshot）
+// 共用同一套畫面渲染邏輯，避免兩處各寫一份、之後改一邊忘了改另一邊
+function renderSingleExperimentDetail(exp, idx, tradesIn, fallbackLabel) {
+    const summaryEl = document.getElementById('customExportSummary');
+    const body = document.getElementById('customExportBody');
+    if (body) body.innerHTML = '';
+
+    // 依買進日期由舊到新排序，呈現「如果從頭到尾都照這套策略操作，每天實際會買賣什麼」
+    // 的交易日誌（跟 backtest.html 的個股買賣交易明細採用同一套排序邏輯）
+    let trades = (tradesIn || []).slice();
+    trades.sort((a, b) => (a.buy_date || '').localeCompare(b.buy_date || ''));
+    currentSingleExpTrades = trades;
+    currentSingleExpLabel = exp ? `#${idx + 1}_方案${exp.exit_strategy}_${exp.max_positions}檔_${exp.max_hold_days}天` : fallbackLabel;
+
+    if (trades.length === 0) {
+        if (summaryEl) summaryEl.textContent = '這筆結果沒有交易紀錄。';
+        return;
+    }
+
+    if (summaryEl && exp) {
+        const holdStr = exp.max_hold_days === 999 ? '無限制' : `${exp.max_hold_days}天`;
+        summaryEl.textContent = `#${idx + 1} 方案${exp.exit_strategy}｜持倉 ${exp.max_positions} 檔｜期限 ${holdStr}｜期間 ${exp.start_date} ~ ${exp.end_date}｜共 ${trades.length} 筆交易｜總報酬率 +${exp.total_return.toFixed(2)}%`;
+    }
+
+    body.innerHTML = trades.map(t => {
+        const pnlVal = t.pnl !== undefined ? t.pnl : (t.pnl_amount !== undefined ? t.pnl_amount : 0);
+        const pnlColor = pnlVal >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+        return `<tr>
+            <td>${t.ticker}</td><td>${t.name}</td>
+            <td>${t.buy_date}</td><td>${t.buy_price}</td><td>${t.sell_date}</td><td>${t.sell_price}</td>
+            <td>${t.hold_days || '-'}</td><td>${t.reason || '平倉'}</td>
+            <td style="color:${pnlColor}">${(t.pnl_pct || 0).toFixed(2)}%</td>
+            <td style="color:${pnlColor}">${Math.round(pnlVal).toLocaleString()}</td>
+        </tr>`;
+    }).join('');
+
+    renderStatsGrid(trades);
+    renderEquityDrawdownChart(trades, exp);
+    renderYearlyChart(exp);
+    renderReasonBreakdown(trades);
+    renderTickerBreakdown(trades);
+}
+
+// 正式站沒有本機完整資料庫，改讀「發布快照」時一併打包好的最佳策略完整交易明細
+// （見 backtest_engine.py 的 publish_snapshot，只帶報酬率最高那一組，資料量很小）
+async function loadTopTradeFromSnapshot() {
+    const resultBox = document.getElementById('customExportResult');
+    const summaryEl = document.getElementById('customExportSummary');
+    try {
+        const snap = await getSnapshot();
+        const experiments = (snap && snap.experiments) || [];
+        const topTrades = (snap && snap.top_trades) || [];
+        if (experiments.length === 0) {
+            if (summaryEl) summaryEl.textContent = '尚無已發布的回測結果。';
+            if (resultBox) resultBox.style.display = 'block';
+            return;
+        }
+        expPickerList = experiments;
+        if (resultBox) resultBox.style.display = 'block';
+        renderSingleExperimentDetail(experiments[0], 0, topTrades, 'top_experiment');
+    } catch (e) {
+        console.error('載入快照交易明細失敗', e);
         if (summaryEl) summaryEl.textContent = '❌ 載入失敗，請重試';
     }
 }
@@ -688,11 +718,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const desc = document.getElementById('leaderboardExportDesc');
         if (desc) desc.textContent = '下載本機端已發布的完整排行榜（依總報酬率排序），包含策略方案、持倉設定、各年度報酬拆解等欄位。CSV 格式，Excel 與 Google 試算表皆可直接開啟。';
 
-        // 「自訂條件匯出」需要即時查詢本機完整資料庫，正式站沒有這個資料，鎖住不顯示操作介面
-        const controls = document.getElementById('customExportControls');
-        if (controls) controls.style.display = 'none';
+        // 「自訂條件匯出」在正式站不能任意挑選實驗（需要即時查詢本機完整資料庫），
+        // 但發布快照時已經額外打包了報酬率最高那一組的完整交易明細，資料量很小，
+        // 可以直接顯示＋提供下載，不用整段鎖住不給一般使用者看
+        const picker = document.getElementById('expPicker');
+        if (picker) picker.style.display = 'none';
+        const refreshBtn = document.getElementById('btnRefreshExpList');
+        if (refreshBtn) refreshBtn.style.display = 'none';
         const localOnlyNote = document.getElementById('customExportLocalOnly');
-        if (localOnlyNote) localOnlyNote.style.display = 'block';
+        if (localOnlyNote) {
+            localOnlyNote.style.display = 'block';
+            localOnlyNote.textContent = 'ℹ️ 正式站僅提供報酬率最高那一組策略的完整交易明細（如需查看其他實驗結果，請在管理者本機端使用）。';
+        }
+        loadTopTradeFromSnapshot();
     }
 });
 </script>

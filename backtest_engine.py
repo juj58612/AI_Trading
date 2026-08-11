@@ -1317,22 +1317,33 @@ def _build_leaderboard_csv(experiments: list) -> str:
 @app.post("/api/backtest/publish_snapshot")
 async def publish_snapshot():
     """
-    把本機跑完的排行榜結果（不含完整交易資料庫、不含逐筆交易明細）打包成一份精簡的
-    靜態快照，寫到專案目錄下的 published_snapshot.json + published_leaderboard.csv。
-    使用者手動 git commit + push 之後，Render 正式站（沒有永久硬碟、跑不了長時間回測）
-    就能讀這些靜態檔案來顯示排行榜，而不必仰賴正式站自己那個每次重啟就會被清空的資料庫。
-    刻意只發布排行榜的統計結果，不含每一筆交易的詳細紀錄，檔案才不會又多又肥大。
+    把本機跑完的排行榜結果打包成一份精簡的靜態快照，寫到專案目錄下的
+    published_snapshot.json + published_leaderboard.csv。使用者手動 git commit + push
+    之後，Render 正式站（沒有永久硬碟、跑不了長時間回測）就能讀這些靜態檔案來顯示排行榜，
+    而不必仰賴正式站自己那個每次重啟就會被清空的資料庫。
+    完整的逐筆交易資料庫有數十 MB、697 組實驗、40 萬筆以上交易，太大不可能整包發布
+    （GitHub 單檔硬性上限 100MB）；但只發布「報酬率最高那一組」的完整交易明細，資料量
+    很小（幾百筆、不到 200KB），值得額外附上，讓正式站的一般使用者至少能看到並下載
+    最佳策略的完整交易明細，不用只看排行榜摘要數字。
     """
     status_data = await get_db_status()
     experiments_data = get_experiments()
     attribution_data = get_attribution()
     experiments = experiments_data.get("data", [])
 
+    top_trades = []
+    if experiments:
+        top_exp_id = experiments[0].get("id")
+        if top_exp_id:
+            top_trades = get_trades(top_exp_id).get("data", [])
+            top_trades.sort(key=lambda t: t.get("buy_date") or "")
+
     snapshot = {
         "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "status": status_data,
         "experiments": experiments,
         "attribution": attribution_data,
+        "top_trades": top_trades,
     }
 
     with open(SNAPSHOT_PATH, 'w', encoding='utf-8') as f:
@@ -1346,10 +1357,11 @@ async def publish_snapshot():
     csv_size_kb = os.path.getsize(SNAPSHOT_CSV_PATH) / 1024
     return {
         "status": "success",
-        "message": f"已產生快照（{len(experiments)} 筆排行榜結果，不含交易明細）：published_snapshot.json（{json_size_kb:.0f} KB）+ published_leaderboard.csv（{csv_size_kb:.0f} KB），請自行 git commit + push 才會真正發布到正式站",
+        "message": f"已產生快照（{len(experiments)} 筆排行榜結果 + 最佳策略 {len(top_trades)} 筆交易明細）：published_snapshot.json（{json_size_kb:.0f} KB）+ published_leaderboard.csv（{csv_size_kb:.0f} KB），請自行 git commit + push 才會真正發布到正式站",
         "json_size_kb": round(json_size_kb, 1),
         "csv_size_kb": round(csv_size_kb, 1),
         "experiments_count": len(experiments),
+        "top_trades_count": len(top_trades),
         "generated_at": snapshot["generated_at"],
     }
 
