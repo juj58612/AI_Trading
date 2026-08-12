@@ -166,6 +166,8 @@
         <a href="#case9">⑨ 該不該優先推薦「外資投信同買第一天」？（反證）</a>
         <a href="#case10">⑩ 「大買」該不該加強推薦訊號？外資/投信權重與連買天數交叉分析（反證）</a>
         <a href="#case11">⑪ 「大賣」該不該加強出場訊號？事件研究+逐年穩健性自我修正（反證）</a>
+        <a href="#case12">⑫ 投信比外資更持久？驗證市場傳言</a>
+        <a href="#case13">⑬ 三大法人資料未來函數：整個系統的關鍵修正</a>
     </div>
 
     <!-- 個案一 -->
@@ -757,6 +759,95 @@
         <h3>結論</h3>
         <p><strong>「大賣」不該加強出場訊號，證據比個案⑩的「大買」更薄弱。</strong>事件研究法本身就顯示賣超金額大小跟後續股價表現沒有清楚關係；5.5年回測一度看似大幅改善，但逐年穩健性檢查後推翻——2022、2025兩年都更差，不是穩定效應。方案B現行的「土洋雙賣只看正負號」設計維持不變是對的。</p>
         <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（再次驗證）</strong>：連續多年回測的加總結果，即使數字很漂亮，也不能取代逐年獨立驗證——這是本系列研究（個案⑤⑨⑩⑪）反覆確認的同一個原則，這次差點被自己的正面結果騙過去，逐年檢查救回了正確結論。</p>
+    </div>
+
+    <!-- 個案十二 -->
+    <div class="doc-section" id="case12">
+        <h2>⑫ 投信比外資更持久？驗證市場傳言<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：使用者提出台股常見的市場說法——投信因法規限制不能大買大賣當沖，買進通常較持久；外資則不一定，尤其有所謂「假外資」（資金繞道海外再匯入台股），操作可能更像短線熱錢，不如投信穩當。這個說法能不能從既有籌碼資料庫（126檔、5.5年）裡找到實證？</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">分三個角度驗證：①連續買超天數的分布（投信streak是否系統性比外資長）；②買超訊號後續5/10/20/60日的股價報酬（持久≠報酬好，分開驗證）；③買超後幾天內首次出現該法人反手賣超（反手越快，越像快進快出的熱錢行為）。</p>
+
+        <h3>① 連續買超天數分布——支持「投信較持久」</h3>
+        <p>📎 <a href="research_data/case12_trust_foreign_streak_summary.csv" download style="color:#ec4899; font-weight:500;">下載連續天數分布統計</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th></th><th>平均</th><th>中位數</th><th>75th百分位</th><th>90th百分位</th><th>最長</th></tr></thead>
+            <tbody>
+                <tr><td><strong>投信</strong></td><td><strong>2.94天</strong></td><td><strong>2天</strong></td><td>3天</td><td><strong>7天</strong></td><td>57天</td></tr>
+                <tr><td>外資</td><td>2.20天</td><td>1天</td><td>3天</td><td>4天</td><td>37天</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 投信買超streak系統性比外資長——平均長33%，中位數長一倍（2天 vs 1天），90th百分位長75%（7天 vs 4天）。方向清楚支持市場傳言。
+        </div>
+
+        <h3>② 買超後續股價報酬——沒有支持「外資訊號比較差」</h3>
+        <table class="doc-table">
+            <thead><tr><th></th><th>後續5日</th><th>後續10日</th><th>後續20日</th><th>後續60日</th></tr></thead>
+            <tbody>
+                <tr><td>投信</td><td>0.84%</td><td>1.54%</td><td>3.06%</td><td>9.96%</td></tr>
+                <tr><td>外資</td><td>0.87%</td><td>1.67%</td><td>3.34%</td><td>10.69%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 外資買超後的後續報酬其實跟投信差不多，甚至略高一點——單純看「訊號準不準」，外資並沒有比較差。「快進快出」不等於「訊號品質差」，是不同的維度。
+        </div>
+
+        <h3>③ 反手賣超速度——最戲劇性的發現，強力支持「外資快進快出」</h3>
+        <p>📎 <a href="research_data/case12_trust_foreign_reversal_summary.csv" download style="color:#ec4899; font-weight:500;">下載反手速度統計</a>　<a href="research_data/case12_trust_fwdreturns.csv" download style="color:#ec4899; font-weight:500;">投信逐筆明細</a>　<a href="research_data/case12_foreign_fwdreturns.csv" download style="color:#ec4899; font-weight:500;">外資逐筆明細</a>　——皆無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th></th><th>20天內反手賣出比例</th><th>平均反手天數</th><th>中位數</th></tr></thead>
+            <tbody>
+                <tr><td>投信</td><td>94.4%</td><td>4.92天</td><td>3天</td></tr>
+                <tr><td><strong>外資</strong></td><td><strong>99.6%</strong></td><td><strong>2.53天</strong></td><td><strong>2天</strong></td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 外資買超後<strong>幾乎必然</strong>（99.6%）會在20天內反手賣出，平均只要2.53天，比投信快了將近一倍（4.92天）。三個角度裡證據最清楚、最戲劇性的一個。
+        </div>
+
+        <h3>結論</h3>
+        <p><strong>市場傳言在「持有天數」跟「反手速度」上都有清楚的數據支持</strong>——投信確實比較穩、抱得久；外資確實比較快進快出，且幾乎必然會反手。但這不代表外資訊號「品質」比較差（②的後續報酬沒有比較差），只是「有效期」比較短，是持久度跟準確度兩個不同的維度。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>跟個案⑬（三大法人資料未來函數修正）的關聯</strong>：外資訊號反手中位數只要2天，如果訊號本身因為資料延遲（FinMind收盤後才公布）就已經晚1天才知道，等於快用掉一半的有效窗口；投信訊號中位數3天才反手，同樣1天延遲的相對衝擊小很多。這是「籌碼判斷延遲修正」特別該優先處理出場端的另一個佐證——不只是理論推論，這裡有實際數據支持。</p>
+    </div>
+
+    <!-- 個案十三 -->
+    <div class="doc-section" id="case13">
+        <h2>⑬ 三大法人資料未來函數：整個系統的關鍵修正<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：使用者持有的6531愛普連續3天(08-07/08-09/08-10)在首頁排名第2、chip_score=5「土洋同買」，08-10買進，隔天(08-11)排名暴跌到97/126、chip_score變成-2。使用者敏銳地提出假設：這會不會是因為系統顯示的「今天同買」訊號，其實抓到的是前一個已公布交易日的資料（因為當天的法人買賣超還沒公布），導致「回測標記的第N天」換算成真實世界能行動的時間點，其實已經是延遲後的更晚時機？</p>
+
+        <h3>查證：確認法人資料的真實公布時間</h3>
+        <p>查證公開資訊：證交所每檔個股的三大法人買賣超要<strong>收盤(13:30)後下午5點</strong>才公布；我們的資料源FinMind要<strong>隔天凌晨1:30</strong>才整理好放進API。也就是說，T日的法人買賣超最早也要T日17:00才存在，實際能查到要等T+1凌晨。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;">資料來源：<a href="https://www.twse.com.tw/zh/trading/foreign/t86.html" target="_blank" style="color:#c084fc;">臺灣證券交易所三大法人買賣超日報</a>、<a href="https://finmind.github.io/tutor/TaiwanMarket/Chip/" target="_blank" style="color:#c084fc;">FinMind籌碼面資料說明</a></p>
+
+        <h3>查code：確認整個系統確實用了不該存在的「當天」資料</h3>
+        <p>逐一檢查<code>backtest_engine.py</code>與<code>main.py</code>，發現進場（籌碼積分）跟出場（土洋雙賣等所有籌碼類條件）都用<code>cdf.loc[current_date]</code>（當天自己的法人資料）去判斷「當天」該不該買賣，同時執行價也是當天收盤價——等於回測讓模型多偷看了一天不該看到的資料（未來函數）。<code>strategy_core.py</code>本身是乾淨的（只接收資料，不主動抓取），問題完全出在呼叫端。</p>
+        <table class="doc-table">
+            <thead><tr><th>檔案</th><th>位置</th><th>問題</th></tr></thead>
+            <tbody>
+                <tr><td><code>backtest_engine.py</code></td><td>出場迴圈</td><td>用當天法人資料判斷當天出場</td></tr>
+                <tr><td><code>backtest_engine.py</code></td><td>進場候選篩選</td><td>用當天法人資料判斷當天進場</td></tr>
+                <tr><td><code>main.py</code></td><td><code>_simulate_holding_exit_signal</code>（操盤室賣出提醒）</td><td>同樣的當天資料問題</td></tr>
+                <tr><td><code>main.py</code></td><td><code>run_scan</code>/<code>process_ticker</code>（首頁即時掃描）</td><td>依賴FinMind延遲「湊巧」不出包，沒有明確防呆</td></tr>
+            </tbody>
+        </table>
+        <p>修正：全部改用「前一個有資料的交易日」的法人資料，執行價維持當天收盤價不變（這部分本來就合理——你在當天開盤前就已經知道前一天17:00公布的資料，可以用來決定當天的交易）；首頁即時掃描額外加上明確的日期防呆，不再單純依賴API延遲的巧合。</p>
+
+        <h3>重新驗證：Regime研究關鍵數字全部下修</h3>
+        <p>📎 <a href="research_data/case13_before_after_comparison.csv" download style="color:#ec4899; font-weight:500;">下載修正前後對照表</a>　<a href="research_data/case13_48combo_lookahead_fixed.csv" download style="color:#ec4899; font-weight:500;">下載修正後48組完整結果</a>　——皆無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>項目</th><th>修正前</th><th>修正後</th></tr></thead>
+            <tbody>
+                <tr><td>個案⑤ baseline</td><td>522.18%（MDD22.25%）</td><td>409.67%（MDD24.45%）</td></tr>
+                <tr><td>個案⑦ 土洋雙賣疊加版</td><td>468.71%（MDD17.48%）</td><td>359.34%（MDD27.59%，明顯惡化）</td></tr>
+                <tr><td>個案⑦ 48組窮舉冠軍</td><td>692.64%（MDD24.17%，<strong>含土洋雙賣</strong>）</td><td><strong>651.37%（MDD38.26%，冠軍配置改變，土洋雙賣被拿掉）</strong></td></tr>
+            </tbody>
+        </table>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>冠軍配置真的變了，不只是數字下修</strong>：原本48組裡的冠軍固定含「土洋雙賣」，修正後最佳配置變成拿掉土洋雙賣（原冠軍配置修正後降到第7名，408.07%）——這正好呼應個案⑪的獨立發現：土洋雙賣訊號本身用未來函數算，優勢有一部分是「偷看」出來的，修正後這個優勢消失。三個獨立研究方向（案例⑨連買天數、案例⑪大賣、這次的未來函數修正）最後匯聚到同一個結論：籌碼類的「當天訊號」普遍沒有想像中可靠。
+        </div>
+
+        <h3>目前狀態</h3>
+        <p><code>strategy_core.py</code>的呼叫端（<code>backtest_engine.py</code>、<code>main.py</code>）已修正並上線；R策略（個案⑤⑦⑧原本考慮上線的配置）需要依這次修正後的數字重新評估，48組窮舉的新冠軍設定尚未正式寫回`strategy_core.py`。<code>backtest_logs.db</code>裡累積的810組正式回測實驗（大數據回測量化分析報告、個案⑨⑩⑪引用的全部歷史交易）全部是修正前產生的，已備份舊資料庫並啟動全面重跑，重跑完成後會更新<code>analysis.html</code>的排行榜與相關個案研究的結論。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

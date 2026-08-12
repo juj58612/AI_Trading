@@ -1020,9 +1020,16 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                 if not pd.isna(t_idx['MA20']):
                     is_bull_today = t_idx['close'] > t_idx['MA20']
 
+            # 三大法人買賣超要收盤(13:30)後17:00才公布，FinMind更要等隔天凌晨1:30才能查到，
+            # 所以current_date「當天」的籌碼資料在current_date收盤當下根本不存在、不可能被真實
+            # 交易者拿來下單——這裡改用cdf.iloc[idx-1]（上一個有資料的交易日，等於前一天17:00
+            # 已公布、隔天開盤前就已知的資料），避免用未來才會公布的資料做這一天的出場判斷。
+            cdf_idx = cdf.index.get_loc(current_date) if current_date in cdf.index else -1
+            today_chip = cdf.iloc[cdf_idx - 1].to_dict() if cdf_idx >= 1 else {}
+
             sell_reason, p = strategy_core.evaluate_exit(
                 p, today_price, yesterday_close,
-                cdf.loc[current_date] if current_date in cdf.index else {},
+                today_chip,
                 req.exit_strategy, req.max_hold_days, current_date,
                 is_bull_regime=is_bull_today
             )
@@ -1091,13 +1098,16 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                 
                 close = today_price['close']
                 
+                # 同樣的未來函數問題：current_date當天的法人買賣超要17:00後才公布，這裡買進判斷
+                # 用的兩天窗口整批往前移一天（idx-2/idx-1取代idx-1/idx），calculate_chip_score
+                # 把list最後一個元素當「今天」，所以最後一筆必須是D-1（已公布、可知），不能是D。
                 inst_list = []
                 idx = cdf.index.get_loc(current_date) if current_date in cdf.index else -1
+                if idx >= 2:
+                    inst_list.append(cdf.iloc[idx-2].to_dict())
                 if idx >= 1:
                     inst_list.append(cdf.iloc[idx-1].to_dict())
-                if idx >= 0:
-                    inst_list.append(cdf.iloc[idx].to_dict())
-                    
+
                 eval_res = strategy_core.evaluate_entry(today_price, inst_list, req.exit_strategy, req.max_hold_days)
                 
                 if eval_res:
