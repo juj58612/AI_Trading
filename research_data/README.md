@@ -107,6 +107,26 @@
   對應 [個案⑪](../case_studies.html#case11) 逐年穩健性檢查：2022空頭年與2025年「大賣濾網」版本都比baseline差，只有2024年較好（但MDD也更差）——推翻5.5年連續回測看起來的優勢，示範「連續回測不能取代逐年獨立驗證」這個方法論教訓。
   產生腳本：`bigsell_year_robustness.py`，2026-08-12。
 
+- **`case12_trust_foreign_streak_summary.csv`**（2列，彙總指標）
+  對應 [個案⑫](../case_studies.html#case12)：投信 vs 外資連續買超天數分布統計，驗證「投信因法規限制不能大買大賣當沖、買超較持久」的市場傳言——投信平均streak 2.94天，外資2.20天。
+  產生腳本：`trust_vs_foreign_persistence.py`，2026-08-12。
+
+- **`case12_trust_foreign_reversal_summary.csv`**（2列，彙總指標）
+  對應 [個案⑫](../case_studies.html#case12)：買超後幾天內首次出現反手賣超，最戲劇性的發現——外資99.6%會在20天內反手賣出（平均2.53天），投信只有94.4%（平均4.92天）。
+  產生腳本：`trust_vs_foreign_persistence.py`，2026-08-12。
+
+- **`case12_trust_fwdreturns.csv`** / **`case12_foreign_fwdreturns.csv`**（58,056列／82,406列，逐筆買超事件的後續5/10/20/60日報酬）
+  對應 [個案⑫](../case_studies.html#case12) 事件研究逐筆明細：投信、外資買超事件各自的後續報酬，兩者其實相差不大（外資甚至略高），代表「反手快」不等於「訊號差」。
+  產生腳本：`trust_vs_foreign_persistence.py`，2026-08-12。
+
+- **`case13_before_after_comparison.csv`**（4列，修正前後對照）
+  對應 [個案⑬](../case_studies.html#case13)：三大法人資料未來函數bug修正前後的關鍵數字對照，案例⑤⑦的regime研究全部重跑確認。
+  來源：`regime_adaptive_v3_add_dualsell.py`、`regime_bear_exhaustive_search.py`（皆已修正未來函數後重跑），2026-08-12。
+
+- **`case13_48combo_lookahead_fixed.csv`**（48列，彙總指標）
+  對應 [個案⑬](../case_studies.html#case13)：修正未來函數後重跑的48組窮舉搜尋完整結果，冠軍配置從「含土洋雙賣」變成「不含土洋雙賣」，證實原冠軍的優勢部分來自未來函數。
+  產生腳本：`regime_bear_exhaustive_search.py`（已修正未來函數），2026-08-12。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。

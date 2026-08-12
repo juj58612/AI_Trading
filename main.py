@@ -501,6 +501,16 @@ def run_scan(tickers):
             if is_mock or not inst_data:
                 return None
 
+            # 三大法人買賣超要收盤(13:30)後17:00才公布、FinMind更要等隔天凌晨1:30才查得到，
+            # 「今天」的籌碼資料在「今天」股價收盤當下不可能真的存在。正常情況下FinMind回傳
+            # 的inst_data本來就不會包含今天（發布時間還沒到），這裡加一道明確防呆：過濾掉任何
+            # 日期>=最新股價交易日的列，避免未來資料時序若有變化、或掃描時機湊巧對齊，
+            # 悄悄把「還沒公布」的資料當成「今天」餵給籌碼積分計算(未來函數)。
+            latest_close_date = hist.index[-1].strftime('%Y-%m-%d')
+            inst_data = [row for row in inst_data if row.get('date', '') < latest_close_date]
+            if not inst_data:
+                return None
+
             # 3. Calculate Chip Score (using unified strategy_core)
             chip_score, signal_text = strategy_core.calculate_chip_score(latest_close, ma5, inst_data)
 
@@ -1001,7 +1011,11 @@ def _simulate_holding_exit_signal(p: dict, regime_df=None) -> dict:
         today_price = price_df.loc[current_date]
         idx = price_df.index.get_loc(current_date)
         yesterday_close = price_df.iloc[idx - 1]['close'] if idx > 0 else None
-        chip_row = chip_df.loc[current_date] if (not chip_df.empty and current_date in chip_df.index) else {}
+        # 三大法人買賣超要收盤後17:00才公布、FinMind隔天凌晨才查得到，current_date當天的
+        # 籌碼資料在current_date當下不可能真實存在，改用前一個有資料的交易日（見
+        # backtest_engine.py run_backtest同一處修正的說明）。
+        chip_idx = chip_df.index.get_loc(current_date) if (not chip_df.empty and current_date in chip_df.index) else -1
+        chip_row = chip_df.iloc[chip_idx - 1] if chip_idx >= 1 else {}
 
         is_bull_today = None
         if exit_strategy == 'R' and regime_df is not None and not regime_df.empty:
@@ -1598,6 +1612,12 @@ def serve_research_data(filename: str):
         "case11_bigsell_streak_cross.csv",
         "case11_bigsell_backtest_5.5yr.csv",
         "case11_bigsell_year_robustness.csv",
+        "case12_trust_foreign_streak_summary.csv",
+        "case12_trust_foreign_reversal_summary.csv",
+        "case12_trust_fwdreturns.csv",
+        "case12_foreign_fwdreturns.csv",
+        "case13_48combo_lookahead_fixed.csv",
+        "case13_before_after_comparison.csv",
     }
     filepath = os.path.join("research_data", filename)
     if filename not in allowed or not os.path.exists(filepath):
