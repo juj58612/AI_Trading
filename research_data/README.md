@@ -67,6 +67,26 @@
   對應 [個案⑨](../case_studies.html#case9) 補充驗證：使用者提出「連續同買天數的最佳解可能隨regime(多空)而不同」的假設，重新用**去重後**的唯一訊號依年度拆解檢查。結果：原本未去重版本顯示「2022年同買第6天以上表現最好(+0.76%/勝率55.8%)」，去重後2022年同買第6天以上只剩9筆真實訊號、報酬轉為-0.28%，跟其他天數一樣糟——原本的「規律」也是重複計數的假象。去重後每年每個天數分桶樣本量降到個位數~數十筆，樣本量不足以支撐任何regime-conditional的細分規則，此方向暫不建議繼續，需要更長歷史/更大股票池累積更多獨立訊號後才適合重新檢驗。
   產生腳本：`cobuy_year_dedup_check.py`，2026-08-12。
 
+- **`case10_bigbuy_dedup_strict.csv`** / **`case10_bigbuy_dedup_loose.csv`**（各4列，彙總指標）
+  對應 [個案⑩](../case_studies.html#case10)「大買」（同買+買超金額夠大）研究：去重後per-trade分析，嚴格版(前10%/90th百分位)與寬鬆版(前25%/75th百分位)兩種門檻交叉比對。
+  產生腳本：`bigbuy_analysis.py`，2026-08-12。
+
+- **`case10_bigbuy_backtest_4way.csv`**（4列，彙總指標）
+  對應 [個案⑩](../case_studies.html#case10) 第一輪決定性驗證：baseline / 硬性濾網寬鬆版 / 硬性濾網嚴格版 / 軟性加權版，四組完整投資組合回測。
+  產生腳本：`bigbuy_backtest_filter.py`，2026-08-12。
+
+- **`case10_bigbuy_weighting_screen.csv`**（5列，彙總指標）
+  對應 [個案⑩](../case_studies.html#case10) 外資/投信權重篩選：5種權重組合（等權重／只看投信／只看外資／投信加重／外資加重）的per-trade快篩結果，找出`foreign_only`分離度最好。
+  產生腳本：`bigbuy_weighting_screen.py`，2026-08-12。
+
+- **`case10_bigbuy_streak_cross.csv`**（10列，交叉表）
+  對應 [個案⑩](../case_studies.html#case10)：連買天數（個案⑨的變數）× 是否大買 的交叉分析，發現第1~2天+大買是最強的交互作用格。
+  產生腳本：`bigbuy_streak_cross.py`，2026-08-12。
+
+- **`case10_bigbuy_final_backtest.csv`**（3列，彙總指標）
+  對應 [個案⑩](../case_studies.html#case10) 最終決定性驗證：baseline / 外資買超前25%濾網 / (大買+限定第1~2天)組合濾網，三組完整投資組合回測，確認即使是篩選出來最有希望的候選條件，portfolio層級依然不如不設限的現行系統。
+  產生腳本：`bigbuy_final_backtest.py`，2026-08-12。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。

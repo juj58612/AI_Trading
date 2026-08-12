@@ -164,6 +164,7 @@
         <a href="#case7">⑦ 用方案B重新設計空頭端：一次不如預期的嘗試</a>
         <a href="#case8">⑧ Regime自動切換策略模型的建構與驗證（總結）</a>
         <a href="#case9">⑨ 該不該優先推薦「外資投信同買第一天」？（反證）</a>
+        <a href="#case10">⑩ 「大買」該不該加強推薦訊號？外資/投信權重與連買天數交叉分析（反證）</a>
     </div>
 
     <!-- 個案一 -->
@@ -591,6 +592,96 @@
         <div class="quote-box">
             📌 <strong>「穩健核心模型+依市況動態調整的靈活參數」這個設計方向本身是對的（Regime自動切換就是成功案例），但不是每個候選參數都有足夠資料支撐做成regime-conditional規則。</strong>「連續同買天數」目前資料量不夠，暫不建議往這個方向做，需要更長歷史或更大股票池累積更多獨立訊號後才適合重新檢驗——已記錄提醒，待未來資料量足夠時重新評估。
         </div>
+    </div>
+
+    <!-- 個案十 -->
+    <div class="doc-section" id="case10">
+        <h2>⑩ 「大買」該不該加強推薦訊號？外資/投信權重與連買天數交叉分析<span class="status-tag status-solid">通用驗證（反證）</span></h2>
+        <p><strong>起因</strong>：個案⑨確認「連買天數」不該當硬性濾網。使用者接著問：目前<code>calculate_chip_score</code>只判斷外資/投信買超是正是負，完全不看金額大小——「大買」（買超金額夠大）該不該加強推薦訊號？並要求：①用網路上可查證的專業定義（沒有固定金額門檻，改用統計相對定義）；②交叉測試外資/投信不同權重；③把連買天數也納入交叉分析一起看。</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">「大買」定義（討論後定案）：同買（foreign&gt;0且trust&gt;0，維持現有定義）+ 合計買超金額夠大，用兩種相對統計方法交叉比對——方法A：買超金額排進該股過去60日的前10%(嚴格版)/前25%(寬鬆版)；方法B：買超金額佔當日成交量比例達90th/75th百分位（門檻依實際資料分布校準，不是憑空設定）。網路查證確認台股法人籌碼沒有官方/業界統一的固定金額「大買」標準，相對統計門檻是量化分析較站得住腳的作法。</p>
+
+        <h3>第一輪：大買 vs 一般同買，per-trade去重分析</h3>
+        <p>📎 <a href="research_data/case10_bigbuy_dedup_strict.csv" download style="color:#ec4899; font-weight:500;">下載嚴格版結果</a>　<a href="research_data/case10_bigbuy_dedup_loose.csv" download style="color:#ec4899; font-weight:500;">下載寬鬆版結果</a>　（皆無需登入即可下載）</p>
+        <table class="doc-table">
+            <thead><tr><th>分類（寬鬆版）</th><th>唯一訊號數</th><th>平均報酬</th><th>勝率</th></tr></thead>
+            <tbody>
+                <tr><td>非同買日</td><td>1,108</td><td>0.26%</td><td>45.1%</td></tr>
+                <tr><td>一般同買（未達大買門檻）</td><td>674</td><td><strong>-0.31%（最差）</strong></td><td>45.1%</td></tr>
+                <tr><td>大買（A或B單一達標）</td><td>1,002</td><td>0.33%</td><td>44.8%</td></tr>
+                <tr><td>大買（A且B都達標）</td><td>675</td><td>0.20%</td><td>46.5%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 比個案⑨的天數變數更有意思：「一般同買」（有同買但買超金額不大）平均報酬是負的，比完全沒有同買訊號還差；只有「大買」才明顯優於平均。逐年拆開看，4/6年方向一致（2022~2026多數支持，2021反轉，2023混雜）——比連買天數變數穩健，但還不到「毫無疑慮」的程度。
+        </div>
+
+        <h3>第一輪決定性驗證：寫成濾網跑完整投資組合回測</h3>
+        <p>📎 <a href="research_data/case10_bigbuy_backtest_4way.csv" download style="color:#ec4899; font-weight:500;">下載四組回測結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th></tr></thead>
+            <tbody>
+                <tr><td><strong>baseline（現行系統，不管金額大小）</strong></td><td><strong>232.06%</strong></td><td><strong>30.57%</strong></td><td>42.59%</td><td><strong>1.58</strong></td></tr>
+                <tr><td>硬性濾網·寬鬆（前25%）</td><td>199.68%</td><td>34.34%更差</td><td>42.22%</td><td>1.44</td></tr>
+                <tr><td>硬性濾網·嚴格（前10%）</td><td>146.55%大幅更差</td><td>36.33%更差</td><td>39.71%</td><td>1.32</td></tr>
+                <tr><td>軟性加權（不排除，大買時momentum+0.05）</td><td>231.83%（幾乎打平）</td><td>34.03%更差</td><td>42.26%</td><td>1.51</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>四組都不如baseline。</strong> 連軟性加權（不排除任何訊號，只是大買時排序往前推）都沒有幫助——總報酬幾乎打平，但MDD反而變差。硬性濾網門檻越嚴格，表現越差。Per-trade看起來的優勢，換算成投資組合層級（有限持倉檔數的排擠效應）後消失——這是個案⑨已經教過的同一課，這次連軟性加權版本也印證了。
+        </div>
+
+        <h3>第二輪：外資/投信不同權重交叉比對</h3>
+        <p>不甘於第一輪結果，使用者要求進一步測試「大買」的定義本身：外資跟投信的買超金額該不該用不同權重合成？測了5種權重組合。</p>
+        <p>📎 <a href="research_data/case10_bigbuy_weighting_screen.csv" download style="color:#ec4899; font-weight:500;">下載5種權重快篩結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>權重方案</th><th>大買平均報酬</th><th>大買勝率</th><th>大買-一般同買 差距</th></tr></thead>
+            <tbody>
+                <tr><td>等權重（現行定義）</td><td>0.28%</td><td>45.5%</td><td>0.513</td></tr>
+                <tr><td>只看投信</td><td>0.21%</td><td>45.5%</td><td>0.242（最小）</td></tr>
+                <tr><td><strong>只看外資</strong></td><td><strong>0.38%（最高）</strong></td><td><strong>46.8%（最高）</strong></td><td><strong>0.601（最大）</strong></td></tr>
+                <tr><td>投信加重(0.5,1.5)</td><td>0.25%</td><td>45.4%</td><td>0.443</td></tr>
+                <tr><td>外資加重(1.5,0.5)</td><td>0.29%</td><td>46.2%</td><td>0.458</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 意外發現：「只看外資買超金額」（完全忽略投信）的per-trade分離度最好，不是市場常識裡認為對中小型股更有指標性的投信。但這只是per-trade快篩，還沒經過投資組合層級驗證。
+        </div>
+
+        <h3>第三輪：連買天數 × 大買 交叉分析</h3>
+        <p>把個案⑨的「連買天數」變數跟本案例的「大買」變數交叉，找有沒有交互作用。</p>
+        <p>📎 <a href="research_data/case10_bigbuy_streak_cross.csv" download style="color:#ec4899; font-weight:500;">下載交叉表</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>連買天數</th><th>非大買 平均/勝率</th><th>大買 平均/勝率</th></tr></thead>
+            <tbody>
+                <tr><td>第1天</td><td>-0.23% / 45.0%</td><td><strong>0.33% / 45.9%</strong></td></tr>
+                <tr><td>第2天</td><td>-0.32% / 46.8%</td><td><strong>0.61%（全表最高）/ 46.9%</strong></td></tr>
+                <tr><td>第3天</td><td>0.36% / 50.0%</td><td>-0.41%（反轉）/ 43.8%</td></tr>
+                <tr><td>第4~5天</td><td>-0.41% / 36.8%</td><td>-0.44% / 36.4%</td></tr>
+                <tr><td>第6天以上</td><td>-1.35% / 34.8%</td><td>-0.36% / 53.6%（n小）</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 發現真正的交互作用：「大買」在第1~2天有明顯幫助（合計n=1,311，兩天都轉正），但第3天卻反轉（大買反而比一般同買差），第4~5天兩者都差。不是單調關係，是「早期+大買」這個特定組合看起來最有希望。
+        </div>
+
+        <h3>最終決定性驗證：篩出的最強候選條件，投資組合層級依然失敗</h3>
+        <p>拿第二、三輪篩出的兩個最有希望的候選（只看外資的大買定義；大買+限定第1~2天），做最後的投資組合回測。</p>
+        <p>📎 <a href="research_data/case10_bigbuy_final_backtest.csv" download style="color:#ec4899; font-weight:500;">下載最終回測結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th></tr></thead>
+            <tbody>
+                <tr><td><strong>baseline（現行系統）</strong></td><td><strong>232.06%</strong></td><td><strong>30.57%</strong></td><td>42.59%</td><td><strong>1.58</strong></td></tr>
+                <tr><td>只看外資買超前25%</td><td>205.54%</td><td>37.08%更差</td><td>42.26%</td><td>1.40</td></tr>
+                <tr><td>大買(等權重)+限定第1~2天</td><td>195.83%</td><td>32.78%更差</td><td>39.95%</td><td>1.36</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>即使是三輪篩選裡最有希望的候選條件，投資組合層級依然打不贏baseline。</strong>「只看外資」per-trade分離度最好，但portfolio回測反而MDD明顯惡化（37.08% vs 30.57%）；「大買+前兩天」的交互作用在per-trade分析裡最強，但回測總報酬也是三組裡最差。
+        </div>
+
+        <h3>結論</h3>
+        <p><strong>「大買」不該加強推薦訊號，不管是硬性濾網、軟性加權、不同外資/投信權重、或跟連買天數交叉的組合條件，投資組合層級全部驗證失敗。</strong>這次研究比個案⑨更完整——測了4種機制（硬濾網/軟加權/權重調整/交互作用），每一種在per-trade分析階段都看起來有點希望，但沒有一種通過投資組合層級的最終考驗。現行系統「只判斷買超正負、不管金額大小」的簡單做法，目前仍是測過的所有版本裡表現最好的。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（延續個案⑨）</strong>：per-trade平均報酬的優勢，不會自動轉換成投資組合層級的優勢——濾網/加權排除或降權的那些訊號裡，還是有不少報酬很好的個股，機會成本往往大於「篩選精準度提升」帶來的好處。任何候選規則都必須走完「per-trade分析→逐年穩健性檢查→真實投資組合回測」這三層，才能下結論，只看第一層很容易得出過度樂觀的錯誤結論。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

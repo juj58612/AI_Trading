@@ -1,0 +1,5 @@
+﻿label,total_return,mdd,win_rate,profit_factor,trades
+baseline (現行系統，不管買超金額大小),232.06,30.57,42.59,1.58,965
+bigbuy_loose (硬性濾網，前25%/75th百分位),199.68,34.34,42.22,1.44,900
+bigbuy_strict (硬性濾網，前10%/90th百分位),146.55,36.33,39.71,1.32,821
+bigbuy_soft_boost (軟性加權，大買momentum+0.05，不排除其他訊號),231.83,34.03,42.26,1.51,975
