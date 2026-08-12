@@ -165,6 +165,7 @@
         <a href="#case8">⑧ Regime自動切換策略模型的建構與驗證（總結）</a>
         <a href="#case9">⑨ 該不該優先推薦「外資投信同買第一天」？（反證）</a>
         <a href="#case10">⑩ 「大買」該不該加強推薦訊號？外資/投信權重與連買天數交叉分析（反證）</a>
+        <a href="#case11">⑪ 「大賣」該不該加強出場訊號？事件研究+逐年穩健性自我修正（反證）</a>
     </div>
 
     <!-- 個案一 -->
@@ -682,6 +683,80 @@
         <h3>結論</h3>
         <p><strong>「大買」不該加強推薦訊號，不管是硬性濾網、軟性加權、不同外資/投信權重、或跟連買天數交叉的組合條件，投資組合層級全部驗證失敗。</strong>這次研究比個案⑨更完整——測了4種機制（硬濾網/軟加權/權重調整/交互作用），每一種在per-trade分析階段都看起來有點希望，但沒有一種通過投資組合層級的最終考驗。現行系統「只判斷買超正負、不管金額大小」的簡單做法，目前仍是測過的所有版本裡表現最好的。</p>
         <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（延續個案⑨）</strong>：per-trade平均報酬的優勢，不會自動轉換成投資組合層級的優勢——濾網/加權排除或降權的那些訊號裡，還是有不少報酬很好的個股，機會成本往往大於「篩選精準度提升」帶來的好處。任何候選規則都必須走完「per-trade分析→逐年穩健性檢查→真實投資組合回測」這三層，才能下結論，只看第一層很容易得出過度樂觀的錯誤結論。</p>
+    </div>
+
+    <!-- 個案十一 -->
+    <div class="doc-section" id="case11">
+        <h2>⑪ 「大賣」該不該加強出場訊號？<span class="status-tag status-solid">通用驗證（反證）</span></h2>
+        <p><strong>起因</strong>：個案⑩證明「大買」不該加強進場推薦。使用者接著問：那對稱的「大賣」呢？目前方案B的「土洋雙賣」出場規則（<code>strategy_core.py</code>）只判斷外資投信是否同時賣超（正負號），完全不看賣超金額大小——該不該用金額大小加強出場訊號？</p>
+        <p style="color:#94a3b8; font-size:0.9rem;">研究方法跟個案⑩不同：這次是「出場」問題，不適合沿用backtest_logs.db的trades表（entry-anchored，且有677組實驗重複計數的已知問題），改用<strong>事件研究法</strong>——對全市場126檔股票、5.5年，找出每一個「同賣日」（foreign&lt;0且trust&lt;0），直接看往後5/10/20個交易日股價的實際報酬率，比較大賣(前10%/25%)vs一般同賣。這個設計天生不會有訊號重複計數的問題。</p>
+
+        <h3>第一輪：事件研究——大賣後續股價表現</h3>
+        <p>📎 <a href="research_data/case11_bigsell_event_summary.csv" download style="color:#ec4899; font-weight:500;">下載事件研究彙總</a>　——無需登入即可下載，共24,975個同賣事件。</p>
+        <table class="doc-table">
+            <thead><tr><th>分類</th><th>事件數</th><th>後續5日均報酬</th><th>後續10日均報酬</th><th>後續20日均報酬</th></tr></thead>
+            <tbody>
+                <tr><td>一般同賣</td><td>16,841</td><td>+0.61%</td><td>+1.15%</td><td>+2.52%</td></tr>
+                <tr><td>大賣（前25%但非前10%）</td><td>4,682</td><td>+0.30%</td><td>+0.95%</td><td>+2.17%</td></tr>
+                <tr><td>大賣（前10%）</td><td>3,452</td><td>+0.60%</td><td>+1.14%</td><td>+2.76%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 跟大買方向完全不同的意外發現：<strong>同賣事件之後，股價平均是上漲的</strong>（所有分類、所有天數都是正報酬），而且賣超金額越大，後續表現沒有清楚的單調關係——最極端的「前10%大賣」後續表現甚至跟「一般同賣」差不多，中間的「前25%但非前10%」反而最弱。訊號本身比個案⑩的大買更弱、更沒有方向性。
+        </div>
+
+        <h3>第二輪：外資/投信權重（賣出版）</h3>
+        <p>📎 <a href="research_data/case11_bigsell_weighting_screen.csv" download style="color:#ec4899; font-weight:500;">下載5種權重篩選結果</a>　——無需登入即可下載。</p>
+        <p>測5種權重組合，大賣vs一般同賣的10日後續報酬差距全部在<strong>±0.2%以內</strong>，沒有一種權重方案顯示明確、有意義的訊號（相較之下，個案⑩大買的「只看外資」權重差距達0.6%，這次連最大差距都遠不如大買研究）。</p>
+
+        <h3>第三輪：連賣天數 × 大賣 交叉分析</h3>
+        <p>📎 <a href="research_data/case11_bigsell_streak_cross.csv" download style="color:#ec4899; font-weight:500;">下載交叉表</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>連賣天數</th><th>一般同賣 10日後續報酬</th><th>大賣 10日後續報酬</th><th>事件數</th></tr></thead>
+            <tbody>
+                <tr><td>第1天</td><td>1.23%</td><td>1.18%</td><td>16,619</td></tr>
+                <tr><td>第2天</td><td>1.01%</td><td>1.08%</td><td>4,742</td></tr>
+                <tr><td>第3天</td><td>1.22%</td><td>0.44%（較弱）</td><td>1,776</td></tr>
+                <tr><td>第4~5天</td><td>0.99%</td><td>0.35%（較弱）</td><td>1,153</td></tr>
+                <tr><td>第6天以上</td><td>-0.10%</td><td>0.24%（反轉）</td><td>538</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 佔樣本85%以上的第1~2天（合計21,361筆），大賣完全看不出額外影響。第3天、第4~5天有一點「大賣後續較弱」的跡象，但樣本數變小（合計僅2,929筆），且第6天以上又反轉。比個案⑩的交叉分析更弱、更不一致。
+        </div>
+
+        <h3>決定性驗證：改寫方案B出場規則，5.5年回測看似大成功</h3>
+        <p>把方案B的「土洋雙賣」從「只看正負號」改成「要求大賣才觸發」，其餘規則不變，跑完整投資組合回測。</p>
+        <p>📎 <a href="research_data/case11_bigsell_backtest_5.5yr.csv" download style="color:#ec4899; font-weight:500;">下載5.5年回測結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>土洋雙賣觸發次數</th></tr></thead>
+            <tbody>
+                <tr><td>baseline（方案B現行，只看正負號）</td><td>161.06%</td><td>36.97%</td><td>42.96%</td><td>1.40</td><td>546</td></tr>
+                <tr><td><strong>大賣濾網（前25%）</strong></td><td><strong>279.22%</strong></td><td><strong>30.83%</strong></td><td><strong>48.40%</strong></td><td><strong>1.54</strong></td><td>223</td></tr>
+                <tr><td>大賣濾網（前10%，較嚴格）</td><td>195.35%</td><td>34.09%</td><td>50.98%</td><td>1.46</td><td>100</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 表面上看是本系列研究裡唯一的正面結果——大賣濾網(前25%)版本總報酬從161%跳到279%，MDD、勝率、獲利因子全面改善。但事件研究跟交叉分析階段的訊號都很弱，這麼漂亮的5.5年回測結果，本身就值得懷疑，必須先做逐年穩健性檢查才能相信。
+        </div>
+
+        <h3>逐年穩健性檢查：推翻上面看似成功的結果</h3>
+        <p>📎 <a href="research_data/case11_bigsell_year_robustness.csv" download style="color:#ec4899; font-weight:500;">下載逐年獨立回測結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>baseline 總報酬/MDD</th><th>大賣濾網(前25%) 總報酬/MDD</th></tr></thead>
+            <tbody>
+                <tr><td>2022空頭年</td><td>-20.96% / 24.36%</td><td><strong>-26.40% / 30.61%（更差）</strong></td></tr>
+                <tr><td>2024多頭年</td><td>37.27% / 14.92%</td><td>48.99% / 19.00%（報酬較好，但MDD更差）</td></tr>
+                <tr><td>2025年</td><td>61.72% / 22.59%</td><td><strong>43.77% / 28.54%（更差）</strong></td></tr>
+            </tbody>
+        </table>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
+            ⚠️ <strong>三年裡兩年（2022、2025）大賣濾網版本都比baseline差，只有2024年報酬較好、但MDD也更差。</strong>5.5年連續回測看起來的279% vs 161%大幅優勢，沒有在任何單一年度穩定重現，很可能是特定連續期間的複利路徑造成的假象——這正是個案⑤研究regime時已經記錄過的「連續回測分段謬誤」，這次在自己的研究裡又踩了一次，也立刻自我修正記錄下來。
+        </div>
+
+        <h3>結論</h3>
+        <p><strong>「大賣」不該加強出場訊號，證據比個案⑩的「大買」更薄弱。</strong>事件研究法本身就顯示賣超金額大小跟後續股價表現沒有清楚關係；5.5年回測一度看似大幅改善，但逐年穩健性檢查後推翻——2022、2025兩年都更差，不是穩定效應。方案B現行的「土洋雙賣只看正負號」設計維持不變是對的。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（再次驗證）</strong>：連續多年回測的加總結果，即使數字很漂亮，也不能取代逐年獨立驗證——這是本系列研究（個案⑤⑨⑩⑪）反覆確認的同一個原則，這次差點被自己的正面結果騙過去，逐年檢查救回了正確結論。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

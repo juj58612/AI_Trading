@@ -1,0 +1,7 @@
+year,label,total_return,mdd,win_rate,profit_factor,trades,dualsell_triggers
+2022,baseline,-20.96,24.36,30.43,0.78,92,51
+2022,bigsell_25,-26.40,30.61,26.67,0.59,75,23
+2024,baseline,37.27,14.92,45.57,1.62,158,97
+2024,bigsell_25,48.99,19.00,50.45,1.91,111,38
+2025,baseline,61.72,22.59,46.06,1.84,165,108
+2025,bigsell_25,43.77,28.54,49.09,1.65,110,37
