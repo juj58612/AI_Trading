@@ -1593,6 +1593,11 @@ def serve_research_data(filename: str):
         "case10_bigbuy_weighting_screen.csv",
         "case10_bigbuy_streak_cross.csv",
         "case10_bigbuy_final_backtest.csv",
+        "case11_bigsell_event_summary.csv",
+        "case11_bigsell_weighting_screen.csv",
+        "case11_bigsell_streak_cross.csv",
+        "case11_bigsell_backtest_5.5yr.csv",
+        "case11_bigsell_year_robustness.csv",
     }
     filepath = os.path.join("research_data", filename)
     if filename not in allowed or not os.path.exists(filepath):

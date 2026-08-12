@@ -87,6 +87,26 @@
   對應 [個案⑩](../case_studies.html#case10) 最終決定性驗證：baseline / 外資買超前25%濾網 / (大買+限定第1~2天)組合濾網，三組完整投資組合回測，確認即使是篩選出來最有希望的候選條件，portfolio層級依然不如不設限的現行系統。
   產生腳本：`bigbuy_final_backtest.py`，2026-08-12。
 
+- **`case11_bigsell_event_summary.csv`**（3列，事件研究彙總）
+  對應 [個案⑪](../case_studies.html#case11)「大賣」研究：事件研究法，每個同賣日往後看5/10/20日實際股價報酬，比較大賣(前10%/25%)vs一般同賣。發現賣超金額大小跟後續股價表現沒有清楚的單調關係。
+  產生腳本：`bigsell_event_study.py`，2026-08-12。
+
+- **`case11_bigsell_weighting_screen.csv`**（5列，彙總指標）
+  對應 [個案⑪](../case_studies.html#case11) 外資/投信權重篩選（賣出版）：5種權重組合，10日後續報酬差距全部在±0.2%以內，沒有一種權重顯示明確訊號。
+  產生腳本：`bigsell_weighting_and_streak.py`，2026-08-12。
+
+- **`case11_bigsell_streak_cross.csv`**（10列，交叉表）
+  對應 [個案⑪](../case_studies.html#case11)：連賣天數 × 是否大賣的交叉分析，發現佔85%以上樣本的第1~2天完全看不出大賣的額外影響。
+  產生腳本：`bigsell_weighting_and_streak.py`，2026-08-12。
+
+- **`case11_bigsell_backtest_5.5yr.csv`**（3列，彙總指標）
+  對應 [個案⑪](../case_studies.html#case11) 決定性驗證（5.5年完整期間）：把方案B「土洋雙賣」改成要求大賣才觸發，5.5年總報酬279.22%大幅優於baseline 161.06%——但這個結果沒有通過逐年穩健性檢查，見下一個檔案。
+  產生腳本：`bigsell_backtest_filter.py`，2026-08-12。
+
+- **`case11_bigsell_year_robustness.csv`**（6列，逐年獨立回測）
+  對應 [個案⑪](../case_studies.html#case11) 逐年穩健性檢查：2022空頭年與2025年「大賣濾網」版本都比baseline差，只有2024年較好（但MDD也更差）——推翻5.5年連續回測看起來的優勢，示範「連續回測不能取代逐年獨立驗證」這個方法論教訓。
+  產生腳本：`bigsell_year_robustness.py`，2026-08-12。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
