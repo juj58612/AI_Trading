@@ -606,25 +606,25 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日 (${scanResult.cache_date || ''}) 快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
+        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日${scanResult.cache_date ? `(${scanResult.cache_date})` : ''}快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
     } else if (scanResult && scanResult.cached) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(59, 130, 246, 0.12)';
         banner.style.borderColor = 'var(--accent-blue)';
         banner.style.color = 'var(--accent-blue)';
-        banner.textContent = `⚡ 已使用今日 (${scanResult.cache_date || ''}) 快取資料，共 ${count} 檔，無需重新連線。`;
+        banner.textContent = `⚡ 已使用今日${scanResult.cache_date ? `(${scanResult.cache_date})` : ''}快取資料，共 ${count} 檔，無需重新連線。`;
     } else if (total > 0 && count < total * 0.8) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.textContent = `⚠️ 本次即時掃描（${scanResult.cache_date || ''}）僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
+        banner.textContent = `⚠️ 本次即時掃描${scanResult.cache_date ? `（${scanResult.cache_date}）` : ''}僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
     } else if (total > 0) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(16, 185, 129, 0.12)';
         banner.style.borderColor = '#10b981';
         banner.style.color = '#10b981';
-        banner.textContent = `✅ 掃描成功（${scanResult.cache_date || ''}），取得 ${count}/${total} 檔最新盤後資料。`;
+        banner.textContent = `✅ 掃描成功${scanResult.cache_date ? `（${scanResult.cache_date}）` : ''}，取得 ${count}/${total} 檔最新盤後資料。`;
     } else {
         banner.style.display = 'none';
         banner.textContent = '';
