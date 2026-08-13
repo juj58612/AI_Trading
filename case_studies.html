@@ -170,6 +170,7 @@
         <a href="#case13">⑬ 三大法人資料未來函數：整個系統的關鍵修正</a>
         <a href="#case14">⑭ 方案E補齊正式驗證：排行榜冠軍，但逐年拆解後是條件式優勢</a>
         <a href="#case15">⑮ 「智慧推薦」可行嗎？依regime動態選用整包方案的驗證（反證：12組全輸給全程用方案E）</a>
+        <a href="#case16">⑯ Optuna系統化參數搜尋：方案E找到真正能打敗預設值的參數組合</a>
     </div>
 
     <!-- 個案一 -->
@@ -992,6 +993,48 @@
             <li>💡 <strong>如果仍然想要顯示regime資訊</strong>：可以保留首頁「研究版advisory面板」顯示目前TAIEX相對20日均線的位置，當作<strong>資訊性參考</strong>（不影響推薦邏輯），讓使用者自己判斷，而不是拿來驅動自動切換——這是目前唯一還站得住腳、跟regime有關的呈現方式。</li>
         </ul>
         <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓</strong>：這是本系列研究第三次驗證「規則層級的regime自適應設計」失敗（個案⑤組合出場規則、個案⑦土洋雙賣疊加、這次的整包方案切換），但第一次得到「不是bug、不是資料問題，是切換這個動作本身在這組資料上就是負值」的結論——搭配上方個案⑭「方案E本身已經是條件式優勢」的發現，兩者合起來指向同一個更深的洞察：<strong>與其預測趨勢再切換，不如直接採用一個設計上就對逆風/盤整有韌性的單一方案。</strong></p>
+    </div>
+
+    <!-- 個案十六 -->
+    <div class="doc-section" id="case16">
+        <h2>⑯ Optuna系統化參數搜尋：方案E找到真正能打敗預設值的參數組合<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：<code>strategy_discussion.html</code>「後續討論串」長期列著一項未完成的待辦——與其手動猜測規則再回測，應該把出場邏輯的關鍵參數變成連續可調變數，交給系統已有的Optuna貝氏最佳化基礎設施搜尋，並用訓練/測試集切分驗證，避免過度配適。2026-08-13這天，regime切換（個案⑤⑦⑧⑮）與籌碼濾網（個案⑨⑩⑪）手動猜規則接連失敗，正好印證了這個待辦的論點，優先順序被拉到最前面。</p>
+        <p>方案E（目前的排行榜冠軍，見個案⑭）的出場邏輯裡有5個從未被系統化搜尋過、憑經驗寫死的常數：進場ATR停損倍數(3.0)、獲利鎖利觸發門檻(12%)、鎖利後ATR倍數(1.25)、固定停利%(15%)、雙賣時仍獲利的收緊ATR倍數(1.0)。這裡把這5個常數變成連續參數，用Optuna在訓練期（2021-01-01~2024-11-01，約70%）跑50次trial搜尋，再用測試期（2024-11-02~2026-08-10，剩餘30%）驗證，避免像過去手動微調那樣，湊出一組只在單一歷史區間好看的參數。</p>
+
+        <h3>結果：唯一一個通過樣本外驗證、真正打敗預設值的優化</h3>
+        <p>📎 <a href="research_data/case16_strategyE_optuna_summary.csv" download style="color:#ec4899; font-weight:500;">下載訓練/測試/全期間對照表</a>　<a href="research_data/case16_strategyE_optuna_search.json" download style="color:#ec4899; font-weight:500;">下載完整50組trial原始資料</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>期間</th><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th></tr></thead>
+            <tbody>
+                <tr><td rowspan="2">訓練期</td><td>預設參數</td><td>103.80%</td><td>25.73%</td><td>38.77%</td><td>1.38</td></tr>
+                <tr><td><strong>Optuna最佳參數</strong></td><td><strong>142.79%</strong></td><td><strong>21.11%</strong></td><td>39.36%</td><td>1.45</td></tr>
+                <tr><td rowspan="2">測試期（樣本外）</td><td>預設參數</td><td>99.35%</td><td><strong>20.49%</strong></td><td>42.76%</td><td>1.68</td></tr>
+                <tr><td><strong>Optuna最佳參數</strong></td><td><strong>110.94%</strong></td><td>21.88%</td><td>39.71%</td><td>1.69</td></tr>
+                <tr><td rowspan="2">全期間</td><td>預設參數</td><td>286.64%</td><td>26.19%</td><td>41.03%</td><td>1.55</td></tr>
+                <tr><td><strong>Optuna最佳參數</strong></td><td><strong>311.72%</strong></td><td><strong>24.45%</strong></td><td>39.85%</td><td>1.57</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>訓練期表現變好不稀奇（本來就是拿訓練期資料調出來的），但測試期（Optuna完全沒看過的樣本外資料）也依然贏——總報酬99.35%→110.94%，MDD雖然從20.49%小幅上升到21.88%，但獲利因子略優。全期間合計286.64%→311.72%，MDD同時從26.19%降到24.45%，報酬與防守雙雙改善。</strong>這是本系列研究裡少數幾個（case⑨⑩⑪⑤⑦⑧⑮全部驗證失敗）真正通過樣本外驗證的優化——差別在於這次不是猜一個新規則，是把既有規則的參數做系統化搜尋，搜尋空間本身受限（5個連續參數，不是離散的規則排列組合），過度配適的風險天生比較低。
+        </div>
+
+        <h3>找到的最佳參數 vs 現行預設值</h3>
+        <table class="doc-table">
+            <thead><tr><th>參數</th><th>現行預設值</th><th>Optuna最佳值</th><th>方向</th></tr></thead>
+            <tbody>
+                <tr><td>進場ATR停損倍數</td><td>3.0</td><td>2.99</td><td>幾乎沒變，等於確認原本的值已經接近最佳</td></tr>
+                <tr><td>獲利鎖利觸發門檻</td><td>12%</td><td>14.9%</td><td>觸發得稍晚一點，給獲利部位多一點空間</td></tr>
+                <tr><td>鎖利後ATR倍數</td><td>1.25</td><td>1.13</td><td>觸發鎖利後收得更緊一點</td></tr>
+                <tr><td>固定停利%</td><td>15%</td><td>18.7%</td><td>停利上限拉高，讓強勢股多漲一點才出場</td></tr>
+                <tr><td>雙賣時仍獲利的收緊ATR倍數</td><td>1.0</td><td>1.62</td><td>收緊幅度變鬆，減少「雙賣後鎖利出場」這個本來就很少觸發（個案⑭發現只佔0.6%）的機制誤殺獲利部位的機會</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 找到的方向跟個案⑭「方案E的招牌機制(獲利中收緊停損)幾乎沒被單獨觸發過」這個發現互相呼應——Optuna自己找到的解，同樣是把這個機制的觸發門檻放寬（收緊倍數從1.0調鬆到1.62），而不是收得更緊，等於系統化搜尋也認同「這個機制不該太敏感」的方向；同時把固定停利上限從15%拉高到18.7%，讓真正的強勢股有更多空間貢獻報酬——這跟個案⑭「E的優勢主要來自快速停損」的解讀是互補的：快速停損保留，但放寬對獲利部位的干預。
+        </div>
+
+        <h3>目前狀態</h3>
+        <p>此結果<strong>尚未寫入 <code>strategy_core.py</code> 正式邏輯</strong>——雖然通過了樣本外驗證，比今天其他全部失敗的嘗試更可信，但仍建議先跟使用者確認要不要正式採用（觸及目前預設方案的核心參數，屬於會直接影響下單建議的變更），且50次trial、單一次訓練/測試切分，樣本量與穩健性檢查仍不如個案⑭對方案E本身做的逐年拆解那樣扎實，建議正式採用前，比照個案⑭的方法論再做一次逐年獨立回測確認新參數不是只在這個特定切分點站得住腳。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

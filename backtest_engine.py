@@ -96,6 +96,12 @@ def init_db():
             col_name = f"return_{yr}"
             if col_name not in cols:
                 c.execute(f"ALTER TABLE experiments ADD COLUMN {col_name} REAL DEFAULT 0")
+        if "sharpe_ratio" not in cols:
+            # Tier 3：daily_equity 本來就會為了算 MDD 逐日算出來，只是算完就丟掉沒存。
+            # 這裡補存年化 Sharpe/Sortino，讓風險調整後報酬也能拿來排序/比較，不只看總報酬。
+            c.execute("ALTER TABLE experiments ADD COLUMN sharpe_ratio REAL DEFAULT 0")
+        if "sortino_ratio" not in cols:
+            c.execute("ALTER TABLE experiments ADD COLUMN sortino_ratio REAL DEFAULT 0")
     except Exception as e:
         print(f"Migration notice: {e}")
 
@@ -1258,7 +1264,21 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
         if val > peak: peak = val
         dd = (peak - val) / peak * 100
         if dd > mdd: mdd = dd
-        
+
+    # Tier 3：年化 Sharpe / Sortino——用逐日equity算逐日報酬率，無風險利率簡化為0
+    # （台股短期公債殖利率長期偏低，且策略比較主要看相對排序，簡化不影響排序結論）。
+    # 逐日equity本來就已經為了算MDD算出來，這裡只是多算兩個統計量，不用額外資料來源。
+    sharpe_ratio = 0.0
+    sortino_ratio = 0.0
+    if len(daily_equity) >= 2:
+        equity_series = pd.Series([d['equity'] for d in daily_equity])
+        daily_returns = equity_series.pct_change().dropna()
+        if len(daily_returns) > 1 and daily_returns.std() > 0:
+            sharpe_ratio = round((daily_returns.mean() / daily_returns.std()) * math.sqrt(252), 2)
+        downside_returns = daily_returns[daily_returns < 0]
+        if len(downside_returns) > 1 and downside_returns.std() > 0:
+            sortino_ratio = round((daily_returns.mean() / downside_returns.std()) * math.sqrt(252), 2)
+
     # Calculate annual returns
     yearly_returns = {2021: 0.0, 2022: 0.0, 2023: 0.0, 2024: 0.0, 2025: 0.0, 2026: 0.0}
     if daily_equity:
@@ -1306,17 +1326,19 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
         "mdd": round(mdd, 2),
         "win_rate": round(win_rate, 2),
         "profit_factor": round(profit_factor, 2),
-        "total_trades": len(trade_history)
+        "total_trades": len(trade_history),
+        "sharpe_ratio": sharpe_ratio,
+        "sortino_ratio": sortino_ratio
     }
-    
+
     # Save to SQLite DB
     try:
         conn = sqlite3.connect(SQLITE_PATH)
         c = conn.cursor()
         c.execute('''
-            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, is_grid_trial, pool_size, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, req.is_grid_trial, len(TICKERS), yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026]))
+            INSERT INTO experiments (capital, max_positions, fee_rate, start_date, end_date, max_hold_days, exit_strategy, total_return, cagr, mdd, win_rate, profit_factor, total_trades, is_out_of_sample, is_grid_trial, pool_size, return_2021, return_2022, return_2023, return_2024, return_2025, return_2026, sharpe_ratio, sortino_ratio)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (req.capital, req.max_positions, req.fee_rate, req.start_date, req.end_date, req.max_hold_days, req.exit_strategy, metrics_dict['total_return'], metrics_dict['cagr'], metrics_dict['mdd'], metrics_dict['win_rate'], metrics_dict['profit_factor'], metrics_dict['total_trades'], req.is_out_of_sample, req.is_grid_trial, len(TICKERS), yearly_returns[2021], yearly_returns[2022], yearly_returns[2023], yearly_returns[2024], yearly_returns[2025], yearly_returns[2026], sharpe_ratio, sortino_ratio))
         
         experiment_id = c.lastrowid
         
@@ -1689,21 +1711,35 @@ def get_attribution():
             
             decisions.append(f"💡 <b>持倉天數黃金區間</b>：數據顯示，最優持倉期限為 <b>{best_hold} 天</b> (平均總報酬 {round(best_hold_ret, 2)}%)；但若考量 2022 年空頭防禦性，最優持倉期限為 <b>{best_def_hold} 天</b> (單年抗震回檔僅 {round(best_def_ret, 2)}%)。建議真實模型期限設定在 <b>30 ~ 60 天</b>，為抗震與爆發力最佳平衡區間。")
 
-        # Rule on positions
-        if not pos_sens == []:
-            best_pos = df_exp.groupby('max_positions')['total_return'].mean().idxmax()
+        # Rule on positions — 動態找出資料裡實際存在的「MDD最低檔數」vs「最少檔數(通常風險最集中)」對照，
+        # 不寫死特定兩個檔數(3 vs 5)，避免網格參數改變後這條規則悄悄失效或講錯話
+        if not pos_sens == [] and len(df_exp['max_positions'].unique()) >= 2:
             pos_mdds = df_exp.groupby('max_positions')['mdd'].mean()
-            mdd_3 = pos_mdds.get(3, None)
-            mdd_5 = pos_mdds.get(5, None)
-            if mdd_3 and mdd_5:
-                mdd_reduction = round(mdd_3 - mdd_5, 2)
-                decisions.append(f"🛡️ <b>資金分散防護力</b>：將持倉上限由 3 檔提高至 5 檔時，平均最大回撤 (MDD) 由 {round(mdd_3, 2)}% 降低至 {round(mdd_5, 2)}% (<b>風險降低了 {mdd_reduction}%</b>)，總報酬幾乎持平。<b>建議採用 5 檔配置進行資金均分。</b>")
-                
-        # Rule on strategies
-        if not strat_sens == []:
-            strat_rets = df_exp.groupby('exit_strategy')['total_return'].mean()
-            ret_diff = round(strat_rets.get('D', 0) - strat_rets.get('C', 0), 2)
-            decisions.append(f"🏆 <b>策略方案抉擇</b>：方案 D 的平均總報酬為 {round(strat_rets.get('D', 0), 2)}%，超越方案 C 的 {round(strat_rets.get('C', 0), 2)}% (<b>差幅達 {ret_diff}%</b>)。雖方案 C 在 2022 年防守稍強，但綜合考慮爆發力，<b>推薦採用方案 D 作為真實進出場核心。</b>")
+            min_pos = pos_mdds.index.min()
+            best_mdd_pos = pos_mdds.idxmin()
+            baseline_mdd = pos_mdds.get(min_pos)
+            best_mdd_val = pos_mdds.get(best_mdd_pos)
+            if best_mdd_pos != min_pos and baseline_mdd is not None:
+                mdd_reduction = round(baseline_mdd - best_mdd_val, 2)
+                decisions.append(f"🛡️ <b>資金分散防護力</b>：持倉上限提高到 <b>{best_mdd_pos} 檔</b>時平均最大回撤(MDD)最低，為 {round(best_mdd_val, 2)}%；相較於只持有 {min_pos} 檔（MDD {round(baseline_mdd, 2)}%），<b>風險降低了 {mdd_reduction} 個百分點</b>。建議採用 {best_mdd_pos} 檔左右的配置分散單一標的誤判的衝擊。")
+
+        # Rule on strategies — 2026-08-13重寫：動態找出目前資料庫裡平均報酬最高、MDD最低的方案，
+        # 不再寫死比較D跟C（過去這樣寫，方案E補齊資料後就會變成錯誤建議，見 STRATEGY_ANALYSIS_NOTES.md
+        # 2026-08-13條目 / case_studies.html 個案⑭）
+        if not strat_sens == [] and len(strat_rets := df_exp.groupby('exit_strategy')['total_return'].mean()) >= 2:
+            strat_mdds = df_exp.groupby('exit_strategy')['mdd'].mean()
+            best_strat = strat_rets.idxmax()
+            best_ret = strat_rets.max()
+            runner_up = strat_rets.drop(best_strat).idxmax()
+            runner_up_ret = strat_rets[runner_up]
+            ret_diff = round(best_ret - runner_up_ret, 2)
+            defensive_strat = strat_mdds.idxmin()
+            defensive_mdd = strat_mdds.min()
+            best_mdd = strat_mdds.get(best_strat)
+            if defensive_strat == best_strat:
+                decisions.append(f"🏆 <b>策略方案抉擇</b>：方案 <b>{best_strat}</b> 的平均總報酬為 {round(best_ret, 2)}%，是目前 {len(strat_rets)} 個已測試方案裡最高的（次高為方案 {runner_up}，{round(runner_up_ret, 2)}%，差幅 {ret_diff}%），且平均MDD（{round(best_mdd, 2)}%）也是所有方案裡最低，<b>報酬與防守雙優，推薦作為真實進出場核心</b>。")
+            else:
+                decisions.append(f"🏆 <b>策略方案抉擇</b>：方案 <b>{best_strat}</b> 的平均總報酬為 {round(best_ret, 2)}%，是目前 {len(strat_rets)} 個已測試方案裡最高的（次高為方案 {runner_up}，{round(runner_up_ret, 2)}%，差幅 {ret_diff}%）。若優先考慮防守，方案 {defensive_strat} 的平均MDD（{round(defensive_mdd, 2)}%）最低——<b>是報酬與防守之間的取捨，非單一方案全面最優</b>。")
 
         return {
             "status": "success",

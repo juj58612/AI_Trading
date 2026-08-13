@@ -234,6 +234,8 @@
                         <th>最大回撤 (MDD)</th>
                         <th>勝率</th>
                         <th>獲利因子</th>
+                        <th title="年化夏普值：風險調整後報酬，用逐日equity算逐日報酬率，無風險利率簡化為0">Sharpe</th>
+                        <th title="年化索提諾比率：只計入下檔波動的風險調整後報酬，比Sharpe更聚焦虧損風險">Sortino</th>
                         <th>2021 (爆發)</th>
                         <th>2022 (空頭)</th>
                         <th>2023 (主升)</th>
@@ -243,7 +245,7 @@
                     </tr>
                 </thead>
                 <tbody id="lbTableBody">
-                    <tr><td colspan="16">載入大數據排行榜中...</td></tr>
+                    <tr><td colspan="18">載入大數據排行榜中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -547,6 +549,8 @@ function renderTable(list) {
             <td style="color: #4ade80;">${row.mdd.toFixed(2)}%</td>
             <td>${row.win_rate.toFixed(1)}%</td>
             <td>${row.profit_factor.toFixed(2)}</td>
+            <td style="color:${(row.sharpe_ratio || 0) >= 1 ? '#4ade80' : '#cbd5e1'};">${(row.sharpe_ratio || 0).toFixed(2)}</td>
+            <td style="color:${(row.sortino_ratio || 0) >= 1 ? '#4ade80' : '#cbd5e1'};">${(row.sortino_ratio || 0).toFixed(2)}</td>
             <td>${(row.return_2021 || 0).toFixed(1)}%</td>
             <td>${(row.return_2022 || 0).toFixed(1)}%</td>
             <td>${(row.return_2023 || 0).toFixed(1)}%</td>
