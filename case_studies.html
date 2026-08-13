@@ -514,6 +514,9 @@
     <div class="doc-section" id="case9">
         <h2>⑨ 該不該優先推薦「外資投信同買第一天」的標的？<span class="status-tag status-solid">通用驗證（反證）</span></h2>
         <p><strong>起因</strong>：使用者觀察到，模型推薦的標的常常已經連漲好幾天，直覺認為「應該優先推薦外資投信同買的第一天，越早進場越好」，並問目前模型有沒有做到這件事。查證<code>strategy_core.py</code>的<code>calculate_chip_score</code>後確認：籌碼積分只看「今天」跟「昨天」兩天的法人買賣超，完全沒有「這波同買訊號已經連續幾天」的概念——第1天同買跟第10天同買，只要當天訊號一樣，積分完全相同。這個案研究的是：如果幫模型加上這個概念，會不會讓推薦更好？</p>
+        <div class="quote-box" style="border-left-color:#f59e0b;">
+            🔄 <strong>2026-08-12更新</strong>：本案例發表後發現<a href="#case13" style="color:#c084fc;">個案⑬</a>的三大法人資料未來函數bug，下面per-trade分析的數字已用修正後的資料庫重跑更新——結果甚至更支持「第1天」（去重後第1天報酬1.13%，從第2天起單調遞減，比原本更乾淨）。但<strong>決定性投資組合回測結論不變</strong>：不限制進場天數依然是四組裡表現最好的（215.49%），只是絕對數字下修。詳細對照見<a href="#case13" style="color:#c084fc;">個案⑬</a>。
+        </div>
 
         <h3>第一版分析：方法論陷阱（僅供對照，結論有誤）</h3>
         <p>把資料庫裡677組實驗（含Optuna grid trial）共514,881筆交易全部pool在一起，依進場當下「外資投信連續同買天數」分桶算平均報酬，結果顯示同買第1天平均報酬1.22%、是所有天數裡最高，看起來支持使用者的直覺。</p>
@@ -528,16 +531,16 @@
         <table class="doc-table">
             <thead><tr><th>進場時機</th><th>訊號數(去重後)</th><th>平均報酬%</th><th>勝率</th></tr></thead>
             <tbody>
-                <tr><td>非同買日進場</td><td>1,108</td><td>0.26%</td><td>45.1%</td></tr>
-                <tr><td>同買第1天</td><td>1,282</td><td>0.15%</td><td>45.6%</td></tr>
-                <tr><td><strong>同買第2天</strong></td><td>630</td><td><strong>0.31%（最高）</strong></td><td>46.8%</td></tr>
-                <tr><td>同買第3天</td><td>232</td><td>-0.12%</td><td>46.1%</td></tr>
-                <tr><td>同買第4~5天</td><td>156</td><td>-0.43%</td><td>36.5%</td></tr>
-                <tr><td>同買第6天以上</td><td>51</td><td>-0.81%</td><td>45.1%</td></tr>
+                <tr><td>非同買日進場</td><td>1,631</td><td>0.06%</td><td>43.3%</td></tr>
+                <tr><td><strong>同買第1天</strong></td><td>209</td><td><strong>1.13%（最高）</strong></td><td>49.8%</td></tr>
+                <tr><td>同買第2天</td><td>337</td><td>0.58%</td><td>50.1%</td></tr>
+                <tr><td>同買第3天</td><td>217</td><td>-0.34%</td><td>42.9%</td></tr>
+                <tr><td>同買第4~5天</td><td>152</td><td>-0.50%</td><td>36.8%</td></tr>
+                <tr><td>同買第6天以上</td><td>48</td><td>-0.90%</td><td>39.6%</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 去重後排序完全改變：<strong>同買第2天的平均報酬反而最高，第1天並不特別突出</strong>——原本「第1天最好」的結論，主要是同一訊號被重複計入好幾百次造成的統計假象，不是真實效應。
+            📌 <strong>（2026-08-12依個案⑬修正後更新）</strong>修正未來函數後重新去重分析：現在是<strong>同買第1天平均報酬最高（1.13%），且從第3天起單調遞減</strong>——比修正前的版本更乾淨、更符合直覺。原本「第2天最高、第1天沒特別突出」的舊結論，是未來函數污染了「第N天」的標籤本身所致：用被污染的當天資料去標記連續天數，標記本身就是錯的。
         </div>
 
         <h3>依年度拆開看：方向甚至會整個反轉</h3>
@@ -563,14 +566,14 @@
         <table class="doc-table">
             <thead><tr><th>進場濾網</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
             <tbody>
-                <tr><td><strong>不限制（現行系統真實行為）</strong></td><td><strong>232.06%</strong></td><td>30.57%</td><td>42.59%</td><td><strong>1.58</strong></td><td>965</td></tr>
-                <tr><td>只准同買第1~2天進場</td><td>211.02%</td><td>35.30%（更差）</td><td>40.21%（更差）</td><td>1.43</td><td>950</td></tr>
-                <tr><td>只准同買第1天進場</td><td>220.74%</td><td>27.11%（較佳）</td><td>39.67%（更差）</td><td>1.35</td><td>915</td></tr>
-                <tr><td>只准第3天以上進場（反向對照）</td><td>97.81%（大幅更差）</td><td>39.02%</td><td>41.40%</td><td>1.35</td><td>314</td></tr>
+                <tr><td><strong>不限制（現行系統真實行為）</strong></td><td><strong>215.49%</strong></td><td>33.03%</td><td>41.08%</td><td><strong>1.54</strong></td><td>959</td></tr>
+                <tr><td>只准同買第1~2天進場</td><td>164.41%（更差）</td><td>36.48%（更差）</td><td>39.64%（更差）</td><td>1.46</td><td>936</td></tr>
+                <tr><td>只准同買第1天進場</td><td>201.62%（較接近但仍更差）</td><td>29.00%（較佳）</td><td>38.93%（更差）</td><td>1.37</td><td>917</td></tr>
+                <tr><td>只准第3天以上進場（反向對照）</td><td>-10.12%（大幅更差，由正轉負）</td><td>61.25%（大幅惡化）</td><td>37.75%</td><td>1.11</td><td>249</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 <strong>不限制進場天數（現行系統的真實行為）在總報酬與獲利因子上都是四組裡最好的</strong>。限定只准第1天或前兩天進場，總報酬反而變差（211~221% vs 232%），只有MDD在「只准第1天」版本略為改善。完全排除頭兩天（反向對照組）報酬腰斬且交易數大減——把好標的濾掉的機會成本，遠大於「避開已經漲一段」帶來的好處。
+            📌 <strong>（2026-08-12依個案⑬修正後更新，數字已更新，結論不變）</strong>不限制進場天數依然是四組裡總報酬與獲利因子最好的。修正後最明顯的變化是反向對照組（只准第3天以上）從原本的97.81%正報酬變成**-10.12%虧損**、MDD飆到61.25%——標籤修正後，「早進場vs晚進場」的對比反而比修正前更鮮明，早期進場的優勢被凸顯得更清楚，但依然不足以支持做成硬性濾網：把好標的濾掉的機會成本，還是大於「避開已經漲一段」帶來的好處。
         </div>
 
         <h3>結論</h3>
@@ -602,6 +605,9 @@
         <h2>⑩ 「大買」該不該加強推薦訊號？外資/投信權重與連買天數交叉分析<span class="status-tag status-solid">通用驗證（反證）</span></h2>
         <p><strong>起因</strong>：個案⑨確認「連買天數」不該當硬性濾網。使用者接著問：目前<code>calculate_chip_score</code>只判斷外資/投信買超是正是負，完全不看金額大小——「大買」（買超金額夠大）該不該加強推薦訊號？並要求：①用網路上可查證的專業定義（沒有固定金額門檻，改用統計相對定義）；②交叉測試外資/投信不同權重；③把連買天數也納入交叉分析一起看。</p>
         <p style="color:#94a3b8; font-size:0.9rem;">「大買」定義（討論後定案）：同買（foreign&gt;0且trust&gt;0，維持現有定義）+ 合計買超金額夠大，用兩種相對統計方法交叉比對——方法A：買超金額排進該股過去60日的前10%(嚴格版)/前25%(寬鬆版)；方法B：買超金額佔當日成交量比例達90th/75th百分位（門檻依實際資料分布校準，不是憑空設定）。網路查證確認台股法人籌碼沒有官方/業界統一的固定金額「大買」標準，相對統計門檻是量化分析較站得住腳的作法。</p>
+        <div class="quote-box" style="border-left-color:#f59e0b;">
+            🔄 <strong>2026-08-12更新</strong>：依<a href="#case13" style="color:#c084fc;">個案⑬</a>修正未來函數後，下方決定性回測數字已更新，<strong>結論不變</strong>——不限制買超金額大小依然是表現最好的版本。
+        </div>
 
         <h3>第一輪：大買 vs 一般同買，per-trade去重分析</h3>
         <p>📎 <a href="research_data/case10_bigbuy_dedup_strict.csv" download style="color:#ec4899; font-weight:500;">下載嚴格版結果</a>　<a href="research_data/case10_bigbuy_dedup_loose.csv" download style="color:#ec4899; font-weight:500;">下載寬鬆版結果</a>　（皆無需登入即可下載）</p>
@@ -623,14 +629,14 @@
         <table class="doc-table">
             <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th></tr></thead>
             <tbody>
-                <tr><td><strong>baseline（現行系統，不管金額大小）</strong></td><td><strong>232.06%</strong></td><td><strong>30.57%</strong></td><td>42.59%</td><td><strong>1.58</strong></td></tr>
-                <tr><td>硬性濾網·寬鬆（前25%）</td><td>199.68%</td><td>34.34%更差</td><td>42.22%</td><td>1.44</td></tr>
-                <tr><td>硬性濾網·嚴格（前10%）</td><td>146.55%大幅更差</td><td>36.33%更差</td><td>39.71%</td><td>1.32</td></tr>
-                <tr><td>軟性加權（不排除，大買時momentum+0.05）</td><td>231.83%（幾乎打平）</td><td>34.03%更差</td><td>42.26%</td><td>1.51</td></tr>
+                <tr><td><strong>baseline（現行系統，不管金額大小）</strong></td><td><strong>215.49%</strong></td><td><strong>33.03%</strong></td><td>41.08%</td><td><strong>1.54</strong></td></tr>
+                <tr><td>硬性濾網·寬鬆（前25%）</td><td>187.03%</td><td>33.20%更差</td><td>39.66%</td><td>1.43</td></tr>
+                <tr><td>硬性濾網·嚴格（前10%）</td><td>154.81%大幅更差</td><td>42.01%更差</td><td>39.49%</td><td>1.35</td></tr>
+                <tr><td>軟性加權（不排除，大買時momentum+0.05）</td><td>196.65%</td><td>39.33%更差</td><td>40.88%</td><td>1.51</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 <strong>四組都不如baseline。</strong> 連軟性加權（不排除任何訊號，只是大買時排序往前推）都沒有幫助——總報酬幾乎打平，但MDD反而變差。硬性濾網門檻越嚴格，表現越差。Per-trade看起來的優勢，換算成投資組合層級（有限持倉檔數的排擠效應）後消失——這是個案⑨已經教過的同一課，這次連軟性加權版本也印證了。
+            📌 <strong>（2026-08-12依個案⑬修正後更新，結論不變）四組都不如baseline。</strong> 連軟性加權（不排除任何訊號，只是大買時排序往前推）都沒有幫助——總報酬更差，MDD也更差。硬性濾網門檻越嚴格，表現越差。Per-trade看起來的優勢，換算成投資組合層級（有限持倉檔數的排擠效應）後消失——這是個案⑨已經教過的同一課，這次連軟性加權版本也印證了。
         </div>
 
         <h3>第二輪：外資/投信不同權重交叉比對</h3>
@@ -673,13 +679,13 @@
         <table class="doc-table">
             <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th></tr></thead>
             <tbody>
-                <tr><td><strong>baseline（現行系統）</strong></td><td><strong>232.06%</strong></td><td><strong>30.57%</strong></td><td>42.59%</td><td><strong>1.58</strong></td></tr>
-                <tr><td>只看外資買超前25%</td><td>205.54%</td><td>37.08%更差</td><td>42.26%</td><td>1.40</td></tr>
-                <tr><td>大買(等權重)+限定第1~2天</td><td>195.83%</td><td>32.78%更差</td><td>39.95%</td><td>1.36</td></tr>
+                <tr><td><strong>baseline（現行系統）</strong></td><td><strong>215.49%</strong></td><td><strong>33.03%</strong></td><td>41.08%</td><td><strong>1.54</strong></td></tr>
+                <tr><td>只看外資買超前25%</td><td>140.47%大幅更差</td><td>42.63%更差</td><td>38.52%</td><td>1.29</td></tr>
+                <tr><td>大買(等權重)+限定第1~2天</td><td>171.00%</td><td>41.91%更差</td><td>38.45%</td><td>1.40</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 <strong>即使是三輪篩選裡最有希望的候選條件，投資組合層級依然打不贏baseline。</strong>「只看外資」per-trade分離度最好，但portfolio回測反而MDD明顯惡化（37.08% vs 30.57%）；「大買+前兩天」的交互作用在per-trade分析裡最強，但回測總報酬也是三組裡最差。
+            📌 <strong>（2026-08-12依個案⑬修正後更新，結論不變）即使是三輪篩選裡最有希望的候選條件，投資組合層級依然打不贏baseline。</strong>「只看外資」per-trade分離度最好，但portfolio回測反而是三組裡最差、MDD也明顯惡化；「大買+前兩天」的交互作用在per-trade分析裡最強，但回測總報酬同樣不如不設限的baseline。
         </div>
 
         <h3>結論</h3>
@@ -733,32 +739,34 @@
         <table class="doc-table">
             <thead><tr><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>土洋雙賣觸發次數</th></tr></thead>
             <tbody>
-                <tr><td>baseline（方案B現行，只看正負號）</td><td>161.06%</td><td>36.97%</td><td>42.96%</td><td>1.40</td><td>546</td></tr>
-                <tr><td><strong>大賣濾網（前25%）</strong></td><td><strong>279.22%</strong></td><td><strong>30.83%</strong></td><td><strong>48.40%</strong></td><td><strong>1.54</strong></td><td>223</td></tr>
-                <tr><td>大賣濾網（前10%，較嚴格）</td><td>195.35%</td><td>34.09%</td><td>50.98%</td><td>1.46</td><td>100</td></tr>
+                <tr><td>baseline（方案B現行，只看正負號）</td><td>168.71%</td><td>36.68%</td><td>45.00%</td><td>1.37</td><td>561</td></tr>
+                <tr><td><strong>大賣濾網（前25%）</strong></td><td><strong>246.52%</strong></td><td><strong>27.98%</strong></td><td><strong>49.21%</strong></td><td><strong>1.55</strong></td><td>228</td></tr>
+                <tr><td>大賣濾網（前10%，較嚴格）</td><td>179.19%</td><td>37.04%</td><td>51.70%</td><td>1.50</td><td>98</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 表面上看是本系列研究裡唯一的正面結果——大賣濾網(前25%)版本總報酬從161%跳到279%，MDD、勝率、獲利因子全面改善。但事件研究跟交叉分析階段的訊號都很弱，這麼漂亮的5.5年回測結果，本身就值得懷疑，必須先做逐年穩健性檢查才能相信。
+            📌 <strong>（2026-08-13依個案⑬修正後更新）</strong>表面上看仍是本系列研究裡唯一的正面結果——大賣濾網(前25%)版本總報酬從169%跳到247%，MDD、勝率、獲利因子全面改善。但事件研究跟交叉分析階段的訊號都很弱，這麼漂亮的5.5年回測結果，本身就值得懷疑，必須先做逐年穩健性檢查才能相信。
         </div>
 
-        <h3>逐年穩健性檢查：推翻上面看似成功的結果</h3>
-        <p>📎 <a href="research_data/case11_bigsell_year_robustness.csv" download style="color:#ec4899; font-weight:500;">下載逐年獨立回測結果</a>　——無需登入即可下載。</p>
+        <h3>逐年穩健性檢查：從「推翻」修正為「證據混雜」</h3>
+        <p>📎 <a href="research_data/case11_bigsell_year_robustness.csv" download style="color:#ec4899; font-weight:500;">下載逐年獨立回測結果（2021~2025全5年）</a>　——無需登入即可下載。</p>
         <table class="doc-table">
             <thead><tr><th>年度</th><th>baseline 總報酬/MDD</th><th>大賣濾網(前25%) 總報酬/MDD</th></tr></thead>
             <tbody>
-                <tr><td>2022空頭年</td><td>-20.96% / 24.36%</td><td><strong>-26.40% / 30.61%（更差）</strong></td></tr>
-                <tr><td>2024多頭年</td><td>37.27% / 14.92%</td><td>48.99% / 19.00%（報酬較好，但MDD更差）</td></tr>
-                <tr><td>2025年</td><td>61.72% / 22.59%</td><td><strong>43.77% / 28.54%（更差）</strong></td></tr>
+                <tr><td>2021</td><td>-9.50% / 22.02%</td><td>9.56% / 18.87%（較好）</td></tr>
+                <tr><td>2022空頭年</td><td>-16.30% / 25.71%</td><td><strong>-23.21% / 31.31%（更差）</strong></td></tr>
+                <tr><td>2023</td><td>55.61% / 8.06%</td><td>78.34% / 8.28%（較好）</td></tr>
+                <tr><td>2024多頭年</td><td>26.80% / 15.35%</td><td>33.58% / 20.00%（報酬較好，但MDD更差）</td></tr>
+                <tr><td>2025年</td><td>42.79% / 25.24%</td><td><strong>28.20% / 16.50%（報酬更差，但MDD較好）</strong></td></tr>
             </tbody>
         </table>
         <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
-            ⚠️ <strong>三年裡兩年（2022、2025）大賣濾網版本都比baseline差，只有2024年報酬較好、但MDD也更差。</strong>5.5年連續回測看起來的279% vs 161%大幅優勢，沒有在任何單一年度穩定重現，很可能是特定連續期間的複利路徑造成的假象——這正是個案⑤研究regime時已經記錄過的「連續回測分段謬誤」，這次在自己的研究裡又踩了一次，也立刻自我修正記錄下來。
+            ⚠️ <strong>2026-08-13更正：先前只查了3年（2022/2024/2025）就下「推翻」結論，補齊2021、2023兩年後，證據其實是混雜的——5年裡3年（2021、2023、2024）大賣濾網報酬較好，2年（2022空頭年、2025）較差。</strong>唯一的空頭年樣本（2022）明確不利於這個濾網，2025年也不利，但這只是2/5年、且都集中在近期，不足以斷定是規律還是巧合。5.5年連續回測的247% vs 169%優勢，也沒有在任何單一年度穩定重現到同等幅度，仍然可能有連續回測複利路徑的放大效果。
         </div>
 
         <h3>結論</h3>
-        <p><strong>「大賣」不該加強出場訊號，證據比個案⑩的「大買」更薄弱。</strong>事件研究法本身就顯示賣超金額大小跟後續股價表現沒有清楚關係；5.5年回測一度看似大幅改善，但逐年穩健性檢查後推翻——2022、2025兩年都更差，不是穩定效應。方案B現行的「土洋雙賣只看正負號」設計維持不變是對的。</p>
-        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（再次驗證）</strong>：連續多年回測的加總結果，即使數字很漂亮，也不能取代逐年獨立驗證——這是本系列研究（個案⑤⑨⑩⑪）反覆確認的同一個原則，這次差點被自己的正面結果騙過去，逐年檢查救回了正確結論。</p>
+        <p><strong>「大賣」加強出場訊號的證據是混雜的，還不足以採用，但也不能像最初那樣直接反證。</strong>事件研究、交叉分析階段訊號都很弱；5.5年回測看似大幅改善，逐年穩健性檢查（補齊到全5年後）顯示3年較好、2年較差，唯一的空頭年樣本（2022）和最近一年（2025）都不利於濾網。在有更多空頭年樣本之前，方案B現行的「土洋雙賣只看正負號」設計維持不變是較保守、較安全的選擇；但這條線索比個案⑨的連買天數、個案⑩的大買金額更值得未來繼續觀察，不宜直接歸零。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（雙重）</strong>：(1) 連續多年回測的加總結果，即使數字很漂亮，也不能取代逐年獨立驗證——這是本系列研究（個案⑤⑨⑩⑪）反覆確認的同一個原則。(2) 逐年穩健性檢查本身也要做「全年份」而非「挑幾年」，最初只查3年就下「推翻」的結論同樣是一種取樣偏誤，補齊5年後結論從「清楚反證」修正為「證據混雜、傾向保守」——連自我修正的驗證步驟，也需要被再驗證。</p>
     </div>
 
     <!-- 個案十二 -->
