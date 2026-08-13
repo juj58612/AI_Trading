@@ -597,15 +597,13 @@ def get_regime_status():
             "taiex_ma20": round(ma20, 2),
             "taiex_date": last["date"],
             "bias_pct": round((close - ma20) / ma20 * 100, 2),
-            "recommendation": {
-                "entry": "一次買完（Lump-sum）" if is_bull else "3:3:4 分批進場",
-                "exit": "防線A（-8%停損）關閉，其餘防線（防線B／高點打折鎖利／保本停利）維持"
-                        if is_bull else
-                        "防線A／防線B／高點打折鎖利全關，只留保本停利（調整模式，非直接出清）＋土洋雙賣",
-            },
-            "note": "研究版建議，依「TAIEX收盤 vs 20日均線」逐日動態判斷；系統實際下單建議目前仍採單一固定模型，未套用此regime切換邏輯，僅供參考。",
-            "report_url": "research_report.html",
-            "case_url": "case_studies.html#case5",
+            # 2026-08-13更新：原本這裡會依regime顯示「建議進場/出場方式」，個案研究⑤⑦⑧⑮
+            # 證實依這個訊號切換出場規則或整包方案，全部輸給固定使用單一方案（方案E），
+            # 已移除該建議文字，避免面板繼續顯示已被推翻的結論。改為純資訊性展示regime數值，
+            # 並說明目前系統實際採用的是方案E（個案⑭⑯驗證後的正式預設值）。
+            "note": "此面板僅供資訊參考，不代表推薦邏輯。個案研究⑤⑦⑧⑮已證實依此訊號切換出場規則或整包方案，皆輸給固定使用方案E；系統目前的下單建議固定採用方案E（個案⑭⑯驗證後的正式預設值），不隨此regime數值變動。",
+            "report_url": "case_studies.html#case15",
+            "case_url": "case_studies.html#case16",
         }
         save_regime_cache({"date": today_str, "result": result})
         return result
