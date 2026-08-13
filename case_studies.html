@@ -168,6 +168,7 @@
         <a href="#case11">⑪ 「大賣」該不該加強出場訊號？事件研究+逐年穩健性自我修正（反證）</a>
         <a href="#case12">⑫ 投信比外資更持久？驗證市場傳言</a>
         <a href="#case13">⑬ 三大法人資料未來函數：整個系統的關鍵修正</a>
+        <a href="#case14">⑭ 方案E補齊正式驗證：排行榜冠軍，但逐年拆解後是條件式優勢</a>
     </div>
 
     <!-- 個案一 -->
@@ -872,6 +873,67 @@
 
         <h3>目前狀態</h3>
         <p><code>strategy_core.py</code>的呼叫端（<code>backtest_engine.py</code>、<code>main.py</code>）已修正並上線。R策略（個案⑤⑦⑧原本考慮上線的配置）依修正後的數字重新評估，結論是<strong>目前不建議寫入</strong>——連最基本的「贏過靜態方案」都不再成立，維持首頁研究版advisory面板即可，不進一步整合成正式下單邏輯。<code>backtest_logs.db</code>裡累積的811組正式回測實驗已完成全面重跑（大數據回測量化分析報告、個案⑨⑩⑪引用的交易數據皆已更新）；case_studies.html個案⑤⑦⑧與<a href="research_report.html" style="color:#c084fc;">研究報告</a>、<a href="analysis.html" style="color:#c084fc;">大數據回測量化分析中心</a>的Regime相關數字已於2026-08-13同步更新。</p>
+    </div>
+
+    <!-- 個案十四 -->
+    <div class="doc-section" id="case14">
+        <h2>⑭ 方案E補齊正式驗證：排行榜冠軍，但逐年拆解後是條件式優勢<span class="status-tag status-solid">通用驗證</span></h2>
+        <p><strong>起因</strong>：方案E（快穩雙軌）早在<a href="strategy_core.py" style="color:#c084fc;">strategy_core.py</a>就已完整實作，但「大數據回測」網格勾選框（<code>backtest.html</code>）預設沒有勾選它，導致跑進正式資料庫的方案E實驗只有12組、且是修正未來函數前產生的舊資料，數字跟A/B/C/D完全不能公平比較。使用者提出「應該可以納入」，於是先補齊跟A/B/C/D同規模的正式網格，再比照Regime研究線（個案⑤～⑧）的方法論做逐年拆解與交叉驗證，不能因為排行榜數字漂亮就直接採信。</p>
+
+        <h3>第一步：補齊199組正式網格</h3>
+        <p>刪除12組修正前、參數也對不上A~D的舊E實驗，複製方案D的199組正式參數組合（同樣的持倉檔數1~10檔×持倉天數2~360天×5.5年區間），改用<code>exit_strategy='E'</code>重新跑一輪，全部直接呼叫正式<code>run_backtest</code>，同步存入SQLite。199組全數成功，0失敗。</p>
+        <p>📎 <a href="research_data/case14_leaderboard_top10.csv" download style="color:#ec4899; font-weight:500;">下載補齊後排行榜前10名</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>排名</th><th>方案</th><th>持倉檔數</th><th>持倉天數</th><th>總報酬</th></tr></thead>
+            <tbody>
+                <tr><td>🥇 1~5</td><td><strong>E（全部前5名皆為方案E）</strong></td><td>2~3檔</td><td>30~45天</td><td><strong>388.58%～406.11%</strong></td></tr>
+                <tr><td>6</td><td>方案D（原冠軍）</td><td>2檔</td><td>10天</td><td>384.18%</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 方案E補齊資料後直接包辦全站排行榜前5名，把原冠軍方案D擠到第6名。用production實際採用的<strong>8檔持股</strong>（而非排行榜偏好的極端集中2~3檔）重新比較五個方案各自最佳設定：<strong>A 268.86%(MDD33.91%) / B 203.71%(MDD30.68%) / C 227.84%(MDD48.61%) / D 278.78%(MDD27.36%) / E 299.26%(MDD25.93%，五方案裡MDD最低)</strong>——8檔設定下E依然是報酬最高、風險最低的方案，不是只有極端集中持股才成立的排行榜偏誤。
+        </div>
+
+        <h3>逐年拆解：8檔持股下，E vs D（現行系統建議）vs A（基準）</h3>
+        <p>比照個案⑥的方法論，直接鎖定2021~2026每一個年度獨立回測（而非連續回測貼標籤），檢驗5.5年累積的優勢是不是每年都站得住腳。</p>
+        <p>📎 <a href="research_data/case14_strategyE_year_isolation.csv" download style="color:#ec4899; font-weight:500;">下載逐年獨立回測結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>方案E(8檔/30天)</th><th>方案D(8檔/20天)</th><th>方案A(8檔/90天)</th><th>該年贏家</th></tr></thead>
+            <tbody>
+                <tr><td>2021</td><td><strong>-0.69%（三組最差）</strong></td><td><strong>+15.83%</strong></td><td>-7.40%</td><td>D</td></tr>
+                <tr><td>2022空頭年</td><td><strong>+1.68%（唯一正報酬）</strong></td><td>-10.45%</td><td>-7.65%</td><td>E</td></tr>
+                <tr><td>2023</td><td><strong>+66.33%</strong></td><td>+54.75%</td><td>+63.14%</td><td>E</td></tr>
+                <tr><td>2024多頭年</td><td><strong>+27.40%（三組最差）</strong></td><td>+36.03%</td><td><strong>+46.77%</strong></td><td>A</td></tr>
+                <tr><td>2025</td><td>+31.42%</td><td>+28.66%</td><td><strong>+45.70%</strong></td><td>A</td></tr>
+                <tr><td>2026年初迄今</td><td>+54.67%</td><td><strong>+56.39%</strong></td><td>+48.04%</td><td>D</td></tr>
+            </tbody>
+        </table>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px 16px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin: 14px 0;">
+            🚨 <strong>重要發現：方案E不是「每年都最好」，6年裡3個方案各贏2年（A贏2024/2025，D贏2021/2026，E贏2022/2023）。</strong>方案E在2021、2024兩個強勢多頭年反而是三組裡表現最差的，在2022空頭年、2023報酬最好。5.5年連續回測看到的299.26%領先，是複利路徑的結果——E在對的年份（空頭/整理）贏得夠多，蓋過了它在強勢多頭年落後的部分，不是「規則本身全面優於其他方案」。這跟個案⑤Regime研究「連續回測優勢不代表逐年都站得住腳」是同一個提醒，但這次<strong>不是bug造成的假象，是可以解釋的機制性取捨</strong>（見下方出場原因分析）。
+        </div>
+
+        <h3>出場原因拆解：方案E真正贏在哪裡？</h3>
+        <p>方案E設計的核心差異，是把方案B的「土洋雙賣」觸發後依賺賠分兩種處理——虧損中立即出場（比照B），獲利中則不直接出場，改成收緊移動停損（比照C/D邏輯），理論上應該保留獲利持續奔跑的空間。實際拆解8檔/30天版本836筆交易的出場原因分布：</p>
+        <p>📎 <a href="research_data/case14_strategyE_exit_reason_breakdown.csv" download style="color:#ec4899; font-weight:500;">下載出場原因統計</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>出場原因</th><th>筆數</th><th>佔比</th><th>平均報酬</th><th>平均持有天數</th></tr></thead>
+            <tbody>
+                <tr><td>土洋雙賣（虧損中，立即出場）</td><td>309</td><td>37.0%</td><td>-4.56%</td><td>8.3天</td></tr>
+                <tr><td>15%停利</td><td>208</td><td>24.9%</td><td>+17.49%</td><td>12.3天</td></tr>
+                <tr><td>觸發停損（ATR移動停損）</td><td>205</td><td>24.5%</td><td>-5.40%</td><td>12.3天</td></tr>
+                <tr><td>時間到期</td><td>102</td><td>12.2%</td><td>+3.39%</td><td>30.4天</td></tr>
+                <tr><td>期末平倉</td><td>7</td><td>0.8%</td><td>+2.84%</td><td>9.0天</td></tr>
+                <tr><td><strong>雙賣後鎖利出場（獲利中收緊停損，方案E的招牌機制）</strong></td><td><strong>5</strong></td><td><strong>0.6%</strong></td><td>+2.73%</td><td>10.0天</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>方案E的招牌機制（獲利中收緊停損而非直接出清）作為獨立標籤的出場原因只出現5次（836筆裡的0.6%）</strong>，跟B的「土洋雙賣」直接出清相比幾乎不算差異化因子。真正跟方案B不同、且佔比達37%的，是「虧損中的土洋雙賣」——平均-4.56%、平均只抱8.3天就出場，比同樣是停損類的「觸發停損」（平均-5.40%、抱12.3天）更早、更輕的認賠出場。<strong>方案E的優勢比較可能來自「虧損時比其他方案更快認賠」，而不是原本設計理念強調的「獲利時給空間繼續漲」</strong>——後者這個機制在實際交易裡幾乎沒有機會被單獨觸發到（多數獲利部位在真的觸發收緊停損之前，早就已經先達到15%停利出場了）。這個機制解釋跟原始設計意圖有落差，值得記錄下來，但不影響已觀測到的績效數字本身。
+        </div>
+
+        <h3>結論</h3>
+        <p><strong>方案E在8檔持股的實戰設定下，5.5年累積報酬與MDD確實是五方案裡最好的（299.26%/MDD25.93%），這個結論通過了排行榜偏誤檢查（非集中持股才成立）。但它不是「無條件優於現行方案D」的全面升級</strong>——逐年拆解顯示它在強勢多頭年（2021、2024）明顯落後，在空頭與盤整年（2022、2023）明顯領先，是一種偏防禦、偏空頭/盤整市況的風險輪廓，不是任何市況都最佳。出場原因分析也顯示，實際驅動E優勢的主因是「虧損時比其他方案出場更快」，不是原始設計强調的「獲利時給空間繼續漲」機制（這個機制在實戰中幾乎沒被單獨觸發過）。</p>
+        <p><strong>實戰建議</strong>：方案E值得作為「偏防禦」的可選方案提供給使用者參考（類似方案B/C的定位），特別適合預期空頭或盤整市況時使用；但不建議直接取代方案D成為系統預設的「最佳建議」，因為在強勢多頭年（2024這類單年近50%漲幅的行情）方案D和方案A的表現明顯更好。<code>backtest.html</code>的方案E勾選框已改為預設納入大數據回測，`analysis.html`/`doc.html`已移除「實驗性」標籤，但下拉選單的系統預設值仍維持方案D，不會因為這次研究就自動切換預設。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓（延續整個系列）</strong>：多年連續回測的排行榜總報酬，即使通過了「非極端集中持股」的偏誤檢查，依然可能是複利路徑的產物——逐年獨立拆解是判斷「規則本身穩健」還是「特定年份湊出來的優勢」不可省略的一步，這次差異在於：拆解後發現的不是bug造成的假象（跟個案⑤⑦⑧不同），而是一個可以用交易機制解釋、真實存在但有適用條件的風險輪廓。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>
