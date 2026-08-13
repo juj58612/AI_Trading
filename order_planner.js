@@ -160,7 +160,11 @@ async function loadPlannerData() {
                 
                 // Render Warnings if any
                 renderWarnings(data.warning);
-                
+
+                // 後端固定用「有勾選的最多5檔平均分配」算股數，不知道使用者client端
+                // 已經取消勾選了哪幾檔，這裡重新依目前實際勾選狀態分配一次預算
+                redistributeAutoBudget();
+
                 // Render both columns
                 renderOrders();
             } else {
@@ -405,7 +409,44 @@ function toggleOrderCheck(type, idx) {
     } else {
         manualOrders[idx].checked = !manualOrders[idx].checked;
     }
-    updateTotalCosts();
+    redistributeAutoBudget();
+    renderOrders();
+}
+
+// 使用者勾選/取消勾選A清單裡的股票時，把總預算重新平均分配到「目前仍勾選、且沒被
+// 使用者手動調整過股數(userEdited)」的買進建議上——原本勾5檔取消3檔只留2檔，
+// 預算還是照5檔分，沒有真的分給剩下2檔，使用者回報這個問題。手動調整過股數的
+// 那幾筆視為使用者刻意設定，不會被這裡覆蓋；B手動掛單已勾選的金額一樣先從總預算扣除。
+function redistributeAutoBudget() {
+    const totalWan = parseFloat(document.getElementById('cashInput').value) || 0;
+    const totalTwd = totalWan * 10000;
+
+    let manualBuyTwd = 0;
+    (manualOrders || []).forEach(o => {
+        if (o.checked && o.type === 'buy') {
+            manualBuyTwd += o.price * o.shares * 1000;
+        }
+    });
+    const cashForAuto = Math.max(0, totalTwd - manualBuyTwd);
+
+    const buyOrders = (autoOrders || []).filter(o => o.type === 'buy');
+    let lockedTwd = 0;
+    buyOrders.forEach(o => {
+        if (o.checked && o.userEdited) {
+            lockedTwd += o.price * o.shares * 1000;
+        }
+    });
+    const redistributable = Math.max(0, cashForAuto - lockedTwd);
+
+    const targets = buyOrders.filter(o => o.checked && !o.userEdited);
+    if (targets.length === 0) return;
+
+    const allocPerStock = redistributable / targets.length;
+    targets.forEach(o => {
+        if (!o.price || o.price <= 0) return;
+        const sharesTwd = allocPerStock / (o.price * 1.0015);
+        o.shares = Math.round((sharesTwd / 1000) * 1000) / 1000; // 四捨五入到小數第3位（張）
+    });
 }
 
 // Edit Price/Shares Modal Control
@@ -462,6 +503,8 @@ function saveOrderEdits() {
         // B 的金額變了，總預算裡留給 A 的額度也跟著變，重新跟後端算一次 A
         loadPlannerData();
     } else {
+        // 這筆A的股數被使用者手動鎖定了，剩下沒被手動調整過的A清單要重新分配預算
+        redistributeAutoBudget();
         renderOrders();
     }
 }
