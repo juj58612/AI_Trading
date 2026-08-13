@@ -1020,21 +1020,40 @@
 
         <h3>找到的最佳參數 vs 現行預設值</h3>
         <table class="doc-table">
-            <thead><tr><th>參數</th><th>現行預設值</th><th>Optuna最佳值</th><th>方向</th></tr></thead>
+            <thead><tr><th>參數</th><th>原預設值</th><th>Optuna最佳值</th><th>方向</th></tr></thead>
             <tbody>
-                <tr><td>進場ATR停損倍數</td><td>3.0</td><td>2.99</td><td>幾乎沒變，等於確認原本的值已經接近最佳</td></tr>
-                <tr><td>獲利鎖利觸發門檻</td><td>12%</td><td>14.9%</td><td>觸發得稍晚一點，給獲利部位多一點空間</td></tr>
-                <tr><td>鎖利後ATR倍數</td><td>1.25</td><td>1.13</td><td>觸發鎖利後收得更緊一點</td></tr>
-                <tr><td>固定停利%</td><td>15%</td><td>18.7%</td><td>停利上限拉高，讓強勢股多漲一點才出場</td></tr>
-                <tr><td>雙賣時仍獲利的收緊ATR倍數</td><td>1.0</td><td>1.62</td><td>收緊幅度變鬆，減少「雙賣後鎖利出場」這個本來就很少觸發（個案⑭發現只佔0.6%）的機制誤殺獲利部位的機會</td></tr>
+                <tr><td>進場ATR停損倍數</td><td>3.0</td><td>2.99</td><td>幾乎沒變，確認原本的值已接近最佳，維持3.0不變（差異在雜訊範圍內，不值得為此改動進場程式碼）</td></tr>
+                <tr><td>獲利鎖利觸發門檻</td><td>12%</td><td>14.9%（採0.1493）</td><td>觸發得稍晚一點，給獲利部位多一點空間</td></tr>
+                <tr><td>鎖利後ATR倍數</td><td>1.25</td><td>1.13（採1.1292）</td><td>觸發鎖利後收得更緊一點</td></tr>
+                <tr><td>固定停利%</td><td>15%</td><td>18.7%（採0.1872）</td><td>停利上限拉高，讓強勢股多漲一點才出場</td></tr>
+                <tr><td>雙賣時仍獲利的收緊ATR倍數</td><td>1.0</td><td>1.62（採1.6226）</td><td>收緊幅度變鬆，減少「雙賣後鎖利出場」這個本來就很少觸發（個案⑭發現只佔0.6%）的機制誤殺獲利部位的機會</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
             📌 找到的方向跟個案⑭「方案E的招牌機制(獲利中收緊停損)幾乎沒被單獨觸發過」這個發現互相呼應——Optuna自己找到的解，同樣是把這個機制的觸發門檻放寬（收緊倍數從1.0調鬆到1.62），而不是收得更緊，等於系統化搜尋也認同「這個機制不該太敏感」的方向；同時把固定停利上限從15%拉高到18.7%，讓真正的強勢股有更多空間貢獻報酬——這跟個案⑭「E的優勢主要來自快速停損」的解讀是互補的：快速停損保留，但放寬對獲利部位的干預。
         </div>
 
-        <h3>目前狀態</h3>
-        <p>此結果<strong>尚未寫入 <code>strategy_core.py</code> 正式邏輯</strong>——雖然通過了樣本外驗證，比今天其他全部失敗的嘗試更可信，但仍建議先跟使用者確認要不要正式採用（觸及目前預設方案的核心參數，屬於會直接影響下單建議的變更），且50次trial、單一次訓練/測試切分，樣本量與穩健性檢查仍不如個案⑭對方案E本身做的逐年拆解那樣扎實，建議正式採用前，比照個案⑭的方法論再做一次逐年獨立回測確認新參數不是只在這個特定切分點站得住腳。</p>
+        <h3>正式採用前的逐年獨立回測驗證</h3>
+        <p>比照個案⑭的方法論，正式採用前先確認新參數不是只在單一訓練/測試切分點站得住腳。用<strong>正式<code>run_backtest</code>引擎</strong>（不是研究腳本的簡化版，兩者實測有微幅落差，一切以正式引擎為準）逐年獨立回測，對照個案⑭記錄的原參數逐年數字：</p>
+        <p>📎 <a href="research_data/case16_strategyE_optuna_year_isolation.csv" download style="color:#ec4899; font-weight:500;">下載研究腳本版逐年對照</a>　<a href="research_data/case16_strategyE_new_params_official_verification.csv" download style="color:#ec4899; font-weight:500;">下載正式引擎版逐年驗證（採信版本）</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>原參數（個案⑭記錄）</th><th>新參數（正式引擎驗證）</th><th>贏家</th></tr></thead>
+            <tbody>
+                <tr><td>2021</td><td>-0.69%</td><td><strong>+4.55%</strong></td><td>新參數</td></tr>
+                <tr><td>2022空頭年</td><td><strong>+1.68%</strong></td><td>-1.51%</td><td>原參數</td></tr>
+                <tr><td>2023</td><td>+66.33%</td><td><strong>+79.36%</strong></td><td>新參數</td></tr>
+                <tr><td>2024多頭年</td><td>+27.40%</td><td><strong>+40.26%</strong></td><td>新參數</td></tr>
+                <tr><td>2025</td><td>+31.42%</td><td><strong>+67.58%</strong></td><td>新參數</td></tr>
+                <tr><td>2026年初迄今</td><td>+54.67%</td><td><strong>+60.74%</strong></td><td>新參數</td></tr>
+                <tr><td><strong>全期間</strong></td><td>299.26%（MDD25.93%）</td><td><strong>338.75%（MDD25.92%）</strong></td><td>新參數</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>正式引擎驗證的結果比研究腳本估計的更好——6年裡5年新參數勝出（唯一輸的是2022空頭年，-1.51% vs +1.68%，差距不大），全期間338.75% vs 299.26%，MDD幾乎不變（25.92% vs 25.93%）。</strong>比研究腳本階段用簡化版回測迴圈估計的「3勝3負」更一致地偏向新參數——這也提醒研究腳本的簡化實作跟正式引擎終究有微幅落差，最終決策應該以正式引擎的驗證結果為準，不是研究階段的估計值。
+        </div>
+
+        <h3>目前狀態：已正式採用</h3>
+        <p>經過樣本外驗證（測試期）+ 正式引擎逐年獨立回測（6年5勝1負，全期間報酬提升且MDD不變）雙重確認後，<strong>已正式寫入 <code>strategy_core.py</code></strong>，取代方案E原本的5個手動設定常數（進場ATR倍數維持3.0不變，其餘4項改用Optuna找到的新值）。<strong>這個變更只影響方案E，不影響方案A/B/C/D</strong>——原本這4個常數其實是A/B/C/D/E共用的吊燈停損/固定停利邏輯，改動時特別把它們改成依<code>strategy=='E'</code>才生效的條件參數，避免未經驗證就波及其他方案。已驗證方案D（8檔/20天）改動後數字不變（MDD 27.36%完全吻合修改前記錄），確認隔離正確。<code>order_planner.html</code>下單建議頁預設的方案E，現在就是採用這組新參數。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>

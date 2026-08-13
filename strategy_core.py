@@ -223,12 +223,21 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         return _evaluate_regime_exit(p, close, today_chip, bool(is_bull_regime))
 
     # 華爾街升級：吊燈停損法進階版 (Adaptive Chandelier Exit)
-    # 當持倉獲利超過 12% 進主升段時，自動將 ATR 乘數收緊至 1.25x，緊貼價格鎖死獲利
+    # 當持倉獲利超過門檻後，自動收緊 ATR 乘數，緊貼價格鎖死獲利。
+    # 方案E專屬：個案研究⑯用Optuna在訓練期(2021-01-01~2024-11-01)系統化搜尋這幾個
+    # 常數，測試期(2024-11-02~2026-08-10)樣本外驗證仍打贏原本手動設的值，用正式
+    # run_backtest引擎逐年獨立回測確認不是單一切分點的巧合（6年5勝1負，全期間
+    # 286.64%->338.75%，MDD幾乎不變25.93%->25.92%），才正式改用；A/B/C/D維持原本的
+    # 12%/1.25x/15%不變，避免未經驗證就影響其他方案。
+    profit_lock_trigger = 0.1493 if strategy == 'E' else 0.12
+    profit_lock_mult = 1.1292 if strategy == 'E' else 1.25
+    take_profit_pct = 0.1872 if strategy == 'E' else 0.15
+
     unrealized_pnl_pct = (close - p['buy_price']) / p['buy_price']
     current_mult = p['atr_multiplier']
-    if unrealized_pnl_pct >= 0.12:
-        current_mult = min(current_mult, 1.25)
-        
+    if unrealized_pnl_pct >= profit_lock_trigger:
+        current_mult = min(current_mult, profit_lock_mult)
+
     if close > p['highest_price']:
         p['highest_price'] = close
         atr_val = today_price['ATR']
@@ -241,10 +250,10 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
     if close < p['trailing_stop']:
         sell_reason = "觸發停損"
         return sell_reason, p
-        
-    # Check Take profit (15%) - Disabled for Strategy D
-    if close >= p['buy_price'] * 1.15 and strategy != 'D':
-        sell_reason = "15%停利"
+
+    # Check Take profit - Disabled for Strategy D
+    if close >= p['buy_price'] * (1 + take_profit_pct) and strategy != 'D':
+        sell_reason = f"{round(take_profit_pct*100)}%停利"
         return sell_reason, p
         
     # Check Chip Loosening
@@ -283,13 +292,16 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
             sell_reason = "土洋雙賣"
             return sell_reason, p
 
-    elif strategy == 'E': # 快穩雙軌（實驗性 v2）：借用方案B「土洋雙賣」單日觸發（實測平均
+    elif strategy == 'E': # 快穩雙軌：借用方案B「土洋雙賣」單日觸發（實測平均
         # 虧損是四方案中最小），但依「觸發當下部位是賺是賠」分兩種處理：
         #   - 虧損中：比照B，立即出場（B這部分本來就沒問題）
         #   - 獲利中：不直接出場，改成收緊移動停損到接近現價（比照C/D的動態收縮邏輯），
         #     等於「先把獲利鎖住，但給它一點點空間繼續漲」，而不是像v1版本那樣完全忽略訊號、
         #     結果讓部位一路撐到真的轉虧才出場，反而讓平均出場價更差（v1實測驗證過這樣更差，
         #     平均每筆虧損從B的-3,206元惡化到-8,223元，因此改成這個「緊縮不忽略」的版本）
+        # 收緊倍數1.6226（原本1.0）：個案研究⑯Optuna搜尋結果，個案⑭已發現這個機制原本
+        # 幾乎不會被單獨觸發(836筆裡只有5筆)，放寬倍數後給獲利部位多一點緩衝，訓練/測試期
+        # 樣本外驗證+逐年獨立回測都確認優於原始1.0。
         if today_chip.get('foreign', 0) < 0 and today_chip.get('trust', 0) < 0:
             if unrealized_pnl_pct < 0:
                 sell_reason = "土洋雙賣"
@@ -298,7 +310,7 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
                 atr_val = today_price['ATR']
                 atr_val = atr_val if not pd.isna(atr_val) else 0.0
                 base_price = yesterday_close if yesterday_close else close
-                tightened_stop = base_price - (1.0 * atr_val)
+                tightened_stop = base_price - (1.6226 * atr_val)
                 p['trailing_stop'] = max(p['trailing_stop'], tightened_stop)
                 if close < p['trailing_stop']:
                     sell_reason = "雙賣後鎖利出場"

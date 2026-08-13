@@ -155,6 +155,14 @@
   對應 [個案⑯](../case_studies.html#case16)：Optuna 50次trial的逐次搜尋紀錄，含最佳參數、訓練/測試/全期間三組對照的完整metrics。
   產生腳本：`optuna_strategyE_param_search.py`，2026-08-13。
 
+- **`case16_strategyE_optuna_year_isolation.csv`**（12列，研究腳本簡化版逐年獨立回測）
+  對應 [個案⑯](../case_studies.html#case16)：正式採用前的逐年穩健性檢查（研究腳本簡化版），新參數6年裡3年較好。此為初步估計版本，正式採信的是下一個檔案（正式引擎版）。
+  產生腳本：`optuna_E_params_year_isolation.py`，2026-08-13。
+
+- **`case16_strategyE_new_params_official_verification.csv`**（7列，正式`run_backtest`引擎逐年+全期間驗證，採信版本）
+  對應 [個案⑯](../case_studies.html#case16)：用正式回測引擎（不是研究腳本簡化版）重新驗證新參數，結果比研究腳本估計的更好——6年5勝1負，全期間286.64%→338.75%，MDD幾乎不變（25.93%→25.92%）。此結果是最終決定正式寫入`strategy_core.py`的依據。
+  產生腳本：`verify_E_new_params_official.py`（直接呼叫正式`run_backtest`），2026-08-13。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
