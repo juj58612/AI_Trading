@@ -480,6 +480,9 @@ function closeManualAddModal() {
 }
 
 // Auto fill stock name based on config
+// 2026-08-13修正：此清單原本只有60檔，跟app.js的AI_STOCKS_CONFIG(126檔)長期沒同步，
+// 導致這頁對66檔股票的formatStockName()找不到中文名、只顯示股票代號。改成跟app.js
+// 同步的126檔完整清單（欄位格式不同：這裡name不含代號前綴，formatStockName自己會組合）。
 const STOCKS_CONFIG = [
     { ticker: "2330", name: "台積電" }, { ticker: "2317", name: "鴻海" },
     { ticker: "2382", name: "廣達" }, { ticker: "3231", name: "緯創" },
@@ -510,7 +513,40 @@ const STOCKS_CONFIG = [
     { ticker: "3533", name: "嘉澤" }, { ticker: "2359", name: "所羅門" },
     { ticker: "6414", name: "樺漢" }, { ticker: "2395", name: "研華" },
     { ticker: "6139", name: "亞翔" }, { ticker: "5443", name: "均豪" },
-    { ticker: "2303", name: "聯電" }, { ticker: "6230", name: "尼得科超眾" }
+    { ticker: "2303", name: "聯電" }, { ticker: "6230", name: "尼得科超眾" },
+    { ticker: "3081", name: "聯亞" }, { ticker: "3105", name: "穩懋" },
+    { ticker: "2455", name: "全新" }, { ticker: "3163", name: "波若威" },
+    { ticker: "3363", name: "上詮" }, { ticker: "6442", name: "光聖" },
+    { ticker: "3380", name: "明泰" }, { ticker: "6830", name: "汎銓" },
+    { ticker: "3587", name: "閎康" }, { ticker: "3289", name: "宜特" },
+    { ticker: "1503", name: "士林電機" }, { ticker: "1513", name: "中興電工" },
+    { ticker: "1514", name: "亞力電機" }, { ticker: "1519", name: "華城電機" },
+    { ticker: "1560", name: "中砂科技" }, { ticker: "1609", name: "大亞電線電纜" },
+    { ticker: "2301", name: "光寶科技" }, { ticker: "2337", name: "旺宏電子" },
+    { ticker: "2355", name: "敬鵬工業" }, { ticker: "2385", name: "群光電子" },
+    { ticker: "2404", name: "漢唐集成" }, { ticker: "2412", name: "中華電信" },
+    { ticker: "2436", name: "偉詮電子" }, { ticker: "2458", name: "義隆電子" },
+    { ticker: "2480", name: "敦陽科技" }, { ticker: "2492", name: "華新科技" },
+    { ticker: "3005", name: "神基科技" }, { ticker: "3413", name: "京鼎精密" },
+    { ticker: "3532", name: "台勝科" }, { ticker: "4755", name: "三福化工" },
+    { ticker: "4958", name: "臻鼎-KY" }, { ticker: "5388", name: "中磊電子" },
+    { ticker: "5434", name: "崇越科技" }, { ticker: "6166", name: "凌華科技" },
+    { ticker: "6183", name: "關貿網路" }, { ticker: "6196", name: "帆宣系統" },
+    { ticker: "6202", name: "盛群半導體" }, { ticker: "6206", name: "Flytech" },
+    { ticker: "6214", name: "精誠資訊" }, { ticker: "6239", name: "力成科技" },
+    { ticker: "6257", name: "矽格科技" }, { ticker: "6269", name: "台郡科技" },
+    { ticker: "6285", name: "啟碁科技" }, { ticker: "6412", name: "群光電能" },
+    { ticker: "6415", name: "矽力*-KY" }, { ticker: "6438", name: "迅得機械" },
+    { ticker: "6533", name: "晶心科技" }, { ticker: "6719", name: "力智電子" },
+    { ticker: "6770", name: "力積電" }, { ticker: "8081", name: "致新科技" },
+    { ticker: "8114", name: "振樺電子" }, { ticker: "3227", name: "原相科技" },
+    { ticker: "3374", name: "精材科技" }, { ticker: "3438", name: "類比科技" },
+    { ticker: "3680", name: "家登精密" }, { ticker: "4979", name: "LuxNet" },
+    { ticker: "4991", name: "GCS Holdings" }, { ticker: "5227", name: "立凱-KY" },
+    { ticker: "5347", name: "世界先進" }, { ticker: "5483", name: "中美矽晶" },
+    { ticker: "6182", name: "合晶科技" }, { ticker: "6223", name: "旺矽科技" },
+    { ticker: "6488", name: "環球晶圓" }, { ticker: "6510", name: "中華精測" },
+    { ticker: "8050", name: "廣積科技" }, { ticker: "8086", name: "宏捷科" },
 ];
 
 window.autoFillTickerNameAndPrice = function() {
