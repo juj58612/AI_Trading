@@ -170,6 +170,11 @@
             <li><strong>外資今日買超 (土洋同買)</strong>：+1 分。</li>
             <li><strong>跌破 5MA 均線</strong>：-2 分（強制扣分防禦）。</li>
         </ul>
+        <p><strong>積分同分時如何排序？</strong>做多飆股篩選控制台（首頁AI推薦卡片）用的是籌碼積分與動能組成的複合分數來排序：</p>
+        <div class="code-block">
+            aiScore = (chip_score × 100) + momentum
+        </div>
+        <p>其中 <strong>momentum（動能）= (收盤價 − 20日均線) ÷ 20日均線</strong>，也就是股價站上20日均線的乖離率。籌碼積分乘以100之後，數值遠大於momentum（通常在±0.5以內），所以<strong>積分本身還是絕對的主要排序依據</strong>；只有當兩檔股票的籌碼積分完全相同時，複合分數的差距才會完全來自momentum，實質上等同於用動能排序——<strong>積分同分時，站上20日均線幅度越大（乖離越大、漲越多）的排名越前面</strong>。這跟5.6節「乖離率不該當硬性懲罰項」的研究結論一致：乖離大不但不扣分，在積分同分時反而是加分的排序依據。</p>
 
         <h3>2.3 逆波動率資金分配模型 (Risk Parity Sizing)</h3>
         <p>針對不同波動度（ATR）的股票，系統拒絕簡單的「等權重買進」，而是採用 <strong>Risk Parity 逆波動率模型</strong>：</p>
