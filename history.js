@@ -663,6 +663,15 @@ function renderHistory(data) {
         else if (item.outcome.includes('損') || item.outcome.includes('虧') || item.outcome.includes('賠')) badgeClass = 'outcome-loss';
         
         const headerBg = item.type === 'short' ? 'linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)' : 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)';
+
+        const isShort = item.type === 'short';
+        const finalPrice = item.exitPrice || item.closePrice || 0;
+        const pnlPercent = item.cost > 0 ? (isShort ? (item.cost - finalPrice) / item.cost * 100 : (finalPrice - item.cost) / item.cost * 100) : 0;
+        const pnlAmount = Math.round((isShort ? (item.cost - finalPrice) : (finalPrice - item.cost)) * item.shares * 1000);
+        const pnlColor = pnlAmount >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        const pnlSymbol = pnlAmount >= 0 ? '▲ +' : '▼ -';
+        const pnlFormatted = new Intl.NumberFormat('zh-TW').format(Math.abs(pnlAmount));
+
         html += `
             <div class="history-card" style="position: relative;">
                 <div style="background: ${headerBg}; margin: -18px -18px 15px -18px; padding: 18px; border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--border-color); position: relative;">
@@ -676,11 +685,15 @@ function renderHistory(data) {
                     </div>
                 </div>
                 
+                <div class="history-data-point" style="margin-bottom: 12px;">
+                    損益：<strong style="color:${pnlColor}; font-size: 1.3rem;">${finalPrice > 0 ? pnlSymbol + pnlFormatted + ' 元' : '-'}</strong>
+                    ${finalPrice > 0 ? `<span style="color:${pnlColor}; font-size: 0.9rem; margin-left: 6px;">(${pnlAmount >= 0 ? '+' : ''}${pnlPercent.toFixed(1)}%)</span>` : ''}
+                </div>
                 <div class="history-body">
                     <div class="history-data-point">建倉成本：<strong>${item.cost} 元</strong></div>
                     <div class="history-data-point">操作數量：<strong>${(item.shares >= 1 && Number.isInteger(item.shares)) ? item.shares + ' 張' : (item.shares * 1000).toLocaleString() + ' 股 (' + item.shares + ' 張)'}</strong></div>
                     <div class="history-data-point">波段極端收盤價：<strong>${item.high || 0} 元</strong></div>
-                    <div class="history-data-point">最後紀錄收盤：<strong>${item.closePrice || item.exitPrice || 0} 元</strong></div>
+                    <div class="history-data-point">最後紀錄收盤：<strong>${finalPrice} 元</strong></div>
                 </div>
                 
                 ${(item.reason || item.journal) ? `
