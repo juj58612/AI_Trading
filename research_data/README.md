@@ -139,6 +139,14 @@
   對應 [個案⑭](../case_studies.html#case14)：方案E（8檔/30天，836筆交易）依出場原因拆解的筆數/平均報酬/平均持有天數。方案E的招牌機制「雙賣後鎖利出場」（獲利中收緊停損而非直接出清）只佔0.6%（5筆），實際差異化主因是「土洋雙賣（虧損中）」比其他方案的停損更快出場（平均8.3天 vs 觸發停損的12.3天）。
   產生腳本：對`backtest_logs.db`的trades表直接SQL查詢（experiment_id=3645），2026-08-13。
 
+- **`case15_regime_strategy_selector.csv`**（42列，6組配置×7個期間）
+  對應 [個案⑮](../case_studies.html#case15) Part 1：用原始20日均線regime訊號，在進場當下選用整包方案（不自創組合規則），全期間+逐年獨立回測。結果：三種切換版本全部輸給「全程只用方案E」（286.64%），因為訊號本身5.5年翻轉141次、中位數只維持4天，太容易把部位誤配到錯誤方案。
+  產生腳本：`regime_strategy_selector.py`（直接呼叫`strategy_core.evaluate_entry/evaluate_exit`，look-ahead安全），2026-08-13。
+
+- **`case15_regime_strategy_selector_smoothed.csv`**（63列，3種平滑方式×3組配置×7個期間）
+  對應 [個案⑮](../case_studies.html#case15) Part 2：拉長平滑regime訊號（60日均線／連續5天確認／連續10天確認）後重測，9組全部依然輸給「全程只用方案E」，加重平滑反而讓部分配置更差（確認延遲放大誤配傷害）。
+  產生腳本：`regime_strategy_selector_v2_smoothed.py`，2026-08-13。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
