@@ -1032,7 +1032,31 @@ window.addEventListener('DOMContentLoaded', () => {
     loadPortfolioFromStorage();
     loadScanCacheStatus();
     loadRegimeStatus();
+    loadHoldingsSellSignalBanner();
 });
+
+// 首頁持股主動提醒：用跟「我的操盤室」同一套逐日重播出場邏輯(strategy_core.evaluate_exit)
+// 檢查目前所有持倉，有任何一筆觸發賣出訊號就在首頁顯示提示，不用點進操盤室才會發現。
+async function loadHoldingsSellSignalBanner() {
+    const banner = document.getElementById('holdingsSellSignalBanner');
+    if (!banner) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/portfolio/sell_check`, {
+            headers: { 'Authorization': getAuthHeader() }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const count = data.triggered_count || 0;
+        if (count > 0) {
+            banner.textContent = `🔔 有 ${count} 筆持倉觸發停損/停利訊號，點此查看 →`;
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+    } catch (e) {
+        console.warn('持股賣出訊號檢查失敗:', e);
+    }
+}
 
 async function loadScanCacheStatus() {
     try {

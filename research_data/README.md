@@ -147,6 +147,14 @@
   對應 [個案⑮](../case_studies.html#case15) Part 2：拉長平滑regime訊號（60日均線／連續5天確認／連續10天確認）後重測，9組全部依然輸給「全程只用方案E」，加重平滑反而讓部分配置更差（確認延遲放大誤配傷害）。
   產生腳本：`regime_strategy_selector_v2_smoothed.py`，2026-08-13。
 
+- **`case16_strategyE_optuna_summary.csv`**（6列，訓練/測試/全期間×預設值/Optuna最佳值）
+  對應 [個案⑯](../case_studies.html#case16)：方案E系統化參數搜尋，唯一通過樣本外驗證、真正打敗預設值的優化（全期間286.64%→311.72%，MDD同時從26.19%降到24.45%）。
+  產生腳本：`optuna_strategyE_param_search.py`，2026-08-13。
+
+- **`case16_strategyE_optuna_search.json`**（50組trial完整原始資料，含每組參數與對應指標）
+  對應 [個案⑯](../case_studies.html#case16)：Optuna 50次trial的逐次搜尋紀錄，含最佳參數、訓練/測試/全期間三組對照的完整metrics。
+  產生腳本：`optuna_strategyE_param_search.py`，2026-08-13。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
