@@ -149,12 +149,13 @@
 
         <h3 class="report-h3">二、測試方法論</h3>
         <p class="report-p"><b>進場邏輯（所有方案共用）</b>：以「三大法人籌碼積分矩陣」為核心——投信今日買超 +2 分、連續買超(≥2日) 額外 +1 分、外資今日買超 +1 分、跌破 5 日均線 -2 分強制扣分，並要求站上 VWMA5（成交量加權均線）才視為「真突破」，過濾無量誘多。進場資金依 Risk Parity 逆波動率模型分配（波動度越高的股票配置越少），並套用「三合一巨觀風控熔斷保險絲」（外資期貨淨空單過高或匯率大貶時，一票否決新建多單）。四種方案的進場規則完全相同，差異只在賣出（出場）邏輯。</p>
-        <p class="report-p"><b>測試的出場方案（本次報告涵蓋方案 A~D，方案 E 為實驗性質、預設不納入正式統計）</b>：</p>
+        <p class="report-p"><b>測試的出場方案（本次報告涵蓋方案 A~E）</b>：</p>
         <ul class="report-ul">
             <li><b>方案 A（固定 % 停損）</b>：以固定百分比停損/停利，邏輯最單純，作為其他方案的比較基準。</li>
             <li><b>方案 B（關鍵支撐破位）</b>：以技術面關鍵支撐價位是否跌破作為出場判斷。</li>
             <li><b>方案 C（動態收縮防線）</b>：停損防線隨獲利提高動態收縮，但觸發門檻較寬鬆。</li>
             <li><b>方案 D（自適應吊燈鎖利）</b>：ATR 停損乘數依大盤趨勢動態調整（多頭 2.2x／空頭 1.5x），獲利達 12% 後自動收緊至 1.25x ATR 鎖利，是唯一沒有固定停利上限的方案。</li>
+            <li><b>方案 E（快穩雙軌）</b>：借用方案 B「土洋雙賣」單日觸發規則，但依觸發當下部位賺賠分兩種處理——虧損中比照方案 B 立即出場，獲利中則改為收緊移動停損鎖利（比照方案 C/D 的動態收縮邏輯），而非直接出清。2026-08-13 起已補齊跟 A~D 同等規模（199組）的正式參數網格，正式納入本報告統計。</li>
         </ul>
         <p class="report-p"><b>測試變數（網格參數）</b>：最大持倉檔數（1~10 檔）、最大持倉天數（2~360 天）、出場方案（A~D）、資金與手續費設定。測試工具分兩種：<b>「大數據回測」</b>對所有勾選的參數組合做完整排列組合（Full Grid Permutation），每組都是完整區間（例如 2021-01-01～2026-08-10）的正式回測；<b>「AI 網格最佳化」</b>則用 Optuna 貝氏優化在較小的搜索空間內快速嘗試，並將資料切成前 70% 訓練期（In-Sample）／後 30% 樣本外測試期（Out-of-Sample），避免針對訓練期過度擬合——這批訓練期試跑資料刻意跟正式排行榜、本報告的統計分開，不會混進以下的分析。</p>
 
@@ -176,23 +177,31 @@
         <div id="reportConclusion"></div>
         <p class="report-p" style="color: var(--text-sub); font-size: 0.82rem; margin-top: 15px; border-top: 1px dashed #334155; padding-top: 12px;">⚠️ <b>方法論限制</b>：以上全部為歷史資料回測結果，不代表未來績效；回測未完全模擬滑價、委託成交機率與極端流動性事件，實戰摩擦成本可能高於回測假設。台股總體環境（法規、資金結構、AI 產業週期）可能隨時間改變，建議定期（例如每季）用最新資料重新執行本報告的統計流程，而不是套用一次結果長期不變。</p>
 
-        <h3 class="report-h3">六、延伸研究：Regime（多空狀態）自動切換能否贏過任何單一固定方案？</h3>
+        <h3 class="report-h3">六、延伸研究：Regime（多空狀態）自動切換能否贏過任何單一固定方案？<span style="color:#ef4444; font-size:0.85rem;">（2026-08-13重大更新：結論反轉，見下方）</span></h3>
         <p class="report-p">以上第一至五節的排行榜與統計，全部建立在同一個前提上：<b>整個 5.5 年回測期間套用同一組固定參數（同一個出場方案、同一個持倉檔數／天數上限）</b>，不論大盤當時是多頭、空頭或盤整，進出場規則都不會改變。這個前提本身值得挑戰——2022 年空頭年跟 2024 年多頭年，真的適合用同一套規則嗎？</p>
-        <p class="report-p">另一系列獨立研究（完整過程見 <a href="research_report.html" target="_blank" style="color:#c084fc;">📄 Regime自動切換策略模型研究報告</a>，摘要版見 <a href="case_studies.html#case5" target="_blank" style="color:#c084fc;">個案研究⑤～⑦</a>）針對這個問題做了系統化驗證：以「TAIEX 當日收盤 vs 20 日均線」作為即時、不使用未來資訊的多空判斷訊號——多頭時採一次買完＋關閉固定 8% 停損防線，空頭時改採 3:3:4 分批進場＋收緊出場組合（防線A／防線B／高點打折鎖利全關，只留保本停利調整模式＋土洋雙賣）。這組空頭端配置是把 5 個開關全部排列組合（48 組）逐一跑滿全期間篩出的冠軍，並在「巨觀風控真正生效」的狀態下重跑做交叉驗證，結果如下：</p>
+        <p class="report-p">另一系列獨立研究（完整過程見 <a href="research_report.html" target="_blank" style="color:#c084fc;">📄 Regime自動切換策略模型研究報告</a>，摘要版見 <a href="case_studies.html#case5" target="_blank" style="color:#c084fc;">個案研究⑤～⑧</a>）針對這個問題做了系統化驗證：以「TAIEX 當日收盤 vs 20 日均線」作為即時、不使用未來資訊的多空判斷訊號——多頭時採一次買完＋關閉固定停損防線，空頭時改採 3:3:4 分批進場＋收緊出場組合。原始版本（2026-08-11完成，未計入未來函數修正）曾測出692.64%/MDD24.17%（巨觀風控fail-open）與488.17%/MDD19.98%（風控生效）的亮眼數字，且兩種風控狀態下冠軍配置一致，一度是全站信心最高的研究結果。</p>
+        <div style="background:rgba(239,68,68,0.12); border-left:4px solid #ef4444; padding:14px 18px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin: 14px 0;">
+            🚨 <strong>2026-08-13重大修正</strong>：發現三大法人籌碼資料存在系統性未來函數（收盤後17:00才公布，過去出場端規則卻用了「當天」資料判斷「當天」出場，詳見 <a href="case_studies.html#case13" target="_blank" style="color:#fca5a5; text-decoration:underline;">個案⑬</a>）。修正後重新驗證，<strong>核心結論反轉：Regime自動切換不再明確贏過最簡單的靜態方案</strong>。
+        </div>
         <div class="kpi-grid" style="margin: 14px 0;">
             <div class="kpi-card">
-                <div class="kpi-title">Regime自動切換（巨觀風控 fail-open）</div>
-                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+692.64%</div>
-                <div class="kpi-sub">MDD 24.17%｜2021-01～2026-08</div>
+                <div class="kpi-title">Regime自動切換 全期間（修正後）</div>
+                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+409.67%</div>
+                <div class="kpi-sub">MDD 24.45%｜2021-01～2026-08</div>
+            </div>
+            <div class="kpi-card" style="border-color:#4ade80;">
+                <div class="kpi-title">靜態最佳單一改動（對照組，修正後反超）</div>
+                <div class="kpi-value" style="font-size:1.3rem; color:#4ade80;">+425.17%</div>
+                <div class="kpi-sub">MDD 24.14%（更低）｜一次買完+關防線A，不需regime判斷</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-title">Regime自動切換（巨觀風控真正生效）</div>
-                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+488.17%</div>
-                <div class="kpi-sub">MDD 19.98%｜完全相同配置，交叉驗證冠軍不變</div>
+                <div class="kpi-title">空頭端48組窮舉冠軍（風控生效，修正後）</div>
+                <div class="kpi-value" style="font-size:1.3rem; color:#f59e0b;">+651.37%</div>
+                <div class="kpi-sub">MDD 38.26%（明顯高於修正前認知的19.98%）｜配置已不含土洋雙賣</div>
             </div>
         </div>
-        <div class="insight-card">📌 <b>與本報告排行榜的關係</b>：第四節的排行榜是「單一固定方案」下的最佳結果；上方數字是「依市況動態切換方案」的結果，測試用的股票池、期間、手續費假設完全一致，可直接對照。但目前 Regime 判斷邏輯<b>尚未寫入正式系統（<code>strategy_core.py</code>）</b>，只在首頁以「研究版advisory面板」顯示供參考，實際下單建議仍是本報告分析的單一固定模型，需要更長期樣本驗證後才會考慮正式導入。</div>
-        <div class="insight-card" style="border-left-color:#f59e0b;">🔬 <b>方法論說明</b>：此系列研究過程中修正過兩個曾經導致錯誤結論的陷阱——① 用「連續回測內逐筆標記regime」取代「真正單一年度隔離回測」，會得到反向的錯誤結論；② 巨觀風控歷史資料過去沒有本地快取，FinMind逾時會靜默fail-open（風控形同虛設）卻不會有任何警示訊息。完整修正過程見<a href="research_report.html#sec4" target="_blank" style="color:#c084fc;">研究報告 4.方法論教訓</a>。</div>
+        <div class="insight-card" style="border-left-color:#ef4444;">📌 <b>與本報告排行榜的關係</b>：第四節的排行榜是「單一固定方案」下的最佳結果；上方數字是「依市況動態切換方案」修正未來函數後的結果。<b>最關鍵的發現是：Regime自動切換（409.67%）已被完全不需要即時regime判斷的極簡靜態方案「一次買完+關防線A」（425.17%，MDD也更低）反超</b>——這代表「依市況動態切換」這個設計方向本身，在目前已驗證的這一版規則下，並沒有真正贏過簡單方案。Regime 判斷邏輯<b>維持不寫入正式系統（<code>strategy_core.py</code>）</b>，首頁「研究版advisory面板」繼續顯示供參考，但不會進一步整合成正式下單邏輯。</div>
+        <div class="insight-card" style="border-left-color:#f59e0b;">🔬 <b>方法論說明</b>：此系列研究過程中修正過三個曾經導致錯誤結論的陷阱——① 用「連續回測內逐筆標記regime」取代「真正單一年度隔離回測」，會得到反向的錯誤結論；② 巨觀風控歷史資料過去沒有本地快取，FinMind逾時會靜默fail-open（風控形同虛設）卻不會有任何警示訊息；③ <b>（2026-08-13新增，影響最大）三大法人籌碼資料的未來函數</b>——當天觸發型的出場規則（如土洋雙賣）用了尚未公布的當天資料判斷，這種污染不會在一般樣本外年份檢查裡被抓出來，因為每一年都受到同樣的系統性偏誤影響，看起來仍然「一致」。完整修正過程見<a href="research_report.html#sec4" target="_blank" style="color:#c084fc;">研究報告 4.方法論教訓</a>。</div>
     </div>
 
     <!-- 圖表區 -->

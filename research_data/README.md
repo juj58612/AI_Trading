@@ -23,9 +23,9 @@
   對應 [個案④「出場機制對照」](../case_studies.html#case4)。8組全期間配置對照（卡片四防線 vs Scale-out 等）+ 5組配置×3個期間（全期間/2022/2024）的regime隔離結果。
   產生腳本：`exit_mechanism_comparison_v2.py` + `exit_mechanism_regime_and_combo.py`，2026-08-10。
 
-- **`case5_regime_v1_trades.csv`**（273 筆，24KB）
-  對應 [個案⑤「Regime自動切換」](../case_studies.html#case5) 原版的完整逐筆交易明細，已用本地固定快取重跑確認可重現（522.18%分毫不差）。
-  產生腳本：`regime_adaptive_v3_add_dualsell.py` 的 `mode='adaptive'`（純規則，未疊加土洋雙賣），2026-08-10。
+- **`case5_regime_v1_trades.csv`**（297 筆，2026-08-13已依個案⑬未來函數修正重新產生，取代原本273筆的修正前版本）
+  對應 [個案⑤「Regime自動切換」](../case_studies.html#case5) 修正後的完整逐筆交易明細。修正後總報酬409.67%（原522.18%），且已被靜態最佳單一改動（425.17%）反超，核心結論反轉，詳見個案⑤。
+  產生腳本：`regime_adaptive_backtest.py`（entry端chip lookup已修正為`[idx-2,idx-1]`），2026-08-13。
 
 - **`case6_all_strategies_summary.csv`**（15 列，851B，彙總指標，非逐筆交易）
   對應 [個案⑥「A/B/C/D/E五方案全面對照」](../case_studies.html#case6)。直接呼叫正式 `backtest_engine.run_backtest`，同步存入SQLite，逐筆交易明細可在回測實驗室查對應實驗ID查詢。
@@ -35,17 +35,17 @@
   對應 [個案⑦「用方案B重新設計空頭端」](../case_studies.html#case7) 的失敗嘗試（整套換成方案B原生邏輯，162.67% vs 個案⑤原版522.18%）。
   產生腳本：`regime_adaptive_v2_A_bull_B_bear.py`，2026-08-10。
 
-- **`case7_strategyB_dualsell_overlay_trades.csv`**（465 筆，56KB）
-  對應 [個案⑦](../case_studies.html#case7) 後續修正版：只把方案B的「土洋雙賣」規則疊加進個案⑤的card-line組合（不是整套換掉）。468.71% / MDD 17.48%，是報酬換防守的取捨，不是單純勝出。
-  產生腳本：`regime_adaptive_v3_add_dualsell.py` 的 `mode='adaptive_dualsell'`，2026-08-10。
+- **`case7_strategyB_dualsell_overlay_trades.csv`**（2026-08-13已依個案⑬未來函數修正重新產生，取代原本465筆的修正前版本）
+  對應 [個案⑦](../case_studies.html#case7) 後續修正版：只把方案B的「土洋雙賣」規則疊加進個案⑤的card-line組合（不是整套換掉）。修正後359.34% / MDD 27.59%（原468.71%/17.48%）——總報酬與MDD雙雙變差，不再是取捨，而是全面劣化，詳見個案⑦。
+  產生腳本：`regime_adaptive_v3_add_dualsell.py` 的 `mode='adaptive_dualsell'`（entry端chip lookup已修正），2026-08-13。
 
-- **`case7_bear_exhaustive_48combos.csv`**（48 列，彙總指標，非逐筆交易）
-  對應 [個案⑦](../case_studies.html#case7) 系統化窮舉版：空頭端5個開關（防線A／防線B／高點打折鎖利／保本停利／土洋雙賣）全部排列組合，找到目前測過最佳設定（防線A/B/高點鎖利全關，只留保本停利adjust+土洋雙賣，692.64%），打贏先前手動挑選的版本。此結果是在巨觀風控fail-open狀態下跑出來的，快取修好後尚未重跑confirm。
-  產生腳本：`regime_bear_exhaustive_search.py`，2026-08-11。
+- **`case7_bear_exhaustive_48combos.csv`**（48 列，彙總指標，非逐筆交易，2026-08-13已依個案⑬修正重新產生）
+  對應 [個案⑦](../case_studies.html#case7) 系統化窮舉版（fail-open）：空頭端5個開關全部排列組合。修正後新冠軍（防線A/B/高點鎖利/保本停利/土洋雙賣全關，671.27%/MDD47.84%）與修正前冠軍（含土洋雙賣，692.64%）完全不同——舊冠軍配置修正後只排第46名（262.67%）。MDD 47.84%極高，不建議直接採用，詳見個案⑦。
+  產生腳本：`regime_bear_exhaustive_search_failopen.py`（`regime_bear_exhaustive_search.py`的fail-open變體，強制關閉巨觀風控否決），2026-08-13。
 
-- **`case7_bear_exhaustive_48combos_macroON.csv`**（48 列，彙總指標，非逐筆交易）
-  對應 [個案⑦](../case_studies.html#case7) 交叉驗證版：用「巨觀風控真正生效」（修好本地快取後）重跑同樣48組。冠軍配置跟fail-open版完全相同，總報酬488.17%（降低是風控生效的預期效果），MDD進一步降到19.98%。
-  產生腳本：`regime_bear_exhaustive_search.py`（同一支，加上`fetch_macro_3in1_series`與veto/pos_scale邏輯後重跑），2026-08-11。
+- **`case7_bear_exhaustive_48combos_macroON.csv`**（48 列，彙總指標，非逐筆交易，2026-08-13已依個案⑬修正重新產生）
+  對應 [個案⑦](../case_studies.html#case7) 交叉驗證版：用「巨觀風控真正生效」重跑同樣48組。修正後新冠軍651.37%/MDD38.26%（原488.17%/19.98%），配置為防線A/B/高點鎖利全關、保本停利adjust、<strong>土洋雙賣關閉</strong>（原冠軍含土洋雙賣，修正後降到第8名407.30%）——「兩種風控狀態冠軍配置完全相同」這個修正前的核心穩健性論證需要重新解讀，詳見個案⑦⑧。
+  產生腳本：`regime_bear_exhaustive_search.py`（entry/exit端chip lookup已修正），2026-08-13。
 
 - **`case9_cobuy_pooled_flawed.csv`**（6列，彙總指標）
   對應 [個案⑨](../case_studies.html#case9)「連續同買天數」研究的**第一版（有方法論瑕疵，僅供對照）**：把677組實驗（含grid trial）的514,881筆交易全部pool在一起，依進場當下「連續同買天數」分桶。看起來同買第1天報酬最高，但這是同一訊號被幾百組參數組合重複計入的假象，正確結論見下一個檔案。

@@ -324,7 +324,10 @@
     <div class="doc-section" id="case5">
         <h2>⑤ Regime自動切換：能否贏過任何單一固定方案？<span class="status-tag status-solid">通用驗證</span></h2>
         <p><strong>起因</strong>：個案③④都指向同一個結論——進場方式與出場防線的最佳選擇，會隨大盤處於多頭或空頭而反轉。與其手動判斷、固定選一套規則，能不能設計一個<strong>即時可算、不使用未來資訊</strong>的訊號，讓模型每天自動判斷該用哪一套參數？這是白皮書2.6節「三合一巨觀風控」原則的自然延伸——把「依市況調整」從「要不要買」擴大到「怎麼買、怎麼賣」。</p>
-        <p>📎 <a href="research_data/case5_regime_v1_trades.csv" download style="color:#ec4899; font-weight:500;">下載完整逐筆交易明細 (CSV，273筆)</a>　——已用本地固定快取重跑確認可重現（522.18%分毫不差）。無需登入即可下載。</p>
+        <p>📎 <a href="research_data/case5_regime_v1_trades.csv" download style="color:#ec4899; font-weight:500;">下載完整逐筆交易明細 (CSV，273筆)</a>　——已用本地固定快取重跑確認可重現（522.18%分毫不差，此為修正前數字，見下方2026-08-13更新）。無需登入即可下載。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem; margin-bottom: 14px;">
+            ⚠️ <strong>2026-08-13更新</strong>：個案⑬發現三大法人籌碼資料存在未來函數（look-ahead bias），本案例的出場邏輯依賴當天籌碼資料，已一併修正並重新驗證，見下方表格。原始522.18%數字保留於此處作為方法論演進紀錄，<strong>目前有效數字請看下方修正後版本</strong>。
+        </div>
 
         <h3>切換規則設計</h3>
         <p>regime訊號：當天TAIEX收盤價 vs 20日均線（每天都算得出來，不偷看未來）。兩條子規則分別取自個案③④裡，各自在獨立年份回測中表現最好的組合：</p>
@@ -334,37 +337,38 @@
         </ul>
 
         <h3>全期間對照（2021-2026，8檔持股）</h3>
+        <p style="color:#94a3b8; font-size:0.85rem;">下表為2026-08-13依個案⑬未來函數修正後重跑的數字。修正前數字（靜態基準298.72%／靜態最佳單一改動394.38%／Regime自動切換522.18%）保留於本段最初的CSV下載連結中作為方法論演進紀錄，<strong>不再代表目前結論</strong>。</p>
         <table class="doc-table">
             <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
             <tbody>
-                <tr><td>靜態基準（一次買完+卡片四防線）</td><td>298.72%</td><td>22.97%</td><td>48.02%</td><td>2.25</td><td>227</td></tr>
-                <tr><td>靜態最佳單一改動（一次買完+關防線A）</td><td>394.38%</td><td>21.68%</td><td>49.7%</td><td>3.16</td><td>165</td></tr>
-                <tr><td><strong>Regime自動切換</strong></td><td><strong>522.18%</strong></td><td>22.25%</td><td><strong>53.11%</strong></td><td>2.92</td><td>273</td></tr>
+                <tr><td>靜態基準（一次買完+卡片四防線）</td><td>254.74%</td><td>29.82%</td><td>44.64%</td><td>2.11</td><td>224</td></tr>
+                <tr><td><strong>靜態最佳單一改動（一次買完+關防線A）</strong></td><td><strong>425.17%（現在是三組裡最高）</strong></td><td><strong>24.14%（現在是三組裡最低）</strong></td><td><strong>52.06%</strong></td><td><strong>2.84</strong></td><td>194</td></tr>
+                <tr><td>Regime自動切換</td><td>409.67%（原本最高，現在退居第二）</td><td>24.45%</td><td>49.49%</td><td>2.55</td><td>297</td></tr>
             </tbody>
         </table>
-        <div class="quote-box">
-            📌 Regime自動切換贏過兩個靜態方案：總報酬比目前已知最好的靜態單一改動高出約33%（394%→522%），勝率也是三組裡最高，MDD維持在跟靜態方案相近的水準——不是靠犧牲風控換來的。
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px 16px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin: 14px 0;">
+            🚨 <strong>重大變化：修正未來函數後，Regime自動切換不再是三組裡最好的</strong>——「靜態最佳單一改動」（一次買完+關防線A，沒有任何regime判斷、沒有任何空頭端分批/card-line邏輯）以425.17%反超Regime自動切換的409.67%，MDD也更低（24.14% vs 24.45%）。修正前Regime領先靜態最佳約33%（522%→394%），修正後兩者幾乎打平、甚至靜態方案略勝一籌。這代表個案⑤原本「動態切換贏過任何單一固定方案」的核心主張，<strong>在修正未來函數後不再成立</strong>。
         </div>
 
-        <h3>樣本外檢查：沒被用來挑規則的年份表現如何？</h3>
+        <h3>樣本外檢查：沒被用來挑規則的年份表現如何？（同樣已用修正後數字更新）</h3>
         <p style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
             ⚠️ <strong>方法論限制</strong>：兩條子規則本身是從2024（多頭）、2022（空頭）獨立回測裡挑出的贏家，而驗證切換效果的全期間測試又把這兩年算在裡面——這不是完全乾淨的樣本外驗證，2022、2024的表現某種程度上是「贏家在自己的主場」。因此另外拉出各年度單獨表現，檢查沒被用來挑規則的年份是否也站得住腳。
         </p>
         <table class="doc-table">
             <thead><tr><th>年度</th><th>是否用於挑規則</th><th>交易數</th><th>勝率</th><th>該年損益</th></tr></thead>
             <tbody>
-                <tr><td>2021</td><td>否</td><td>37</td><td>54.1%</td><td>+139,412</td></tr>
-                <tr><td>2022</td><td><strong>是（空頭規則來源）</strong></td><td>37</td><td><strong>40.5%（六年最低）</strong></td><td>+5,342</td></tr>
-                <tr><td>2023</td><td>否</td><td>35</td><td>62.9%</td><td>+484,824</td></tr>
-                <tr><td>2024</td><td><strong>是（多頭規則來源）</strong></td><td>55</td><td>56.4%</td><td>+1,076,981</td></tr>
-                <tr><td>2025</td><td>否</td><td>44</td><td>50.0%</td><td>+1,650,162</td></tr>
-                <tr><td>2026</td><td>否（年度未完）</td><td>65</td><td>53.8%</td><td>+1,891,968</td></tr>
+                <tr><td>2021</td><td>否</td><td>40</td><td>50.0%</td><td><strong>-114,456（修正後轉負）</strong></td></tr>
+                <tr><td>2022</td><td><strong>是（空頭規則來源）</strong></td><td>54</td><td><strong>33.3%（修正後六年最低，更差）</strong></td><td>+22,171</td></tr>
+                <tr><td>2023</td><td>否</td><td>29</td><td>69.0%</td><td>+556,205</td></tr>
+                <tr><td>2024</td><td><strong>是（多頭規則來源）</strong></td><td>55</td><td>50.9%</td><td>+371,776（大幅下修）</td></tr>
+                <tr><td>2025</td><td>否</td><td>52</td><td>46.2%</td><td>+1,841,518</td></tr>
+                <tr><td>2026</td><td>否（年度未完）</td><td>67</td><td>55.2%</td><td>+1,433,898</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 沒被用來挑規則的四個年份（2021/2023/2025/2026）全部是正報酬，勝率50~63%；反而是唯一用來挑空頭規則的2022年，勝率是六年裡最低的（40.5%）。整體表現不是靠兩個「主場年」撐起來的，多數年份都站得住腳，大幅降低了過度配適（overfitting）的疑慮，但樣本仍只涵蓋5.5年、每個regime僅有限個完整年份，還稱不上長期穩健驗證。
+            📌 <strong>（2026-08-13更新）</strong>修正後，沒被用來挑規則的四個年份裡有一個（2021）從正轉負，不再是「全數正報酬」；唯一用來挑空頭規則的2022年勝率也進一步下修到33.3%（六年最低，比修正前的40.5%更差）。「整體表現不是靠兩個主場年撐起來」這個修正前的論點，證據強度比原先認知的更弱。
         </div>
-        <p><strong>結論</strong>：以「即時可算、不使用未來資訊」的regime訊號動態切換進出場參數，確實贏過目前測過的任何單一固定方案，且沒被用來挑規則的年份表現同樣站得住腳，不只是巧合湊出來的兩年好結果。這驗證了「依市況判斷適合的參數」這個設計方向本身是有效的。<strong>但這仍是研究階段的結果，尚未套用到 <code>strategy_core.py</code> 或任何正式頁面／模型中</strong>——下一步若要正式導入，建議先累積更多年份的資料（尤其更多獨立的空頭年樣本）再考慮上線，並在使用者主動要求前，不會將此邏輯做成首頁功能。</p>
+        <p><strong>結論（2026-08-13更新，方向性改變）</strong>：修正未來函數後，Regime自動切換<strong>不再明確贏過</strong>「一次買完+關防線A」這個完全不需要regime判斷、不需要空頭端分批/card-line規則的極簡靜態方案——後者總報酬更高、MDD更低。個案⑤原本的核心結論站不住腳，Regime自動切換相對於最強靜態單一改動的優勢在本次修正後消失，<strong>目前不建議把regime自動切換當成優於簡單方案的實戰依據</strong>。這不代表「依市況判斷」的想法本身是錯的（見下方個案⑥⑦仍發現空頭年單獨最佳方案跟多頭不同），但已驗證的這一版切換規則設計，並沒有真正把這個潛在優勢兌現成實際報酬——需要重新設計切換規則或子規則來源，而非直接採用現有版本。<strong>維持研究階段，未套用到 <code>strategy_core.py</code> 或任何正式頁面／模型中。</strong></p>
         <p style="color:#94a3b8; font-size:0.85rem;">關於樣本年限：股票池全部是AI概念股，AI題材本身只有約5年的爆發期可回測，往前拉長年限沒有對應的真實資料可測，不是刻意把驗證範圍縮小。</p>
     </div>
 
@@ -402,112 +406,122 @@
         </p>
 
         <h3>結果：整合方案B反而讓整體表現變差</h3>
+        <p style="color:#94a3b8; font-size:0.85rem;">⚠️ 這一段（整套替換B失敗版）是規則設計路上被淘汰的分支，未列入最終配置，故未依個案⑬重新回測——251.51%／162.67%／522.18%三個數字仍是修正前的，僅供理解「個別最強積木湊在一起不保證整體最強」這個定性結論參考，不代表目前的量化結論。個案⑤欄位的522.18%目前已更新為409.67%（見上方個案⑤）。</p>
         <p>📎 <a href="research_data/case7_strategyB_fullswap_failed_trades.csv" download style="color:#ec4899; font-weight:500;">下載完整逐筆交易明細 (CSV，891筆，整套換方案B失敗版)</a>　——無需登入即可下載。</p>
         <table class="doc-table">
             <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
             <tbody>
                 <tr><td>靜態方案A（全程不切換，不含巨觀風控）</td><td>251.51%</td><td>27.41%</td><td>43.01%</td><td>1.47</td><td>965</td></tr>
                 <tr><td>Regime v2（多頭A原生＋空頭B原生分批）</td><td><strong>162.67%（更差）</strong></td><td><strong>37.18%（更差）</strong></td><td>41.53%</td><td>1.37</td><td>891</td></tr>
-                <tr><td>對照：個案⑤ Regime v1（空頭用card-line組合，同樣不含巨觀風控）</td><td><strong>522.18%</strong></td><td>22.25%</td><td>53.11%</td><td>2.92</td><td>273</td></tr>
+                <tr><td>對照：個案⑤ Regime v1（空頭用card-line組合，同樣不含巨觀風控）</td><td>522.18%（修正前，現為409.67%）</td><td>22.25%</td><td>53.11%</td><td>2.92</td><td>273</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 方案B雖然是2022年單獨測試表現最好的方案，但把它整合進regime系統、取代原本card-line組合當空頭邏輯後，總報酬跟MDD都比「全程只用方案A」還差，更遠遠不如個案⑤原本的card-line組合版本（522.18%）。個別最強的積木，湊在一起不保證整體最強——這跟個案④「組合最佳假設不成立」是同一種現象。
+            📌 方案B雖然是2022年單獨測試表現最好的方案，但把它整合進regime系統、取代原本card-line組合當空頭邏輯後，總報酬跟MDD都比「全程只用方案A」還差，更遠遠不如個案⑤原本的card-line組合版本。個別最強的積木，湊在一起不保證整體最強——這跟個案④「組合最佳假設不成立」是同一種現象，這個定性結論不受未來函數修正影響。
         </div>
-        <p><strong>結論</strong>：目前測過的regime模型設計中，<strong>個案⑤的版本（多頭=一次買完+關防線A；空頭=3:3:4分批+關防線A/保本停利直接出清的card-line組合）仍然是表現最好的</strong>，用「方案B原生邏輯」取代空頭端是一次已驗證失敗的嘗試，不採用。</p>
+        <p><strong>結論</strong>：目前測過的regime模型設計中，用「方案B原生邏輯」取代空頭端是一次已驗證失敗的嘗試，不採用。<strong>但個案⑤原版本身在修正未來函數後也不再是最佳選擇，見上方個案⑤的重大更新</strong>。</p>
 
         <h3>後續嘗試：只把方案B真正的差異點（土洋雙賣）疊加進去，不是整套換掉</h3>
         <p>查證 <code>evaluate_entry</code> 發現方案A/B/C/E的進場篩選邏輯其實完全相同（只有方案D有額外濾網），方案B真正的差異只在出場端一條規則：「土洋雙賣」（外資與投信同一天都賣超就立即全部出清）。與其整套替換（已證實失敗），改成把這條規則當成<strong>新增的第五條防線</strong>疊加進個案⑤原本的空頭card-line組合裡，其餘不變。</p>
         <p>📎 <a href="research_data/case7_strategyB_dualsell_overlay_trades.csv" download style="color:#ec4899; font-weight:500;">下載完整逐筆交易明細 (CSV，465筆，疊加土洋雙賣版)</a>　——無需登入即可下載。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem; margin-bottom: 10px;">
+            ⚠️ <strong>2026-08-13依個案⑬修正後更新</strong>：土洋雙賣本身是「當天籌碼」觸發的出場規則，正是未來函數影響最直接的一條，數字下修最多。
+        </div>
         <table class="doc-table">
             <thead><tr><th>方案</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>交易數</th></tr></thead>
             <tbody>
-                <tr><td>個案⑤原版（重跑確認可重現，分毫不差）</td><td><strong>522.18%</strong></td><td>22.25%</td><td><strong>53.11%</strong></td><td>2.92</td><td>273</td></tr>
-                <tr><td>疊加土洋雙賣</td><td>468.71%</td><td><strong>17.48%（明顯更低）</strong></td><td>44.09%</td><td>2.62</td><td>465</td></tr>
+                <tr><td>個案⑤原版（重跑確認可重現）</td><td><strong>409.67%</strong></td><td>24.45%</td><td><strong>49.49%</strong></td><td>2.55</td><td>297</td></tr>
+                <tr><td>疊加土洋雙賣</td><td>359.34%（更差）</td><td><strong>27.59%（更差）</strong></td><td>44.80%</td><td>2.28</td><td>471</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 這次不是單純的贏或輸，是另一組風險-報酬取捨：總報酬略降（522%→469%），但MDD明顯改善（22.25%→17.48%，降了近5個百分點），交易周轉也大增（273→465筆，土洋雙賣觸發更頻繁）。用一部分報酬換取更強的空頭防守——重視資金保護優先於總報酬極大化時，這個疊加版更合適；純看總報酬，原版仍勝出。
+            📌 <strong>（2026-08-13更新，結論方向改變）</strong>修正前這是報酬換防守的取捨（總報酬略降但MDD明顯改善）；修正後<strong>土洋雙賣疊加版總報酬跟MDD雙雙變差</strong>（409.67%→359.34%，24.45%→27.59%），不再是任何一種取捨下的合理選擇——土洋雙賣的「防守優勢」很大一部分是未來函數偷看到的假象，修正後這個優勢消失。
         </div>
-        <p><strong>結論</strong>：方案B的空頭優勢已經找到一種有效整合方式（疊加土洋雙賣，而非整套替換），但這是取捨而非全面勝出，目前仍以個案⑤原版當基準，是否改用疊加版取決於使用者對「報酬 vs 防守」的優先順序。</p>
+        <p><strong>結論（2026-08-13更新）</strong>：修正未來函數後，土洋雙賣疊加版不再是有效的取捨方案，總報酬與MDD都比原版差，<strong>不建議採用</strong>。這個發現也呼應下方48組窮舉搜尋修正後的結果——土洋雙賣不再是穩定勝出的開關。</p>
 
         <h3>窮舉搜尋：不再憑判斷手動挑組合，5個開關全部排列</h3>
         <p>前面幾組結果都是研究者憑判斷手動挑的組合，不是系統化窮舉。這裡把空頭端5個開關（防線A／防線B／高點打折鎖利 各on/off、保本停利 off/adjust/sell、土洋雙賣 on/off）全部排列組合，共 <strong>2×2×2×3×2 = 48 組</strong>，多頭端固定沿用個案⑤已驗證最佳設定，逐一跑完整5.5年回測。</p>
-        <p>📎 <a href="research_data/case7_bear_exhaustive_48combos.csv" download style="color:#ec4899; font-weight:500;">下載全部48組彙總數據 (CSV)</a>　——每組的總報酬/MDD/勝率/獲利因子/交易數與5個開關設定。無需登入即可下載。</p>
+        <p>📎 <a href="research_data/case7_bear_exhaustive_48combos.csv" download style="color:#ec4899; font-weight:500;">下載全部48組彙總數據 (CSV)</a>　——每組的總報酬/MDD/勝率/獲利因子/交易數與5個開關設定。2026-08-13已依個案⑬未來函數修正後重新產生，無需登入即可下載。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem; margin-bottom: 10px;">
+            ⚠️ <strong>2026-08-13依個案⑬修正後重新窮舉，冠軍配置改變</strong>：下表為修正後的結果，原本692.64%的冠軍配置（含土洋雙賣）在修正後只排第46名（262.67%，大幅倒退），因為它「防守優勢」原本就有一部分是偷看未公布籌碼資料的假象。
+        </div>
         <table class="doc-table">
             <thead><tr><th>排名</th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>組合</th></tr></thead>
             <tbody>
-                <tr><td>🥇 1</td><td><strong>692.64%</strong></td><td>24.17%</td><td>47.26%</td><td>3.68</td><td>防線A關／防線B關／高點鎖利關／保本停利adjust／<strong>+土洋雙賣</strong></td></tr>
-                <tr><td>🥈 2</td><td>682.76%</td><td>24.24%</td><td>46.65%</td><td>3.56</td><td>防線A關／防線B關／高點鎖利關／保本停利關／<strong>只留土洋雙賣</strong></td></tr>
-                <tr><td>🥉 3</td><td>669.84%</td><td><strong>19.78%（最低）</strong></td><td>47.28%</td><td>3.78</td><td>防線A關／防線B開／高點鎖利關／保本停利關／+土洋雙賣</td></tr>
-                <tr><td>4</td><td>656.52%</td><td>22.92%</td><td>47.58%</td><td>3.72</td><td>防線A關／防線B開／高點鎖利關／保本停利adjust／+土洋雙賣</td></tr>
-                <tr><td>5</td><td>596.51%</td><td>22.09%</td><td>44.73%</td><td>3.33</td><td>防線A關／防線B開／高點鎖利開／保本停利關／+土洋雙賣</td></tr>
-                <tr><td colspan="6" style="color:#94a3b8; text-align:center;">── 對照：個案⑤原版 ──</td></tr>
-                <tr><td>第30名</td><td>522.18%</td><td>22.25%</td><td>53.11%</td><td>2.92</td><td>防線A關／防線B開／高點鎖利開／保本停利sell（原版設定，未加土洋雙賣的疊加版）</td></tr>
+                <tr><td>🥇 1</td><td><strong>671.27%</strong></td><td><strong>47.84%（極高）</strong></td><td>55.7%</td><td>4.90</td><td>防線A關／防線B關／高點鎖利關／保本停利關／<strong>土洋雙賣關（幾乎不設任何出場規則）</strong></td></tr>
+                <tr><td>🥈 2</td><td>576.39%</td><td>46.95%（極高）</td><td>54.32%</td><td>4.81</td><td>防線A關／防線B關／高點鎖利關／保本停利adjust／土洋雙賣關</td></tr>
+                <tr><td>🥉 3</td><td>571.61%</td><td>35.29%</td><td>50.22%</td><td>3.16</td><td>防線A關／防線B開／高點鎖利開／保本停利關／土洋雙賣關</td></tr>
+                <tr><td>4</td><td>554.19%</td><td><strong>22.11%（前5名裡最低）</strong></td><td>45.16%</td><td>2.79</td><td>防線A開／防線B關／高點鎖利開／保本停利sell／土洋雙賣關</td></tr>
+                <tr><td>5</td><td>539.83%</td><td>28.04%</td><td>47.12%</td><td>2.80</td><td>防線A開／防線B關／高點鎖利關／保本停利sell／土洋雙賣關</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 前5名有兩個一致的規律：<strong>防線A一定要關掉</strong>（跟個案④/⑥的發現一致），<strong>土洋雙賣一定要加上</strong>——48組裡沒有例外。高點打折鎖利在前5名裡有4組也是關掉的，顯示這條防線可能也在幫倒忙，不只防線A。第2名更極端：空頭端幾乎什麼規則都不留，只靠土洋雙賣單一條件，總報酬682.76%依然是全部48組裡第二高。窮舉搜尋找到的冠軍組合（692.64%），比原本手動挑的個案⑤版本高出約33%，比疊加版（468.71%）更是高出47%。
+            📌 <strong>修正後最重要的變化：土洋雙賣從「48組裡沒有例外的必勝開關」變成前5名裡完全不出現</strong>，跟修正前的規律完全相反。冠軍組合（671.27%）幾乎不設任何出場規則，等同「買了就抱到MAX_HOLD_DAYS」，MDD高達47.84%——這是用極端風險換來的報酬，不是穩健的規則設計，跟上方靜態基準/最佳單一改動比起來已經失去「規則設計得更好」的意義，比較像過度配適到fail-open這個特定（且不切實際，因為正常運作時macro風控本來就該生效）情境的極端解。前5名裡唯一MDD相對克制的是第4名（22.11%，含防線A、高點鎖利），值得比冠軍更優先考慮。
         </div>
-        <p><strong>結論（更新）</strong>：系統化窮舉找到了比手動挑選更好的空頭端組合——<strong>防線A、防線B、高點打折鎖利全部關掉，只保留保本停利(adjust)+土洋雙賣</strong>，總報酬692.64%、MDD 24.17%，目前是regime模型空頭端測過的最佳設定，取代先前的card-line原版與疊加版當作參考基準。</p>
+        <p><strong>結論（2026-08-13更新，方向改變）</strong>：修正未來函數後，fail-open狀態下的「窮舉冠軍」不再是穩健、可實戰參考的規則組合，而是一個MDD極高、幾乎不設防守的極端解——不建議直接採用單純看總報酬排序的第一名。fail-open本身也不是實戰會遇到的正常狀態（正常運作巨觀風控應該是生效的），下方「風控生效版」的結果更貼近實際情境，應以那組為主要參考。</p>
 
         <h3>交叉驗證：巨觀風控真正生效後，冠軍還是同一組嗎？</h3>
-        <p>上面48組全部是在<a href="doc.html" style="color:#c084fc;">白皮書2.6節巨觀風控</a>fail-open（FinMind逾時、沒套用風控）狀態下跑出來的。巨觀風控本地快取修好之後，用「風控真正生效」的狀態重跑全部48組，交叉驗證冠軍組合是否經得起考驗：</p>
-        <p>📎 <a href="research_data/case7_bear_exhaustive_48combos_macroON.csv" download style="color:#ec4899; font-weight:500;">下載風控生效版48組彙總數據 (CSV)</a>　——無需登入即可下載。</p>
+        <p>上面48組是在<a href="doc.html" style="color:#c084fc;">白皮書2.6節巨觀風控</a>fail-open（不套用風控）狀態下跑出來的。用「風控真正生效」的狀態重跑全部48組，交叉驗證冠軍組合是否經得起考驗：</p>
+        <p>📎 <a href="research_data/case7_bear_exhaustive_48combos_macroON.csv" download style="color:#ec4899; font-weight:500;">下載風控生效版48組彙總數據 (CSV)</a>　——2026-08-13已依個案⑬修正後重新產生，無需登入即可下載。</p>
         <table class="doc-table">
-            <thead><tr><th></th><th>總報酬</th><th>MDD</th><th>獲利因子</th><th>配置</th></tr></thead>
+            <thead><tr><th></th><th>總報酬</th><th>MDD</th><th>勝率</th><th>獲利因子</th><th>配置</th></tr></thead>
             <tbody>
-                <tr><td>fail-open版（之前）</td><td>692.64%</td><td>24.17%</td><td>3.68</td><td>防線A/B/高點鎖利全關，保本adjust，+土洋雙賣</td></tr>
-                <tr><td><strong>風控生效版（交叉驗證）</strong></td><td><strong>488.17%</strong></td><td><strong>19.98%（更低）</strong></td><td>3.07</td><td><strong>完全相同的配置</strong></td></tr>
+                <tr><td>fail-open版第1名（上表）</td><td>671.27%</td><td>47.84%</td><td>55.7%</td><td>4.90</td><td>幾乎不設任何出場規則</td></tr>
+                <tr><td><strong>風控生效版冠軍</strong></td><td><strong>651.37%</strong></td><td><strong>38.26%（仍偏高，但明顯低於fail-open）</strong></td><td>50.94%</td><td>4.38</td><td>防線A/B/高點鎖利全關，保本停利<strong>adjust</strong>，<strong>土洋雙賣關</strong></td></tr>
+                <tr><td colspan="6" style="color:#94a3b8; text-align:center;">── 對照：修正前的舊冠軍配置（含土洋雙賣），修正後排名 ──</td></tr>
+                <tr><td>舊冠軍配置（防線全關/保本adjust/<strong>+土洋雙賣</strong>）</td><td>407.30%（第8名）</td><td>38.00%</td><td>-</td><td>-</td><td>修正前曾是fail-open版第1名（692.64%）</td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 <strong>冠軍組合完全沒變</strong>——兩種風控狀態選出的最佳配置一模一樣，這是本輪研究最重要的穩健性驗證：這個組合是靠規則本身贏，不是fail-open狀態的僥倖。絕對報酬從692%降到488%是預期中的效果（風控生效後會在風險週擋單/減碼，複利效果自然變小），MDD也確實從24.17%進一步降到19.98%，符合風控機制原本該有的效果。<br><br>
-            但第2~5名的排序有明顯變動，且風控生效版的第5名（428.78%）防線A是<strong>開啟</strong>的——先前「前5名一律關防線A」的規律不像想像中絕對，只有冠軍本身（#1）跨兩種風控狀態都穩定，其餘名次的規律解讀要更保守。唯一在fail-open與風控生效兩版的MDD最低前5名裡<strong>毫無例外都出現</strong>的開關是<strong>土洋雙賣（use_dualsell=True）</strong>——這是目前信心最高的單一發現。
+            📌 <strong>2026-08-13更新，發現方向改變</strong>：修正前的核心發現是「兩種風控狀態下冠軍配置完全相同（都含土洋雙賣）」，這是舊版信心最高的結論；修正後這個結論<strong>不再成立</strong>——風控生效版的新冠軍（651.37%，土洋雙賣<strong>關</strong>）跟fail-open版新冠軍（671.27%，同樣土洋雙賣關）在「土洋雙賣關」這一點上仍是一致的，但MDD差距依然很大（38.26% vs 47.84%），顯示風控生效確實能大幅壓低尾端風險。舊冠軍配置（含土洋雙賣）修正後在風控生效版只排第8名（407.30%），大幅落後新冠軍——土洋雙賣的優勢被證實主要是未來函數造成的假象，這也是個案⑪從另一個獨立角度得到的同一個結論。
         </div>
-        <p><strong>最終結論</strong>：regime模型空頭端目前最佳、且經過風控開關交叉驗證仍然成立的設定是——<strong>防線A、防線B、高點打折鎖利全關，保本停利用adjust模式，加上土洋雙賣</strong>。<strong>尚未套用到 <code>strategy_core.py</code> 的即時模型中</strong>，仍是研究階段。</p>
+        <p><strong>最終結論（2026-08-13更新）</strong>：regime模型空頭端經修正後最佳、且相對貼近實戰情境（風控生效）的設定是——<strong>防線A、防線B、高點打折鎖利全關，保本停利用adjust模式，土洋雙賣關閉</strong>，總報酬651.37%、MDD 38.26%。但要注意：即使是這個「風控生效版冠軍」，MDD 38.26%也明顯高於修正前認知的19.98%，風險輪廓比原本以為的差很多；加上個案⑤已發現Regime整體（含多頭端）不再明顯贏過最簡單的靜態方案，<strong>這一整條「Regime自動切換」研究線目前不建議作為優於現行方案的實戰依據，維持研究階段，未套用到 <code>strategy_core.py</code> 的即時模型中</strong>。</p>
     </div>
 
     <!-- 個案八：總結 -->
     <div class="doc-section" id="case8">
         <h2>⑧ Regime自動切換策略模型的建構與驗證<span class="status-tag status-solid">通用驗證</span></h2>
         <p><strong>總結說明</strong>：個案⑤⑥⑦分別記錄了各自獨立的實驗過程，這裡把整個「從零建構到目前最佳驗證版本」的完整脈絡串成單一入口——想快速了解「regime自動切換模型現在長什麼樣子、為什麼是這樣、驗證到什麼程度」，看這個個案即可；想看每一步的詳細數據與方法論細節，再回頭查⑤⑥⑦。</p>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px 16px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin-bottom: 16px;">
+            🚨 <strong>2026-08-13重大更新</strong>：個案⑬發現的未來函數修正後，本案例的核心結論<strong>不再成立</strong>——Regime自動切換不再明確贏過最簡單的靜態方案（見下方Step 3更新），48組窮舉的冠軍配置也從「含土洋雙賣」變成「不含土洋雙賣」（Step 7/8更新）。以下內容保留原始建構過程作為方法論演進紀錄，<strong>結論部分已全部更新為修正後版本，不是原始樂觀結論</strong>。
+        </div>
 
-        <h3>建構過程（依時間順序）</h3>
+        <h3>建構過程（依時間順序，含2026-08-13修正後更新）</h3>
         <ol style="padding-left: 20px; line-height: 1.9;">
-            <li><strong>Step 1　訊號定義</strong>（個案⑤）：TAIEX當日收盤 vs 20日均線，即時可算、不使用未來資訊，站上＝多頭、跌破＝空頭。</li>
+            <li><strong>Step 1　訊號定義</strong>（個案⑤）：TAIEX當日收盤 vs 20日均線，即時可算、不使用未來資訊，站上＝多頭、跌破＝空頭。（不受未來函數修正影響）</li>
             <li><strong>Step 2　子規則來源</strong>（個案⑤）：多頭子規則取自2024多頭年獨立回測的最佳配置，空頭子規則取自2022空頭年獨立回測的最佳配置——分開挑選，不是同一組參數硬套兩種市況。</li>
-            <li><strong>Step 3　驗證切換有效</strong>（個案⑤）：全期間522.18%，贏過任何一個靜態單一方案；且沒被用來挑規則的四個年份（2021/2023/2025/2026）全數正報酬，排除「巧合湊出兩個好年份」的疑慮。</li>
-            <li><strong>Step 4　基底方案驗證</strong>（個案⑥）：把A/B/C/D/E五個方案攤開比較，確認多頭端用方案A是有實證支持的最佳選擇；同時發現方案B才是2022空頭年單獨最強的方案，指出下一步優化方向。</li>
-            <li><strong>Step 5　嘗試失敗＋方法論修正</strong>（個案⑦）：整套換成方案B原生邏輯反而讓表現變差（522%→163%），同時抓到「結果不可重現」的重大方法論問題（TAIEX／巨觀風控即時抓取導致同一支腳本兩次結果不同），修正為本地固定快取後才能真正比較。</li>
-            <li><strong>Step 6　疊加而非替換</strong>（個案⑦）：查證發現方案B真正的差異只有一條規則（土洋雙賣），改成疊加進原本組合而非整套替換，得到報酬換防守的取捨版本（522%→469%，MDD 22.25%→17.48%）。</li>
-            <li><strong>Step 7　系統化窮舉</strong>（個案⑦）：不再手動挑組合，把空頭端5個開關全部排列（48組）逐一跑滿全期間，找到目前最佳配置：防線A／B／高點打折鎖利全關，只留保本停利(adjust)＋土洋雙賣，692.64%、MDD 24.17%，比手動挑選的版本再高出約33%。</li>
-            <li><strong>Step 8　交叉驗證</strong>（個案⑦）：修好巨觀風控本地快取後，在「風控真正生效」狀態下重跑同樣48組——冠軍配置完全沒變，總報酬488.17%（風控生效後的預期效果）、MDD進一步降到19.98%。這是整個系列研究裡最重要的穩健性證據：贏的是規則本身，不是資料不完整的僥倖。</li>
+            <li><strong>Step 3　驗證切換有效？（2026-08-13更新：不再成立）</strong>（個案⑤）：修正前全期間522.18%，號稱贏過任何單一靜態方案；<strong>修正未來函數後重跑，變成409.67%，被「一次買完+關防線A」這個完全不用regime判斷的極簡靜態方案（425.17%）反超</strong>。沒被用來挑規則的年份裡，2021也從正轉負，不再是「全數正報酬」。</li>
+            <li><strong>Step 4　基底方案驗證</strong>（個案⑥）：把A/B/C/D/E五個方案攤開比較，確認多頭端用方案A是有實證支持的最佳選擇；同時發現方案B才是2022空頭年單獨最強的方案，指出下一步優化方向。（此步驟為五方案原生邏輯直接比較，未涉及土洋雙賣等當天觸發型規則，暫未發現需要修正的跡象）</li>
+            <li><strong>Step 5　嘗試失敗＋方法論修正</strong>（個案⑦）：整套換成方案B原生邏輯反而讓表現變差，同時抓到「結果不可重現」的重大方法論問題（TAIEX／巨觀風控即時抓取導致同一支腳本兩次結果不同），修正為本地固定快取後才能真正比較。（定性結論不受未來函數修正影響，數字未重跑，僅供理解方法論演進）</li>
+            <li><strong>Step 6　疊加而非替換？（2026-08-13更新：不再是取捨，是全面變差）</strong>（個案⑦）：查證發現方案B真正的差異只有一條規則（土洋雙賣），修正前疊加進原組合是報酬換防守的取捨（522%→469%但MDD改善）；<strong>修正後土洋雙賣疊加版總報酬與MDD雙雙變差（409.67%→359.34%，24.45%→27.59%）</strong>，不再是任何取捨下的合理選擇。</li>
+            <li><strong>Step 7　系統化窮舉（2026-08-13更新：冠軍配置反轉）</strong>（個案⑦）：把空頭端5個開關全部排列（48組）逐一跑滿全期間。<strong>修正前冠軍含土洋雙賣（692.64%）；修正後土洋雙賣從「48組沒有例外的必勝開關」變成前5名完全不出現，新冠軍（防線全關+保本adjust，不含土洋雙賣）在fail-open狀態下報酬671.27%但MDD高達47.84%，是用極端風險換來的報酬，不算穩健規則。</strong></li>
+            <li><strong>Step 8　交叉驗證（2026-08-13更新：舊冠軍慘遭淘汰）</strong>（個案⑦）：在「風控真正生效」狀態下重跑同樣48組。<strong>修正前的結論是「兩種風控狀態冠軍配置完全相同」（都含土洋雙賣）；修正後這個結論不成立——舊冠軍配置在風控生效版只排第8名（407.30%），新冠軍是651.37%/MDD38.26%（同樣不含土洋雙賣）。</strong>土洋雙賣過去的「防守優勢」被證實主要是未來函數造成的假象，呼應個案⑪從另一角度得到的同一結論。</li>
         </ol>
 
-        <h3>目前驗證通過的最終配置</h3>
+        <h3>目前驗證通過的最終配置（2026-08-13更新）</h3>
         <table class="doc-table">
             <thead><tr><th>市況</th><th>進場</th><th>出場</th></tr></thead>
             <tbody>
                 <tr><td>多頭（TAIEX站上20MA）</td><td>一次買完</td><td>關防線A，其餘（防線B／高點打折鎖利／保本停利）維持</td></tr>
-                <tr><td>空頭（TAIEX跌破20MA）</td><td>3:3:4分批</td><td>防線A／防線B／高點打折鎖利全關，只留保本停利(adjust)＋土洋雙賣</td></tr>
+                <tr><td>空頭（TAIEX跌破20MA）</td><td>3:3:4分批</td><td>防線A／防線B／高點打折鎖利全關，保本停利adjust，<strong>土洋雙賣關閉（原本開啟，修正後拿掉）</strong></td></tr>
             </tbody>
         </table>
         <div class="quote-box">
-            📌 全期間績效：<strong>692.64% / MDD 24.17%</strong>（巨觀風控fail-open）、<strong>488.17% / MDD 19.98%</strong>（巨觀風控真正生效，配置完全相同）——兩種風控狀態下冠軍組合一致，是目前信心最高的研究結果。
+            📌 全期間績效（2026-08-13修正後）：<strong>671.27% / MDD 47.84%</strong>（巨觀風控fail-open，MDD極高不建議直接採用）、<strong>651.37% / MDD 38.26%</strong>（巨觀風控真正生效，較貼近實戰情境）。但更重要的是：<strong>個案⑤已發現Regime整體（含多頭端）不再明顯贏過最簡單的靜態方案「一次買完+關防線A」（425.17%）</strong>——空頭端這裡的數字看起來仍然很高，是因為它只反映空頭期間單獨的表現，不是含多頭端的全期間整體比較。
         </div>
 
-        <h3>驗證程度與局限性（誠實列出，不誇大）</h3>
+        <h3>驗證程度與局限性（2026-08-13誠實更新，不迴避壞消息）</h3>
         <ul>
-            <li>✅ 贏過所有測過的靜態單一方案（個案⑤⑥）、贏過整套替換方案B的嘗試（個案⑦）、贏過手動疊加版（個案⑦）、通過巨觀風控開/關的交叉驗證（個案⑦）。</li>
-            <li>✅ 沒被用來挑規則的年份（2021/2023/2025/2026）全數正報酬，降低過度配適疑慮。</li>
+            <li>❌ <strong>不再贏過最簡單的靜態單一方案</strong>（個案⑤修正後：409.67% vs 425.17%，靜態方案更好且MDD更低）——這是本案例修正前最核心的賣點，修正後已不成立。</li>
+            <li>❌ 土洋雙賣不再是「跨風控狀態都穩定勝出」的規則，兩種風控狀態下的新冠軍都不含它——修正前信心最高的單一發現，方向完全反轉。</li>
+            <li>⚠️ fail-open狀態下修正後的窮舉冠軍MDD高達47.84%，本質是「幾乎不設防守」的極端解，不是穩健規則設計的結果。</li>
+            <li>✅ 沒被用來挑規則的年份，2023/2025/2026仍是正報酬；但2021修正後轉負，過度配適疑慮比修正前認知的更高。</li>
             <li>⚠️ 樣本仍只涵蓋5.5年，空頭年樣本本質上只有2022一個完整年度可用（AI概念股題材本身只有約5年爆發期可回測，非刻意縮小範圍）。</li>
-            <li>⚠️ 48組窮舉的第2~5名排序在風控開/關兩種狀態下有變動，只有冠軍本身（#1）跨兩種狀態都穩定——結論的信心集中在「這一組配置」，不是「這一類規律」都同樣可靠。</li>
             <li>⚠️ C/D/E三個方案只測過各自原生出場邏輯，尚未針對它們做card-line式的細節微調，不能排除某個方案微調後表現超越目前組合。</li>
         </ul>
 
         <h3>目前狀態</h3>
-        <p>此配置<strong>尚未寫入 <code>strategy_core.py</code> 正式邏輯</strong>，系統實際下單建議仍是單一固定模型（方案A/B/C/D原生邏輯，不隨市況切換）。目前唯一的正式落地是首頁新增的<strong>「研究版市況面板」</strong>（advisory-only，不影響現有AI推薦排名或下單建議，僅顯示即時regime判斷與研究建議的進出場方式供參考）——這是把研究成果導入正式系統的第一階段，後續是否進一步整合仍需與使用者討論確認。完整方法論、逐節數據連結見<a href="research_report.html" style="color:#c084fc;">📑 完整研究報告</a>。</p>
+        <p>此配置<strong>尚未寫入 <code>strategy_core.py</code> 正式邏輯，且依上述修正後結論，目前也不建議寫入</strong>——系統實際下單建議仍是單一固定模型（方案A/B/C/D原生邏輯，不隨市況切換），這個決定在未來函數修正後反而更站得住腳。首頁的<strong>「研究版市況面板」</strong>（advisory-only，不影響現有AI推薦排名或下單建議）維持現狀繼續顯示供參考，但不會進一步整合成正式下單邏輯。若未來要重新推動這條研究線，建議先重新設計regime子規則的選取方式（例如不要讓子規則本身依賴容易被未來函數污染的當天觸發型指標），而非直接沿用目前已知失效的版本。完整方法論、逐節數據連結見<a href="research_report.html" style="color:#c084fc;">📑 完整研究報告</a>。</p>
     </div>
 
     <!-- 個案九 -->
@@ -840,22 +854,24 @@
         </table>
         <p>修正：全部改用「前一個有資料的交易日」的法人資料，執行價維持當天收盤價不變（這部分本來就合理——你在當天開盤前就已經知道前一天17:00公布的資料，可以用來決定當天的交易）；首頁即時掃描額外加上明確的日期防呆，不再單純依賴API延遲的巧合。</p>
 
-        <h3>重新驗證：Regime研究關鍵數字全部下修</h3>
-        <p>📎 <a href="research_data/case13_before_after_comparison.csv" download style="color:#ec4899; font-weight:500;">下載修正前後對照表</a>　<a href="research_data/case13_48combo_lookahead_fixed.csv" download style="color:#ec4899; font-weight:500;">下載修正後48組完整結果</a>　——皆無需登入即可下載。</p>
+        <h3>重新驗證：Regime研究關鍵數字全部下修，核心結論反轉</h3>
+        <p>📎 <a href="research_data/case13_before_after_comparison.csv" download style="color:#ec4899; font-weight:500;">下載修正前後對照表</a>　<a href="research_data/case7_bear_exhaustive_48combos.csv" download style="color:#ec4899; font-weight:500;">下載修正後48組完整結果（fail-open）</a>　<a href="research_data/case7_bear_exhaustive_48combos_macroON.csv" download style="color:#ec4899; font-weight:500;">下載修正後48組完整結果（風控生效）</a>　——皆無需登入即可下載。</p>
         <table class="doc-table">
             <thead><tr><th>項目</th><th>修正前</th><th>修正後</th></tr></thead>
             <tbody>
-                <tr><td>個案⑤ baseline</td><td>522.18%（MDD22.25%）</td><td>409.67%（MDD24.45%）</td></tr>
+                <tr><td>個案⑤ Regime自動切換 baseline</td><td>522.18%（MDD22.25%）</td><td>409.67%（MDD24.45%）</td></tr>
+                <tr><td>個案⑤ 靜態最佳單一改動（對照組）</td><td>394.38%（Regime領先約33%）</td><td><strong>425.17%（反超Regime，MDD也更低）</strong></td></tr>
                 <tr><td>個案⑦ 土洋雙賣疊加版</td><td>468.71%（MDD17.48%）</td><td>359.34%（MDD27.59%，明顯惡化）</td></tr>
-                <tr><td>個案⑦ 48組窮舉冠軍</td><td>692.64%（MDD24.17%，<strong>含土洋雙賣</strong>）</td><td><strong>651.37%（MDD38.26%，冠軍配置改變，土洋雙賣被拿掉）</strong></td></tr>
+                <tr><td>個案⑦ 48組窮舉冠軍（fail-open，同口徑比較）</td><td>692.64%（MDD24.17%，<strong>含土洋雙賣</strong>）</td><td>671.27%（<strong>MDD47.84%，極高，不含土洋雙賣</strong>）</td></tr>
+                <tr><td>個案⑦ 48組窮舉冠軍（風控生效，同口徑比較）</td><td>488.17%（MDD19.98%，<strong>含土洋雙賣</strong>）</td><td><strong>651.37%（MDD38.26%，不含土洋雙賣）</strong></td></tr>
             </tbody>
         </table>
         <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; color:#fca5a5; font-size:0.9rem;">
-            ⚠️ <strong>冠軍配置真的變了，不只是數字下修</strong>：原本48組裡的冠軍固定含「土洋雙賣」，修正後最佳配置變成拿掉土洋雙賣（原冠軍配置修正後降到第7名，408.07%）——這正好呼應個案⑪的獨立發現：土洋雙賣訊號本身用未來函數算，優勢有一部分是「偷看」出來的，修正後這個優勢消失。三個獨立研究方向（案例⑨連買天數、案例⑪大賣、這次的未來函數修正）最後匯聚到同一個結論：籌碼類的「當天訊號」普遍沒有想像中可靠。
+            ⚠️ <strong>不只是數字下修，是核心結論反轉</strong>：①冠軍配置真的變了——原本48組裡的冠軍固定含「土洋雙賣」，修正後不論fail-open或風控生效，新冠軍都拿掉土洋雙賣（舊冠軍配置在風控生效版修正後降到第8名，407.30%）；②<strong>更關鍵的是，個案⑤發現Regime自動切換整體已經不再明顯贏過最簡單的靜態方案</strong>（409.67% vs 425.17%，靜態方案更好且MDD更低）——這代表整條「Regime自動切換優於固定方案」的研究主線，在未來函數修正後不再成立。這正好呼應個案⑪的獨立發現：土洋雙賣訊號本身用未來函數算，優勢有一部分是「偷看」出來的，修正後這個優勢消失。三個獨立研究方向（案例⑨連買天數、案例⑪大賣、這次的未來函數修正）最後匯聚到同一個結論：籌碼類的「當天訊號」普遍沒有想像中可靠，也提醒「多空自動切換」這類設計優雅的方案，實證上不必然贏過簡單方案。
         </div>
 
         <h3>目前狀態</h3>
-        <p><code>strategy_core.py</code>的呼叫端（<code>backtest_engine.py</code>、<code>main.py</code>）已修正並上線；R策略（個案⑤⑦⑧原本考慮上線的配置）需要依這次修正後的數字重新評估，48組窮舉的新冠軍設定尚未正式寫回`strategy_core.py`。<code>backtest_logs.db</code>裡累積的810組正式回測實驗（大數據回測量化分析報告、個案⑨⑩⑪引用的全部歷史交易）全部是修正前產生的，已備份舊資料庫並啟動全面重跑，重跑完成後會更新<code>analysis.html</code>的排行榜與相關個案研究的結論。</p>
+        <p><code>strategy_core.py</code>的呼叫端（<code>backtest_engine.py</code>、<code>main.py</code>）已修正並上線。R策略（個案⑤⑦⑧原本考慮上線的配置）依修正後的數字重新評估，結論是<strong>目前不建議寫入</strong>——連最基本的「贏過靜態方案」都不再成立，維持首頁研究版advisory面板即可，不進一步整合成正式下單邏輯。<code>backtest_logs.db</code>裡累積的811組正式回測實驗已完成全面重跑（大數據回測量化分析報告、個案⑨⑩⑪引用的交易數據皆已更新）；case_studies.html個案⑤⑦⑧與<a href="research_report.html" style="color:#c084fc;">研究報告</a>、<a href="analysis.html" style="color:#c084fc;">大數據回測量化分析中心</a>的Regime相關數字已於2026-08-13同步更新。</p>
     </div>
 
     <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:40px;">本頁內容為研究過程紀錄，會隨新的驗證持續增補。完整原始討論見專案內 <code>STRATEGY_ANALYSIS_NOTES.md</code>。</p>
