@@ -1148,7 +1148,7 @@ class CommitRequest(BaseModel):
     orders: List[CommitOrder]
 
 @app.get("/api/planner/recommendations")
-def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, user: str = Depends(authenticate)):
+def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', user: str = Depends(authenticate)):
     cash_twd = cash * 10000.0
     username = user
     portfolio_file = get_user_portfolio_file(username)
@@ -1288,17 +1288,12 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
     potential_buys = []
     portfolio_dict = {p.get('ticker'): p for p in portfolio if p.get('ticker')}
 
-    # Regime自動切換（研究版「R」策略，opt-in）：多頭時建議直接買滿100%（不分批），
-    # 空頭時沿用系統既有的30/30/40分批機制（本來就跟研究驗證的3:3:4分批進場相符）。
-    # 只有使用者在下單建議頁主動勾選才會套用，沒勾選時完全是今天以前的行為。
-    regime_is_bull = None
-    if use_regime:
-        try:
-            regime_info = get_regime_status()
-            regime_is_bull = (regime_info.get("regime") == "多頭") if not regime_info.get("error") else None
-        except Exception as e:
-            print("regime判斷失敗，下單建議退回既有分批邏輯:", e)
-            regime_is_bull = None
+    # 出場方案由使用者在下單建議頁直接選（A/B/C/D/E），取代先前的Regime自動切換
+    # 研究版「R」策略opt-in（2026-08-13起：個案⑤⑦⑧⑮證實regime判斷後切換方案的設計
+    # 反而輸給固定使用單一方案，已移除R相關的多頭一次買滿100%特殊分批邏輯，
+    # 全部方案統一走標準30/30/40分批）。
+    if exit_strategy not in ('A', 'B', 'C', 'D', 'E'):
+        exit_strategy = 'E'
 
     scan_results.sort(key=lambda x: (x.get('chip_score', 0), x.get('momentum', 0)), reverse=True)
 
@@ -1309,7 +1304,6 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
         if chip_score < 1:
             continue
 
-        buy_exit_strategy = "R" if (use_regime and regime_is_bull is not None) else "D"
         held_item = portfolio_dict.get(t)
         if held_item:
             # Check current stage (1 = 30%, 2 = 60%, 3 = 100% full allocation)
@@ -1321,17 +1315,11 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
                 else: current_stage = 1
 
             if current_stage < 3:
-                if use_regime and regime_is_bull:
-                    # Regime多頭：跳過分批，直接建議一次補到100%（研究驗證：多頭一次買完+關防線A）
-                    next_stage_num = 3
-                    signal_text = "Regime多頭：一次買滿100%（研究版）"
-                    stage_text = "補滿 100%（Regime多頭）"
-                else:
-                    # 【情況 A】：尚未買滿！允許順勢右側加碼 Stage 2 (30%) 或 Stage 3 (40%)！
-                    next_stage_num = current_stage + 1
-                    next_stage_label = "加碼 30%" if next_stage_num == 2 else "滿額 40%"
-                    signal_text = f"右側順勢加碼 (第 {next_stage_num} 階段)"
-                    stage_text = f"第 {next_stage_num} 批 {next_stage_label}"
+                # 【情況 A】：尚未買滿！允許順勢右側加碼 Stage 2 (30%) 或 Stage 3 (40%)！
+                next_stage_num = current_stage + 1
+                next_stage_label = "加碼 30%" if next_stage_num == 2 else "滿額 40%"
+                signal_text = f"右側順勢加碼 (第 {next_stage_num} 階段)"
+                stage_text = f"第 {next_stage_num} 批 {next_stage_label}"
                 potential_buys.append({
                     "ticker": t,
                     "name": item.get('name', t),
@@ -1341,38 +1329,24 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
                     "signal": signal_text,
                     "stage": stage_text,
                     "stage_num": next_stage_num,
-                    "exit_strategy": buy_exit_strategy
+                    "exit_strategy": exit_strategy
                 })
             else:
                 # 【情況 B】：已經買滿 (Stage 3 滿額)！觸發 Risk Parity 避險機制，自動跳過，留資金給新黑馬！
                 continue
         else:
-            if use_regime and regime_is_bull:
-                # 【情況 C-多頭】：Regime多頭，新標的第一次就建議買滿100%，不分批
-                potential_buys.append({
-                    "ticker": t,
-                    "name": item.get('name', t),
-                    "price": item.get('latest_close'),
-                    "atr": item.get('atr', 0),
-                    "score": chip_score,
-                    "signal": "Regime多頭：一次買滿100%（研究版）",
-                    "stage": "首批 100%（Regime多頭）",
-                    "stage_num": 3,
-                    "exit_strategy": buy_exit_strategy
-                })
-            else:
-                # 【情況 C】：尚未持有的全新黑馬標的 ➔ 建倉第 1 階段試探盤 (30%)
-                potential_buys.append({
-                    "ticker": t,
-                    "name": item.get('name', t),
-                    "price": item.get('latest_close'),
-                    "atr": item.get('atr', 0),
-                    "score": chip_score,
-                    "signal": item.get('signal', 'S1 止跌/右側試探盤'),
-                    "stage": "首批 30%",
-                    "stage_num": 1,
-                    "exit_strategy": buy_exit_strategy
-                })
+            # 【情況 C】：尚未持有的全新黑馬標的 ➔ 建倉第 1 階段試探盤 (30%)
+            potential_buys.append({
+                "ticker": t,
+                "name": item.get('name', t),
+                "price": item.get('latest_close'),
+                "atr": item.get('atr', 0),
+                "score": chip_score,
+                "signal": item.get('signal', 'S1 止跌/右側試探盤'),
+                "stage": "首批 30%",
+                "stage_num": 1,
+                "exit_strategy": exit_strategy
+            })
 
     # Apply Budget Filter: Divide cash dynamically among top recommendations (up to 5 stocks)
     num_targets = max(1, min(len(potential_buys), 5))
@@ -1399,7 +1373,7 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
                 "score": b['score'],
                 "stage": b['stage'],
                 "stage_num": b.get('stage_num', 1),
-                "exit_strategy": b.get('exit_strategy', 'D')
+                "exit_strategy": b.get('exit_strategy', 'E')
             })
             current_used_cash += needed_cost
         else:
@@ -1413,7 +1387,7 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
                 "score": b['score'],
                 "stage": b['stage'],
                 "stage_num": b.get('stage_num', 1),
-                "exit_strategy": b.get('exit_strategy', 'D')
+                "exit_strategy": b.get('exit_strategy', 'E')
             })
 
     # 跳空/ATR比警示：recommendations 裡的 price 是「掃描當下(通常是前一天收盤)」的價格，
@@ -1454,8 +1428,7 @@ def get_planner_recommendations(cash: float = 100.0, use_regime: bool = False, u
         "sells": sells,
         "filtered_buys": filtered_buys,
         "warning": (scan_warning + "<br>" + macro_warning) if (scan_warning and macro_warning) else (scan_warning or macro_warning),
-        "regime_used": use_regime,
-        "regime_is_bull": regime_is_bull
+        "exit_strategy": exit_strategy
     }
 
 @app.post("/api/planner/commit")

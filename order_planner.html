@@ -270,13 +270,18 @@
                         ⚡ 重新計算推薦
                     </button>
                 </div>
-                <label title="已預設啟用：多頭建議新標的一次買滿100%（關防線A）；空頭維持30/30/40分批，出場只留保本停利(調整模式)+土洋雙賣。研究驗證見個案研究⑧。取消勾選改回傳統方案D+固定30/30/40分批。" style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:#f472b6; cursor:pointer; border:1px solid #ec4899; padding:4px 10px; border-radius:8px; background:rgba(236,72,153,0.08);">
-                    <input type="checkbox" id="useRegimeToggle" checked onchange="loadPlannerData()">
-                    🧭 Regime自動切換（研究版，已預設套用）
-                </label>
+                <div title="決定新建倉/加碼部位往後的停損/停利/移動停損規則，選擇會固定跟著該筆持倉到賣出為止。個案研究⑭：方案E目前是5.5年實測報酬最高、風險（MDD）最低的方案，故設為預設值；若判斷特定標的是強勢動能股、想給它多一點空間，可手動改選方案A或D（停損較不敏感）。" style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:#f472b6; border:1px solid #ec4899; padding:4px 10px; border-radius:8px; background:rgba(236,72,153,0.08);">
+                    <label for="exitStrategySelect" style="cursor:help;">🛡️ 出場方案：</label>
+                    <select id="exitStrategySelect" onchange="loadPlannerData()" style="background:#1e293b; color:#f472b6; border:1px solid #ec4899; border-radius:6px; padding:3px 6px; font-size:0.85rem;">
+                        <option value="E" selected>方案E（快穩雙軌，實測報酬最高/風險最低，推薦）</option>
+                        <option value="D">方案D（自適應吊燈鎖利）</option>
+                        <option value="A">方案A（固定%停損）</option>
+                        <option value="B">方案B（關鍵支撐破位）</option>
+                        <option value="C">方案C（動態收縮防線）</option>
+                    </select>
+                </div>
             </div>
-            <div id="regimeUsedNote" style="display:none; font-size: 0.82rem; color: #f472b6; background: rgba(236,72,153,0.08); border: 1px solid #ec4899; padding: 6px 12px; border-radius: 8px;"></div>
-            <div id="regimeOffNote" style="display:none; font-size: 0.82rem; color: #94a3b8; background: rgba(148,163,184,0.08); border: 1px dashed #475569; padding: 6px 12px; border-radius: 8px;">目前已取消Regime自動切換，改用傳統方案D＋固定30/30/40分批建倉（今天以前的舊行為）。</div>
+            <div id="exitStrategyNote" style="display:none; font-size: 0.82rem; color: #f472b6; background: rgba(236,72,153,0.08); border: 1px solid #ec4899; padding: 6px 12px; border-radius: 8px;"></div>
             <div id="budgetSummary" style="font-size: 0.85rem; color: var(--text-sub); background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 8px;">
                 總預算 - 萬元｜B 手動掛單已佔用 - 萬元｜A 可用預算 - 萬元
             </div>

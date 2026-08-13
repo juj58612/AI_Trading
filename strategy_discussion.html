@@ -127,6 +127,10 @@
         📌 <strong>這是一份持續更新的活文件</strong>，記錄「目前資料庫」得出的分析結論——資料庫更新（新實驗、新股票、程式邏輯調整）後，具體數字都可能跟著改變。原始資料見專案根目錄 <code>STRATEGY_ANALYSIS_NOTES.md</code>（與本頁同步維護）。每次要修改模型架構前，都應該先回顧這裡的結論。
     </div>
 
+    <div class="warn-box" style="border-left-color:#ef4444; background:rgba(239,68,68,0.14);">
+        🚨 <strong>2026-08-13重大更新通知</strong>：以下一～四節的「504組」數據，早於三大法人籌碼資料未來函數修正（look-ahead bias，見 <a href="case_studies.html#case13" style="color:#fca5a5; text-decoration:underline;">個案⑬</a>）與方案E的正式補齊驗證，<strong>已知至少一項核心結論被推翻</strong>——第三節「方案E任何組合都打不贏現有最佳選項」的結論，在方案E補齊到跟A/B/C/D同規模的199組正式網格後（<a href="case_studies.html#case14" style="color:#fca5a5; text-decoration:underline;">個案⑭</a>），已證實方案E才是全站排行榜冠軍（406.11%，8檔實戰設定下299.26%/MDD25.93%，五方案裡最佳）。第一、二節「504組」的具體數字尚未用目前998組資料庫重新驗證（見下方五之「未完成」項目），解讀時請以 <a href="analysis.html" style="color:#fca5a5; text-decoration:underline;">大數據回測量化分析中心</a> 的即時排行榜與 <a href="case_studies.html" style="color:#fca5a5; text-decoration:underline;">個案研究⑬⑭⑮</a> 為準，本頁一～二節數字僅供歷史脈絡參考。完整討論見 <code>STRATEGY_ANALYSIS_NOTES.md</code> 2026-08-13相關條目。
+    </div>
+
     <!-- 一 -->
     <div class="doc-section">
         <h2>一、核心發現：沒有「哪個方案最強」，只有「哪個方案在什麼條件下最強」</h2>
@@ -198,8 +202,9 @@
     <!-- 二 -->
     <div class="doc-section">
         <h2>二、條件式建議表（取代「單一最佳解」）</h2>
+        <p style="color:#94a3b8; font-size:0.85rem;">⚠️ 下表是「504組」舊資料時代的分析，尚未納入方案E、也早於未來函數修正，個別格子的B/D排序不宜直接採信（見上方紅框通知）。保留供歷史脈絡參考，2026-08-13新增的方案E建議見下方獨立說明。</p>
         <table class="doc-table">
-            <thead><tr><th>你的狀況</th><th>建議方案</th></tr></thead>
+            <thead><tr><th>你的狀況</th><th>建議方案（舊資料，僅供參考）</th></tr></thead>
             <tbody>
                 <tr><td>短線快進快出（2-15天）</td><td>方案D</td></tr>
                 <tr><td>一般波段操作（20-60天）</td><td>方案B（其次D，D在15~20天有單點極值）</td></tr>
@@ -210,11 +215,17 @@
                 <tr><td>大分散布局（8-10檔）</td><td>方案D（優勢最明顯）</td></tr>
             </tbody>
         </table>
+        <div class="quote-box" style="margin-top:16px;">
+            ✅ <strong>2026-08-13新增，目前有效建議</strong>：8檔實戰持股設定下，方案E是實測5.5年複利報酬最高、MDD最低的方案（個案研究⑭），已設為<code>order_planner.html</code>下單建議頁的預設出場方案。<strong>但E偏防禦，強勢多頭年會少賺</strong>（例如2024年單獨來看，E只有27.40%，方案A卻有46.77%）——若明確判斷某檔標的正處於強勢動能行情、想給它更多空間，可在下單頁手動改選方案A或D。個案研究⑮進一步驗證過「依市況自動切換方案」這個更聰明的做法，結果反而全部輸給「固定用方案E」，所以目前不提供自動切換，只提供手動覆蓋。
+        </div>
     </div>
 
     <!-- 三 -->
     <div class="doc-section">
-        <h2>三、方案E 實驗紀錄：兩次嘗試都失敗，但失敗得有意義</h2>
+        <h2>三、方案E 實驗紀錄：早期小樣本判「失敗」，2026-08-13補齊資料後推翻——E其實是冠軍<span class="status-tag" style="background:rgba(16,185,129,0.2); color:#4ade80;">已推翻</span></h2>
+        <div class="warn-box" style="border-left-color:#ef4444; background:rgba(239,68,68,0.14); margin-bottom:16px;">
+            🚨 <strong>2026-08-13更新：以下v1/v2/擴大測試的「誠實結論」已被推翻。</strong>當時的判斷只用了8組持倉檔數/天數組合的小樣本，且早於三大法人籌碼資料未來函數修正（<a href="case_studies.html#case13" style="color:#fca5a5; text-decoration:underline;">個案⑬</a>）。2026-08-13把方案E補齊到跟A/B/C/D同規模的199組正式網格重新驗證（<a href="case_studies.html#case14" style="color:#c084fc;">個案⑭</a>），結果：<strong>方案E包辦全站排行榜前5名（406.11%），8檔實戰設定下也是報酬最高、MDD最低的方案（299.26%/MDD25.93%）</strong>——不是「打不贏現有最佳選項」，是目前實測最好的選項。以下原始記錄保留作為方法論教訓（小樣本＋資料未修正時，很容易得出跟大樣本+乾淨資料相反的結論），不代表目前結論。
+        </div>
         <p><strong>設計動機</strong>：與其只在A/B/C/D之間做條件式選擇，能不能設計一個真正更好的新方案？前提是必須通過驗證，不能只憑一次歷史回測就下定論。</p>
 
         <h3>v1：土洋雙賣，但只在虧損時觸發</h3>
@@ -229,8 +240,12 @@
         <p>E在3~5檔幾乎每次墊底；在8~10檔躍升到第2名（僅次於D），但即使在最佳角落也還是輸D一大截（196 vs 278、207 vs 286）。</p>
 
         <div class="warn-box">
-            <strong>誠實結論</strong>：原始假設（「B在獲利部位上被雙賣訊號提早洗出場，浪費了2023多頭年的上漲空間」）沒有被數據支持——B「不管賺賠、雙賣當天就砍」這條規則本身已經調得相當好。E目前在任何測試過的組合都沒有贏過現有最佳選項。沒有繼續手動猜測微調第三版，避免在同一份歷史資料上反覆調整湊出「看起來變好」的版本（過度配適陷阱）。程式碼與UI掛載點已保留（標示🧪實驗性），供未來系統化搜尋使用。
+            <strong>原始「誠實結論」（2026-08-13已推翻，見上方紅框）</strong>：原始假設（「B在獲利部位上被雙賣訊號提早洗出場，浪費了2023多頭年的上漲空間」）沒有被數據支持——B「不管賺賠、雙賣當天就砍」這條規則本身已經調得相當好。E目前在任何測試過的組合都沒有贏過現有最佳選項。沒有繼續手動猜測微調第三版，避免在同一份歷史資料上反覆調整湊出「看起來變好」的版本（過度配適陷阱）。程式碼與UI掛載點已保留（標示🧪實驗性），供未來系統化搜尋使用。
         </div>
+
+        <h3>2026-08-13重新驗證：為什麼小樣本判「失敗」、大樣本判「冠軍」？</h3>
+        <p>兩次結論會相反，核心原因是v1/v2/擴大測試都只在<strong>3~10檔、少數幾個天數組合</strong>下手動試，樣本量遠不如A/B/C/D各自累積的~200組正式實驗；而個案⑭是複製方案D的199組完整參數網格（涵蓋1~10檔×2~360天×5.5年），讓E第一次在跟其他方案「同規模、同條件」下公平比較。此外，v1/v2的回測也早於未來函數修正，籌碼資料本身就有時間對齊問題。個案⑭進一步做了逐年拆解與出場原因拆解，發現E的優勢主要來自「虧損時比其他方案更快認賠」（見<a href="case_studies.html#case14" style="color:#c084fc;">個案⑭</a>完整分析），且不是每年都最好（2021、2024多頭年反而最差），是條件式優勢而非全面碾壓，但5.5年複利下來仍是目前實測最佳。</p>
+        <p><strong>目前狀態</strong>：<code>order_planner.html</code>（實戰下單建議頁）已於2026-08-13把出場方案預設值改為方案E，並開放使用者針對個別持倉手動覆蓋為A/B/C/D（見下單頁「🛡️ 出場方案」下拉選單）。</p>
     </div>
 
     <!-- 四 -->
@@ -246,13 +261,17 @@
     <!-- 五 -->
     <div class="doc-section">
         <h2>五、後續討論串 <span class="status-tag status-open">進行中</span></h2>
+        <p style="color:#94a3b8; font-size:0.85rem;">2026-08-13盤點：以下五項全部仍未完成，一項都沒有被當天的Regime/方案E研究順便解決；但其中兩項的優先順序因為當天結果而提高（見各項目內的更新註記）。</p>
         <ul>
-            <li><span class="status-tag status-open">未完成</span> <code>get_attribution()</code>（`backtest_engine.py`）要重寫成動態依方案交叉分析，不要再寫死比較D跟C，避免分析中心顯示的洞察跟這裡的深度分析對不上。</li>
-            <li><span class="status-tag status-open">已討論</span> Tier 3（逐日NAV／Sharpe/Sortino）：回測引擎其實已經在算逐日equity（用來算MDD），只是算完就丟掉沒存資料庫。不用額外花錢買資料（用的是本機已有的免費 yfinance 股價），改動是把已經在算的東西存下來+重跑504組。</li>
-            <li><span class="status-tag status-open">下一步</span> <strong>改用系統化參數搜尋，不要再手動猜</strong>：本系統已有 Optuna 貝氏最佳化基礎設施（AI 網格最佳化功能，內建 70/30 訓練/測試切分）。與其手動設計規則再回測，應該把出場邏輯的關鍵參數（ATR乘數、停利百分比、確認天數、觸發門檻）變成連續可調變數，交給 Optuna 在訓練集上搜尋，並在測試集驗證。</li>
+            <li><span class="status-tag status-open">未完成，優先順序提高</span> <code>get_attribution()</code>（`backtest_engine.py`）要重寫成動態依方案交叉分析，不要再寫死比較D跟C，避免分析中心顯示的洞察跟這裡的深度分析對不上。<strong>2026-08-13更新</strong>：這個問題比原本認知的更嚴重——方案E補齊後才是真正的冠軍（個案⑭），舊的「只比D跟C」不只寫死了比較對象，連候選都選錯了，衝擊比原本設想的更大。</li>
+            <li><span class="status-tag status-open">已討論</span> Tier 3（逐日NAV／Sharpe/Sortino）：回測引擎其實已經在算逐日equity（用來算MDD），只是算完就丟掉沒存資料庫。不用額外花錢買資料（用的是本機已有的免費 yfinance 股價），改動是把已經在算的東西存下來+重跑（現為998組，非原本的504組）。</li>
+            <li><span class="status-tag status-open">下一步，論點被當天結果佐證</span> <strong>改用系統化參數搜尋，不要再手動猜</strong>：本系統已有 Optuna 貝氏最佳化基礎設施（AI 網格最佳化功能，內建 70/30 訓練/測試切分）。與其手動設計規則再回測，應該把出場邏輯的關鍵參數（ATR乘數、停利百分比、確認天數、觸發門檻）變成連續可調變數，交給 Optuna 在訓練集上搜尋，並在測試集驗證。<strong>2026-08-13更新</strong>：手動猜規則這條路2026-08-13又連續失敗兩次——regime切換設計（<a href="case_studies.html#case15" style="color:#c084fc;">個案⑮</a>，12組全輸給固定用方案E）、籌碼濾網（個案⑨⑩⑪）——這正是本項論點最好的佐證，優先順序應該提高。</li>
             <li><span class="status-tag status-open">新方向</span> <strong>選股因子模型</strong>：目前深度掃描選股只看「站上5MA + 外資投信買賣超」這個很陽春的單一籌碼因子。已確認範疇：<strong>先只用現有免費資料深化，不加基本面</strong>（本益比/EPS成長率這類因子通常要花錢買資料源，之後真的需要再另外評估）。方向是用現有回測結果 + 技術面（均線排列、ATR波動度、乖離率）+ 籌碼面（外資投信買賣超、FinMind免費額度內的融資融券）找出更細緻的客觀選股因子組合。尚未開始設計。</li>
             <li><span class="status-tag status-open">待決定</span> <strong>首頁持股主動提醒</strong>：目前系統「檢查持股該不該買賣」的邏輯只存在下單規劃頁（order_planner.html），且只有真的點進那頁才會計算；首頁不會主動提醒。是否要在首頁加提示（例如「有N筆持倉觸發停損/停利，點此查看」）尚未決定。</li>
         </ul>
+        <div class="quote-box" style="margin-top:16px;">
+            📎 <strong>2026-08-13已解決的相關項目（不在原本五項清單內，附帶記錄）</strong>：<code>order_planner.html</code>原本的「Regime自動切換」opt-in核取框（多頭一次買滿100%＋空頭土洋雙賣），已證實其背後的regime切換設計全面失敗（個案⑤⑦⑧⑮），已移除，改成讓使用者直接選A/B/C/D/E出場方案、預設方案E。詳見 <a href="case_studies.html" style="color:#c084fc;">個案研究⑬⑭⑮</a> 與 <code>STRATEGY_ANALYSIS_NOTES.md</code> 2026-08-13相關條目。
+        </div>
     </div>
 </div>
 
