@@ -167,6 +167,22 @@
   對應 [個案⑰](../case_studies.html#case17)：重新驗證個案①「方案A在距60日低點漲幅>100%時表現轉差」的舊發現，用修正未來函數(個案⑬)後的目前資料庫重跑，結果反轉——>100%漲幅反而是方案A表現最好的分桶（勝率53.0%/平均報酬+4.81%），原始結論未能複現，不建議繼續設計相關風控規則。
   產生腳本：`case17_strategyA_runup_revalidation.py`，2026-08-13。
 
+- **`case18_optuna_ABCD_search_results.json`**（4組，方案A/B/C/D各自的訓練期基準/最佳參數/測試期/全期間對照）
+  對應 [個案⑱](../case_studies.html#case18)：把個案⑯的Optuna系統化搜尋方法論擴大到方案A/B/C/D，只搜尋`evaluate_exit()`內部的出場常數（不含進場ATR倍數）。4個方案在測試期(樣本外)與全期間的總報酬都優於預設值，但B/D的MDD在測試期略微上升。
+  產生腳本：`case18_optuna_ABCD_param_search.py`（v2，修正D的基準線需用regime相依值而非固定3.0），2026-08-13。
+
+- **`case18_ABCD_old_baseline_official_verification.csv`**（24列，舊參數×方案A/B/C/D×6年+全期間，正式引擎）
+  對應 [個案⑱](../case_studies.html#case18)：用`git stash`暫時還原`strategy_core.py`取得的舊參數基準線，正式`run_backtest`引擎逐年獨立回測。
+  產生腳本：`verify_ABCD_new_params_official.py`（對舊版`strategy_core.py`執行），2026-08-13。
+
+- **`case18_ABCD_new_params_official_verification.csv`**（28列，新參數×方案A/B/C/D×6年+全期間，正式引擎，採信版本）
+  對應 [個案⑱](../case_studies.html#case18)：新參數的正式引擎逐年驗證。方案B/D逐年5勝1負，方案C 3勝3負但含2022空頭年大幅改善，方案A逐年僅2勝4負。方案A、D均在2022空頭年變差，是明確標記的已知取捨；全期間4個方案報酬與MDD綜合指標都改善，已正式採用。
+  產生腳本：`verify_ABCD_new_params_official.py`（對新版`strategy_core.py`執行），2026-08-13。
+
+- **`case19_factor_model_optuna_search.json`**（1組，訓練/測試/全期間×現行排序/Optuna最佳權重組合）
+  對應 [個案⑲](../case_studies.html#case19)：把個案⑯⑱的Optuna方法論套用到選股排序本身，把現行`chip_score×100+momentum`固定公式改成6因子(新增ATR相對波動度、量能強度、連續同買天數、60日買超百分位)可搜尋權重組合。60個trial搜尋結果連訓練期都沒贏過現行排序（97.73分 vs 91.38分），測試期落差更大（總報酬110.94%→51.71%）。負面結果，不建議改動現行排序邏輯。
+  產生腳本：`case19_factor_model_search.py`，2026-08-13。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
