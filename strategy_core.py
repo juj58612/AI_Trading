@@ -224,14 +224,24 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
 
     # 華爾街升級：吊燈停損法進階版 (Adaptive Chandelier Exit)
     # 當持倉獲利超過門檻後，自動收緊 ATR 乘數，緊貼價格鎖死獲利。
-    # 方案E專屬：個案研究⑯用Optuna在訓練期(2021-01-01~2024-11-01)系統化搜尋這幾個
-    # 常數，測試期(2024-11-02~2026-08-10)樣本外驗證仍打贏原本手動設的值，用正式
-    # run_backtest引擎逐年獨立回測確認不是單一切分點的巧合（6年5勝1負，全期間
-    # 286.64%->338.75%，MDD幾乎不變25.93%->25.92%），才正式改用；A/B/C/D維持原本的
-    # 12%/1.25x/15%不變，避免未經驗證就影響其他方案。
-    profit_lock_trigger = 0.1493 if strategy == 'E' else 0.12
-    profit_lock_mult = 1.1292 if strategy == 'E' else 1.25
-    take_profit_pct = 0.1872 if strategy == 'E' else 0.15
+    # 個案研究⑯⑱：每個方案的鎖利觸發%／鎖利後ATR倍數／固定停利%這3個常數，原本全部
+    # 共用同一組手動設定值(12%/1.25x/15%)，2026-08-13起改成各方案自己的Optuna搜尋值——
+    # 訓練/測試集切分搜尋+正式run_backtest引擎逐年獨立回測驗證後才採用（見下方各方案的
+    # 個案編號）。維持不變的部分：進場當下的初始ATR停損倍數（方案D是既有的多頭2.2x/
+    # 空頭1.5x設計，其餘方案3.0x，見main.py/backtest_engine.py，這裡不動），因為那是在
+    # 進場當下(main.py/backtest_engine.py)決定的，不在這個函式的常數搜尋範圍內。
+    _EXIT_TUNING = {
+        # strategy: (profit_lock_trigger, profit_lock_mult, take_profit_pct)　個案⑯
+        'E': (0.1493, 1.1292, 0.1872),
+        # 個案⑱：A/B/C同樣通過樣本外驗證+正式引擎逐年獨立回測才採用；D沒有take_profit_pct
+        # (方案D固定停用15%停利，見下方)，用預設值0.15佔位但實際不會被讀取。
+        'A': (0.1494, 0.6709, 0.2017),
+        'B': (0.1993, 0.9146, 0.1553),
+        'C': (0.1804, 1.1555, 0.1410),
+        'D': (0.1774, 1.6574, 0.15),
+    }
+    _tuning = _EXIT_TUNING.get(strategy, (0.12, 1.25, 0.15))
+    profit_lock_trigger, profit_lock_mult, take_profit_pct = _tuning
 
     unrealized_pnl_pct = (close - p['buy_price']) / p['buy_price']
     current_mult = p['atr_multiplier']
@@ -258,32 +268,39 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         
     # Check Chip Loosening
     if strategy in ['C', 'D']: # 動態 ATR
+        # 個案⑱：確認天數(chip_weak_days)與收縮後ATR倍數，各方案改用Optuna搜尋值
+        # （C：2天/1.7126倍，跟原本2天/1.0倍相比確認天數不變、倍數放寬；
+        #   D：1天/1.8842倍，確認天數縮短、倍數也放寬，兩者都通過樣本外驗證）。
+        _chip_weak_threshold = 2 if strategy == 'C' else 1
+        _chip_loosen_mult = 1.7126 if strategy == 'C' else 1.8842
+
         if today_chip.get('foreign', 0) < 0 or today_chip.get('trust', 0) < 0:
             p['chip_weak_days'] = p.get('chip_weak_days', 0) + 1
         else:
             p['chip_weak_days'] = 0
-            
-        if p['chip_weak_days'] >= 2:
+
+        if p['chip_weak_days'] >= _chip_weak_threshold:
             # 收縮防線
-            p['atr_multiplier'] = 1.0
+            p['atr_multiplier'] = _chip_loosen_mult
             atr_val = today_price['ATR']
             atr_val = atr_val if not pd.isna(atr_val) else 0.0
-            
+
             # 使用昨收減去 1 ATR，若沒有昨收則用今收
             base_price = yesterday_close if yesterday_close else close
-            new_stop = base_price - (1.0 * atr_val)
+            new_stop = base_price - (_chip_loosen_mult * atr_val)
             p['trailing_stop'] = max(p['trailing_stop'], new_stop)
             if close < p['trailing_stop']:
                 sell_reason = "動態停損"
                 return sell_reason, p
-                
+
     elif strategy == 'A': # 積分反轉
+        # 個案⑱：確認天數從2天改成3天（Optuna搜尋值，樣本外驗證+正式引擎逐年獨立回測後採用）
         if close < today_price['MA5'] and (today_chip.get('foreign', 0) < 0 or today_chip.get('trust', 0) < 0):
             p['score_weak_days'] = p.get('score_weak_days', 0) + 1
         else:
             p['score_weak_days'] = 0
-            
-        if p['score_weak_days'] >= 2:
+
+        if p['score_weak_days'] >= 3:
             sell_reason = "積分轉負"
             return sell_reason, p
             

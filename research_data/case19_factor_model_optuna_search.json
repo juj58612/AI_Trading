@@ -1,0 +1,60 @@
+{
+  "baseline_weights": {
+    "w_chip": 100.0,
+    "w_momentum": 1.0,
+    "w_atr": 0.0,
+    "w_vol": 0.0,
+    "w_streak": 0.0,
+    "w_pctile": 0.0
+  },
+  "best_weights": {
+    "w_chip": 144.89377478922967,
+    "w_momentum": 4.423546576028422,
+    "w_atr": -3.848747533491226,
+    "w_vol": -2.524905485168458,
+    "w_streak": -1.652790364727721,
+    "w_pctile": -1.543127521264163
+  },
+  "train_baseline": {
+    "total_return": 139.95,
+    "mdd": 21.11,
+    "win_rate": 39.03,
+    "profit_factor": 1.43,
+    "trades": 497
+  },
+  "train_optuna": {
+    "total_return": 134.76,
+    "mdd": 21.69,
+    "win_rate": 41.02,
+    "profit_factor": 1.47,
+    "trades": 490
+  },
+  "test_baseline": {
+    "total_return": 110.94,
+    "mdd": 21.88,
+    "win_rate": 39.71,
+    "profit_factor": 1.69,
+    "trades": 272
+  },
+  "test_optuna": {
+    "total_return": 51.71,
+    "mdd": 23.56,
+    "win_rate": 37.21,
+    "profit_factor": 1.53,
+    "trades": 258
+  },
+  "full_baseline": {
+    "total_return": 309.09,
+    "mdd": 24.4,
+    "win_rate": 39.64,
+    "profit_factor": 1.56,
+    "trades": 787
+  },
+  "full_optuna": {
+    "total_return": 213.75,
+    "mdd": 23.28,
+    "win_rate": 39.34,
+    "profit_factor": 1.51,
+    "trades": 788
+  }
+}

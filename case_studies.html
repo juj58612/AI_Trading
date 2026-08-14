@@ -172,6 +172,8 @@
         <a href="#case15">⑮ 「智慧推薦」可行嗎？依regime動態選用整包方案的驗證（反證：12組全輸給全程用方案E）</a>
         <a href="#case16">⑯ Optuna系統化參數搜尋：方案E找到真正能打敗預設值的參數組合</a>
         <a href="#case17">⑰ 方案A極端漲幅風控訊號重新驗證（反證：原結論未能複現）</a>
+        <a href="#case18">⑱ Optuna系統化參數搜尋擴大到方案A/B/C/D</a>
+        <a href="#case19">⑲ 選股因子模型：加入技術面/籌碼面因子重新排序（反證）</a>
         <a href="#retro-2026-08-13">📊 研究小結：2026-08-13這一天，只有1種嘗試真正有效</a>
     </div>
 
@@ -1078,6 +1080,81 @@
         </div>
         <p><strong>結論</strong>：<strong>不建議繼續設計方案A的極端漲幅軟性風控規則</strong>——支撐這個提案的原始訊號本身沒有通過修正後資料的重新驗證。合理推測原因：雖然「距60日低點漲幅」本身是純價格訊號、不直接涉及籌碼資料，但個案⑬修正的是進場篩選邏輯用的籌碼資料時間對齊，這改變了「哪些股票在什麼時候被選進交易」，連帶讓「哪些交易最終落在極端漲幅分桶裡」的樣本組成整個不同——這也再次印證個案⑬的教訓：即使某個特徵本身不是籌碼類指標，只要它是從「被籌碼邏輯篩選出的交易」衍生出來的分析，一樣可能被未來函數間接污染。</p>
         <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論教訓</strong>：這是本系列研究第二次（第一次是個案⑨連買天數）發現「未來函數修正前的訊號分析」在修正後方向反轉，且都是原本看似合理的訊號結果被推翻。任何2026-08-13未來函數修正之前產出、且分析對象包含「籌碼邏輯篩選出的交易樣本」的研究結論，都應該視為未驗證，需要重新確認才能採信——不限於直接使用籌碼資料的分析。</p>
+    </div>
+
+    <!-- 個案十八 -->
+    <div class="doc-section" id="case18">
+        <h2>⑱ Optuna系統化參數搜尋擴大到方案A/B/C/D<span class="status-tag status-solid">通用驗證（部分保留）</span></h2>
+        <p><strong>起因</strong>：個案⑯用Optuna系統化搜尋（訓練/測試切分＋正式引擎逐年驗證）幫方案E找到一組通過樣本外驗證的新參數，是這一整天研究裡唯一乾淨成功的案例。同樣的方法論還沒套用到A/B/C/D——這4個方案的出場邏輯裡，同樣有獲利鎖利觸發門檻、鎖利後ATR倍數、固定停利%這幾個手動設定、從未系統化搜尋過的常數（A另外多一個「籌碼轉弱天數」門檻，C/D另外多一組「籌碼轉弱時放寬停損」的門檻與倍數）。這次把搜尋範圍擴大到這4個方案，比照個案⑯完全相同的流程：訓練期(2021-01-01~2024-11-01)搜尋、測試期(2024-11-02~2026-08-10)驗證、正式<code>run_backtest</code>引擎逐年獨立回測複核。</p>
+        <p><strong>範圍限制（刻意）</strong>：搜尋只涵蓋<code>evaluate_exit()</code>內部的出場常數，<strong>不觸碰進場ATR停損倍數(<code>initial_atr_mult</code>)</strong>——這個值其實在<code>backtest_engine.py</code>、<code>main.py</code>的賣出訊號回放、<code>main.py</code>的實際下單三個地方各自獨立設定，方案D還有「多頭2.2／非多頭1.5」的regime相依邏輯，這個既有的不一致性本身超出這次研究範圍，維持原樣、只把它當成固定基準線，不列入可搜尋參數，跟個案⑯對方案E的處理方式一致。第一版搜尋腳本一度誤把方案D的基準線也設成寫死的3.0（跟A/B/C/E共用），比較出來的「改善幅度」被錯誤放大，後來自行發現並改用正確的regime相依基準線重跑。</p>
+
+        <h3>結果：4個方案的訓練/測試/全期間對照</h3>
+        <p>📎 <a href="research_data/case18_optuna_ABCD_search_results.json" download style="color:#ec4899; font-weight:500;">下載完整4組Optuna搜尋原始結果</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>方案</th><th>期間</th><th>版本</th><th>總報酬</th><th>MDD</th></tr></thead>
+            <tbody>
+                <tr><td rowspan="2">A</td><td>測試期（樣本外）</td><td>預設／<strong>最佳</strong></td><td>102.30% ／ <strong>144.00%</strong></td><td>22.84% ／ <strong>20.56%</strong></td></tr>
+                <tr><td>全期間</td><td>預設／<strong>最佳</strong></td><td>185.34% ／ <strong>370.20%</strong></td><td>34.76% ／ <strong>27.32%</strong></td></tr>
+                <tr><td rowspan="2">B</td><td>測試期（樣本外）</td><td>預設／<strong>最佳</strong></td><td>97.74% ／ <strong>114.55%</strong></td><td>25.71% ／ 26.02%</td></tr>
+                <tr><td>全期間</td><td>預設／<strong>最佳</strong></td><td>202.49% ／ <strong>231.99%</strong></td><td>30.68% ／ 33.79%</td></tr>
+                <tr><td rowspan="2">C</td><td>測試期（樣本外）</td><td>預設／<strong>最佳</strong></td><td>99.85% ／ <strong>109.38%</strong></td><td>29.81% ／ <strong>25.54%</strong></td></tr>
+                <tr><td>全期間</td><td>預設／<strong>最佳</strong></td><td>149.84% ／ <strong>285.63%</strong></td><td>39.65% ／ <strong>29.92%</strong></td></tr>
+                <tr><td rowspan="2">D</td><td>測試期（樣本外）</td><td>預設／<strong>最佳</strong></td><td>121.55% ／ <strong>140.02%</strong></td><td>19.54% ／ 26.83%</td></tr>
+                <tr><td>全期間</td><td>預設／<strong>最佳</strong></td><td>169.91% ／ <strong>319.03%</strong></td><td>43.15% ／ <strong>27.79%</strong></td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 4個方案在測試期（Optuna沒看過的樣本外資料）跟全期間，總報酬都是新參數勝出，但MDD不是全部改善——B跟D的測試期MDD反而略微上升。跟個案⑯（E的4項全部同時變好）比，這次是「報酬普遍變好、防守性喜憂參半」，值得用正式引擎逐年獨立回測進一步確認是否穩健，而不是照單全收。
+        </div>
+
+        <h3>正式採用前的逐年獨立回測驗證</h3>
+        <p>比照個案⑯的方法論，用<strong>正式<code>run_backtest</code>引擎</strong>（8檔/30天，<code>is_grid_trial=True</code>不寫入正式排行榜）分別對舊參數（暫時<code>git stash</code>還原<code>strategy_core.py</code>取得的官方基準）跟新參數各自跑一次逐年獨立回測，確保比較的是同一套引擎、只有參數不同。</p>
+        <p>📎 <a href="research_data/case18_ABCD_old_baseline_official_verification.csv" download style="color:#ec4899; font-weight:500;">下載舊參數正式引擎逐年驗證</a>　<a href="research_data/case18_ABCD_new_params_official_verification.csv" download style="color:#ec4899; font-weight:500;">下載新參數正式引擎逐年驗證</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>年度</th><th>方案A（舊→新）</th><th>方案B（舊→新）</th><th>方案C（舊→新）</th><th>方案D（舊→新）</th></tr></thead>
+            <tbody>
+                <tr><td>2021</td><td>-11.29%→<strong>+9.20%</strong></td><td>-10.47%→<strong>-5.84%</strong></td><td><strong>+5.84%</strong>→+3.55%</td><td>+6.49%→<strong>+14.15%</strong></td></tr>
+                <tr><td>2022空頭年</td><td><strong>-9.26%</strong>→-18.29%</td><td>-9.18%→<strong>-6.77%</strong></td><td>-27.31%→<strong>-15.97%</strong></td><td><strong>-12.38%</strong>→-17.42%</td></tr>
+                <tr><td>2023</td><td><strong>+59.67%</strong>→+49.26%</td><td><strong>+66.89%</strong>→+55.05%</td><td>+43.82%→<strong>+86.49%</strong></td><td>+55.19%→<strong>+56.55%</strong></td></tr>
+                <tr><td>2024多頭年</td><td><strong>+55.34%</strong>→+40.42%</td><td>+38.17%→<strong>+47.44%</strong></td><td>+40.64%→<strong>+42.94%</strong></td><td>+31.70%→<strong>+36.03%</strong></td></tr>
+                <tr><td>2025</td><td><strong>+69.65%</strong>→+47.20%</td><td>+42.94%→<strong>+50.92%</strong></td><td><strong>+36.32%</strong>→+27.02%</td><td>+5.20%→<strong>+24.10%</strong></td></tr>
+                <tr><td>2026年初迄今</td><td>+47.73%→<strong>+52.78%</strong></td><td>+58.52%→<strong>+77.61%</strong></td><td><strong>+61.50%</strong>→+47.72%</td><td>+39.37%→<strong>+44.19%</strong></td></tr>
+                <tr><td><strong>全期間</strong></td><td>211.90%→<strong>264.91%</strong><br>MDD 37.31%→<strong>29.03%</strong></td><td>202.16%→<strong>224.08%</strong><br>MDD 31.28%→<strong>30.15%</strong></td><td>193.37%→<strong>247.53%</strong><br>MDD 40.57%→<strong>38.50%</strong></td><td>192.13%→<strong>278.98%</strong><br>MDD 31.39%→<strong>29.36%</strong></td></tr>
+                <tr><td><strong>逐年勝負</strong></td><td>新2勝／舊4勝</td><td>新5勝／舊1勝</td><td>新3勝／舊3勝</td><td>新5勝／舊1勝</td></tr>
+            </tbody>
+        </table>
+        <div class="quote-box">
+            📌 <strong>4個方案的全期間報酬跟MDD都是新參數勝出，但逐年勝負分布差異很大。</strong>方案B、D是乾淨的多數勝（5/6年），方案C接近打平（3/6年）但贏的3年裡包含2022空頭年一次很大的改善（-27.31%→-15.97%），方案A逐年勝負最弱（只贏2/6年）。<strong>更值得注意的是方案A跟方案D都在2022空頭年這個唯一的空頭樣本表現變差</strong>（A：-9.26%→-18.29%；D：-12.38%→-17.42%），而B、C反而在同一年變好。這代表A、D的全期間報酬改善，有一部分是用「空頭年防守力打一點折」換來的，跟個案⑯發現方案E在2021/2024表現變差、但整體仍值得採用的取捨性質類似，但這次的犧牲落在真正的空頭年，風險意義不完全一樣，需要被明確標記出來，不是默默採用。
+        </div>
+
+        <h3>目前狀態：B/C以高信心採用，A/D以標記取捨後採用</h3>
+        <p>4個方案的新參數都已寫入<code>strategy_core.py</code>的<code>evaluate_exit()</code>（比照個案⑯的<code>_EXIT_TUNING</code>字典結構，依<code>strategy</code>值選用對應常數，不影響方案E原有的個案⑯參數）。<strong>方案B、C的採用信心較高</strong>——逐年勝負乾淨、且在2022空頭年都同步改善，符合「報酬與防守同時變好」的理想情形。<strong>方案A、D則明確標記一項已知取捨</strong>：全期間報酬與MDD兩項綜合指標都改善，但2022空頭年的表現比舊參數差，代表這組新參數在下一次真正的空頭市場來臨時，防守力可能不如舊參數——採用的理由是全期間的複利效果與MDD綜合表現仍然更好，且目前資料庫只有一個完整空頭年樣本，不足以單獨否決其餘5年一致的改善，但這是後續應該持續觀察、而非視為定論的項目。<code>order_planner.html</code>下單建議頁的方案A/B/C/D選項，現在都已採用這組新參數。</p>
+    </div>
+
+    <!-- 個案十九 -->
+    <div class="doc-section" id="case19">
+        <h2>⑲ 選股因子模型：加入技術面/籌碼面因子重新排序<span class="status-tag status-solid">通用驗證（反證）</span></h2>
+        <p><strong>起因</strong>：目前深度掃描選股排序只用兩個因子——籌碼積分(<code>chip_score</code>，0~5分為主) × 100 加上動能(<code>momentum</code>，乖離率)，見<a href="doc.html" style="color:#ec4899;">白皮書2.2節</a>。<code>strategy_discussion.html</code>「後續討論串」項目④長期列著「選股因子模型」這個新方向，範疇已確認為「先只用現有免費資料深化，不加基本面」。比照個案⑯⑱的方法論，把排序公式從固定的<code>chip_score×100+momentum</code>，改成6個候選因子（籌碼積分、動能、ATR/收盤價相對波動度、量能強度、連續同買天數、60日買超金額百分位——後兩者是個案⑨⑩曾驗證「當硬性濾網」失敗的籌碼因子，這裡改當加權因子重測，是不同的用法）的Optuna可搜尋加權組合，訓練期(2021-01-01~2024-11-01)搜尋60個trial，測試期(2024-11-02~2026-08-10)驗證。進場門檻(<code>chip_score≥1</code>)與出場邏輯(方案E)完全不變，只改「候選股票裡選誰」這一步的排序方式。</p>
+
+        <h3>結果：搜尋60次trial，找不到贏過現行排序的權重組合</h3>
+        <p>📎 <a href="research_data/case19_factor_model_optuna_search.json" download style="color:#ec4899; font-weight:500;">下載完整搜尋結果（含最佳權重與三期間對照）</a>　——無需登入即可下載。</p>
+        <table class="doc-table">
+            <thead><tr><th>期間</th><th>版本</th><th>總報酬</th><th>MDD</th><th>勝率</th></tr></thead>
+            <tbody>
+                <tr><td rowspan="2">訓練期</td><td>現行排序(chip_score×100+momentum)</td><td>139.95%</td><td>21.11%</td><td>39.03%</td></tr>
+                <tr><td>Optuna最佳權重組合</td><td>134.76%</td><td>21.69%</td><td>41.02%</td></tr>
+                <tr><td rowspan="2">測試期（樣本外）</td><td>現行排序</td><td><strong>110.94%</strong></td><td><strong>21.88%</strong></td><td><strong>39.71%</strong></td></tr>
+                <tr><td>Optuna最佳權重組合</td><td>51.71%</td><td>23.56%</td><td>37.21%</td></tr>
+                <tr><td rowspan="2">全期間</td><td>現行排序</td><td><strong>309.09%</strong></td><td>24.40%</td><td>39.64%</td></tr>
+                <tr><td>Optuna最佳權重組合</td><td>213.75%</td><td><strong>23.28%</strong></td><td>39.34%</td></tr>
+            </tbody>
+        </table>
+        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px 16px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin: 14px 0;">
+            🚨 <strong>Optuna找到的「最佳」權重組合，連訓練期(用來搜尋的資料本身)都沒贏過現行排序公式</strong>（評分公式總報酬-2×MDD：現行97.73分 vs 搜尋到的最佳91.38分），測試期落差更大（總報酬110.94%→51.71%，接近腰斬）。這跟個案⑯⑱（新參數在訓練期明顯改善、測試期也跟著改善）的模式完全相反——這次是<strong>60次trial連訓練期都找不到能打敗現行公式的組合</strong>，不是「訓練期贏、測試期輸」的過度配適，而是搜尋本身沒找到出路。
+        </div>
+        <p><strong>合理解讀</strong>：現行的<code>chip_score×100+momentum</code>兩因子排序，權重差距懸殊（chip_score是0~5分乘以100，動能只是個位數的乖離率百分比），實質上等於「chip_score為主排序，momentum只用來在chip_score同分時決定順序」——跟<a href="doc.html" style="color:#ec4899;">白皮書2.2節</a>記錄的排序設計是一致的。這次新增的4個因子（ATR相對波動度、量能強度、連續同買天數、買超百分位）在Optuna最佳解裡權重全部是負值且量級偏小，代表就算納入搜尋範圍，也沒有哪個因子的訊號強到值得打亂現有的「chip_score決定大局」排序邏輯——這跟個案⑨(連買天數當硬性濾網不該用)、個案⑩(買超金額大小不該加強)兩個舊發現的方向一致，只是這次是用加權排序的方式再驗證一次，結論相同：這幾個籌碼衍生因子對「選股排序該選誰」沒有額外的預測力。</p>
+        <p><strong>結論</strong>：<strong>不建議改動現行的選股排序邏輯</strong>——搜尋沒有找到能穩定打敗現行<code>chip_score×100+momentum</code>公式的替代權重組合，且測試期的落差明確到不需要更多trial數就能下判斷。這是一個誠實的負面結果：現有免費資料源在「怎麼排序候選股票」這件事上，可能已經沒有太多額外可榨取的訊號，下一步若要真的提升選股，方向可能要轉向<code>strategy_discussion.html</code>已提過的「加入基本面資料」（本益比、EPS成長率等，需另外評估付費資料源），而不是繼續在現有免費資料的排列組合裡打轉。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;"><strong>方法論說明</strong>：60個trial、6維連續搜尋空間，理論上不能完全排除「trial數不足以找到更好解」的可能性；但既然60個trial裡最好的解連訓練期都沒贏，且測試期差距達到腰斬等級（不是接近打平的邊緣案例），額外增加trial數大機率不會反轉結論，不值得為此投入更多計算資源。</p>
     </div>
 
     <!-- 研究小結 -->

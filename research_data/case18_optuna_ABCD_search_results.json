@@ -1,0 +1,242 @@
+{
+  "A": {
+    "default_params": {
+      "profit_lock_trigger": 0.12,
+      "profit_lock_mult": 1.25,
+      "take_profit_pct": 0.15,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "best_params": {
+      "profit_lock_trigger": 0.1493568171412538,
+      "profit_lock_mult": 0.6708576591671473,
+      "take_profit_pct": 0.20173758599450903,
+      "score_weak_days": 3,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "train_baseline": {
+      "total_return": 73.13,
+      "mdd": 34.76,
+      "win_rate": 38.82,
+      "profit_factor": 1.37,
+      "trades": 608
+    },
+    "train_optuna": {
+      "total_return": 136.94,
+      "mdd": 27.32,
+      "win_rate": 45.29,
+      "profit_factor": 1.6,
+      "trades": 488
+    },
+    "test_baseline": {
+      "total_return": 102.3,
+      "mdd": 22.84,
+      "win_rate": 44.64,
+      "profit_factor": 1.71,
+      "trades": 345
+    },
+    "test_optuna": {
+      "total_return": 144.0,
+      "mdd": 20.56,
+      "win_rate": 48.8,
+      "profit_factor": 1.91,
+      "trades": 250
+    },
+    "full_baseline": {
+      "total_return": 185.34,
+      "mdd": 34.76,
+      "win_rate": 40.84,
+      "profit_factor": 1.5,
+      "trades": 972
+    },
+    "full_optuna": {
+      "total_return": 370.2,
+      "mdd": 27.32,
+      "win_rate": 46.27,
+      "profit_factor": 1.72,
+      "trades": 765
+    }
+  },
+  "B": {
+    "default_params": {
+      "profit_lock_trigger": 0.12,
+      "profit_lock_mult": 1.25,
+      "take_profit_pct": 0.15,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "best_params": {
+      "profit_lock_trigger": 0.1992846145589742,
+      "profit_lock_mult": 0.9146005167452732,
+      "take_profit_pct": 0.15531381414597786,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "train_baseline": {
+      "total_return": 65.14,
+      "mdd": 30.68,
+      "win_rate": 44.41,
+      "profit_factor": 1.28,
+      "trades": 581
+    },
+    "train_optuna": {
+      "total_return": 86.27,
+      "mdd": 33.79,
+      "win_rate": 43.45,
+      "profit_factor": 1.24,
+      "trades": 580
+    },
+    "test_baseline": {
+      "total_return": 97.74,
+      "mdd": 25.71,
+      "win_rate": 48.97,
+      "profit_factor": 1.54,
+      "trades": 341
+    },
+    "test_optuna": {
+      "total_return": 114.55,
+      "mdd": 26.02,
+      "win_rate": 49.85,
+      "profit_factor": 1.65,
+      "trades": 339
+    },
+    "full_baseline": {
+      "total_return": 202.49,
+      "mdd": 30.68,
+      "win_rate": 46.23,
+      "profit_factor": 1.4,
+      "trades": 941
+    },
+    "full_optuna": {
+      "total_return": 231.99,
+      "mdd": 33.79,
+      "win_rate": 45.45,
+      "profit_factor": 1.4,
+      "trades": 946
+    }
+  },
+  "C": {
+    "default_params": {
+      "profit_lock_trigger": 0.12,
+      "profit_lock_mult": 1.25,
+      "take_profit_pct": 0.15,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "best_params": {
+      "profit_lock_trigger": 0.18038191777377624,
+      "profit_lock_mult": 1.1555151155598888,
+      "take_profit_pct": 0.14103580770039875,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.7126422929846041
+    },
+    "train_baseline": {
+      "total_return": 40.49,
+      "mdd": 39.65,
+      "win_rate": 42.74,
+      "profit_factor": 1.18,
+      "trades": 503
+    },
+    "train_optuna": {
+      "total_return": 105.31,
+      "mdd": 28.89,
+      "win_rate": 49.41,
+      "profit_factor": 1.51,
+      "trades": 421
+    },
+    "test_baseline": {
+      "total_return": 99.85,
+      "mdd": 29.81,
+      "win_rate": 48.7,
+      "profit_factor": 1.73,
+      "trades": 308
+    },
+    "test_optuna": {
+      "total_return": 109.38,
+      "mdd": 25.54,
+      "win_rate": 51.26,
+      "profit_factor": 1.62,
+      "trades": 238
+    },
+    "full_baseline": {
+      "total_return": 149.84,
+      "mdd": 39.65,
+      "win_rate": 45.3,
+      "profit_factor": 1.4,
+      "trades": 819
+    },
+    "full_optuna": {
+      "total_return": 285.63,
+      "mdd": 29.92,
+      "win_rate": 49.64,
+      "profit_factor": 1.55,
+      "trades": 687
+    }
+  },
+  "D": {
+    "default_params": {
+      "profit_lock_trigger": 0.12,
+      "profit_lock_mult": 1.25,
+      "take_profit_pct": 0.15,
+      "score_weak_days": 2,
+      "chip_weak_days": 2,
+      "chip_loosen_mult": 1.0
+    },
+    "best_params": {
+      "profit_lock_trigger": 0.17739620083778662,
+      "profit_lock_mult": 1.65743896482036,
+      "take_profit_pct": 0.15,
+      "score_weak_days": 2,
+      "chip_weak_days": 1,
+      "chip_loosen_mult": 1.8842289440093094
+    },
+    "train_baseline": {
+      "total_return": 62.26,
+      "mdd": 43.15,
+      "win_rate": 43.4,
+      "profit_factor": 1.29,
+      "trades": 477
+    },
+    "train_optuna": {
+      "total_return": 178.03,
+      "mdd": 27.79,
+      "win_rate": 47.25,
+      "profit_factor": 1.58,
+      "trades": 400
+    },
+    "test_baseline": {
+      "total_return": 121.55,
+      "mdd": 19.54,
+      "win_rate": 48.52,
+      "profit_factor": 2.0,
+      "trades": 270
+    },
+    "test_optuna": {
+      "total_return": 140.02,
+      "mdd": 26.83,
+      "win_rate": 48.0,
+      "profit_factor": 2.09,
+      "trades": 200
+    },
+    "full_baseline": {
+      "total_return": 169.91,
+      "mdd": 43.15,
+      "win_rate": 44.92,
+      "profit_factor": 1.51,
+      "trades": 768
+    },
+    "full_optuna": {
+      "total_return": 319.03,
+      "mdd": 27.79,
+      "win_rate": 47.03,
+      "profit_factor": 1.77,
+      "trades": 623
+    }
+  }
+}
