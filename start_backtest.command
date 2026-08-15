@@ -11,7 +11,10 @@ fi
 
 # 3. 啟動 Python 後端伺服器 (指定連線埠 58889，並於背景執行)
 # backtest_engine.py 內建 uvicorn run，因此直接執行即可
-python3 backtest_engine.py > backtest_engine.log 2>&1 &
+# 用 nohup 讓程序不掛在這個終端機的工作群組下——關掉這個 Terminal 視窗時，
+# 系統才不會連帶送 SIGHUP 把伺服器一併關掉。
+nohup python3 backtest_engine.py > backtest_engine.log 2>&1 &
+disown
 
 # 4. 暫停 2 秒確保伺服器開機完成
 sleep 2
