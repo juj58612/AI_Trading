@@ -9,7 +9,11 @@ if [ -n "$OLD_PID" ]; then
 fi
 
 # 3. 啟動 Python 後端伺服器 (指定連線埠 58888，並於背景執行)
-python3 -m uvicorn main:app --port 58888 &
+# 用 nohup 把 stdout/stderr 導向 server.log，不接終端機的 pty——這樣之後就算關掉
+# 這個 Terminal 視窗，伺服器的輸出通道也不會被系統收回，避免 print() 撞到已失效的
+# fd 丟出 [Errno 5] Input/output error，害 /api/scan_all 等端點無端500。
+nohup python3 -m uvicorn main:app --port 58888 > server.log 2>&1 &
+disown
 
 # 4. 暫停 2 秒確保伺服器開機完成
 sleep 2
