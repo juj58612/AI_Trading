@@ -47,3 +47,7 @@ history.backup_*.json
 
 # 個人帳密備忘（絕對不能上傳 GitHub）
 我的帳密備忘*.txt
+
+# Firebase 服務帳戶金鑰（絕對不能上傳）
+*firebase-adminsdk*.json
+firebase_key*.json
