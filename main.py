@@ -808,6 +808,16 @@ def admin_list_users(user: str = Depends(authenticate)):
     users = load_registered_users()
     return {"users": sorted(users.keys())}
 
+@app.get("/api/admin/invite_info")
+def admin_invite_info(user: str = Depends(authenticate)):
+    # 帳號管理頁「邀請朋友」區塊用：只有管理者拿得到邀請碼
+    if user != ADMIN_USERNAME:
+        raise HTTPException(status_code=403, detail="僅限管理者查看邀請碼")
+    return {
+        "invitation_code": os.getenv("INVITATION_CODE", ""),
+        "site_url": os.getenv("PUBLIC_SITE_URL", "https://ai-trading-console-wf88.onrender.com"),
+    }
+
 @app.delete("/api/admin/users/{username}")
 def admin_delete_user(username: str, user: str = Depends(authenticate)):
     if user != ADMIN_USERNAME:

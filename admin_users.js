@@ -109,3 +109,41 @@ async function deleteUser(username) {
 }
 
 loadUsers();
+
+
+// ===== 邀請朋友區塊 =====
+async function loadInviteInfo() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/invite_info`, { headers: { 'Authorization': getAuthHeader() } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        const url = d.site_url || window.location.origin;
+        const code = d.invitation_code || '';
+        document.getElementById('inviteUrl').textContent = url;
+        document.getElementById('inviteCode').textContent = code || '（尚未設定 INVITATION_CODE）';
+        document.getElementById('inviteText').value = code
+            ? `邀請你使用「AI 概念股交易策略控制台」\n網址：${url}\n邀請碼：${code}\n打開網址後，點右上角「🔑 邀請碼開戶/登入」，輸入邀請碼，再自訂帳號（英文或數字，3～30 字）和密碼（至少 4 字）即可。`
+            : '尚未設定邀請碼，請先在 Render 後台與本機 .env 設定 INVITATION_CODE。';
+    } catch (e) {
+        document.getElementById('inviteUrl').textContent = '載入失敗';
+        document.getElementById('inviteCode').textContent = '載入失敗';
+    }
+}
+
+async function copyInvite() {
+    const ta = document.getElementById('inviteText');
+    const text = ta.value;
+    let ok = false;
+    try {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+    } catch (e) {
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch (e2) {}
+    }
+    const btn = document.getElementById('btnCopyInvite');
+    btn.textContent = ok ? '✅ 已複製！' : '請手動選取上方文字複製';
+    setTimeout(() => { btn.textContent = '📋 複製邀請訊息'; }, 2500);
+}
+
+loadInviteInfo();
