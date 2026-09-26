@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>損益總帳 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .ledger-card { background: linear-gradient(135deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);
+            border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+        .ledger-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .ledger-toolbar label { color: var(--text-sub); font-size: 0.85rem; }
+        .ledger-toolbar input, .ledger-toolbar select, .modal-grid input, .modal-grid select, .modal-grid textarea {
+            background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; outline: none; }
+        .btn { padding: 7px 14px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;
+            border: 1px solid var(--accent-blue); background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+        .btn:hover { filter: brightness(1.25); }
+        .btn-add { border-color: var(--accent-yellow); background: rgba(245,158,11,0.15); color: var(--accent-yellow); }
+        .btn-danger { border-color: #f87171; background: rgba(248,113,113,0.12); color: #f87171; }
+        .btn-plain { border-color: var(--border-color); background: transparent; color: var(--text-sub); }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+        .stat-box { background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px; }
+        .stat-box .k { color: var(--text-sub); font-size: 0.82rem; }
+        .stat-box .v { font-size: 1.35rem; font-weight: bold; margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .table-wrap { overflow-x: auto; }
+        table.ledger { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+        table.ledger th { text-align: right; color: var(--text-sub); font-weight: normal; padding: 8px 8px;
+            border-bottom: 1px solid var(--border-color); white-space: nowrap; position: sticky; top: 0; background: #1e293b; }
+        table.ledger td { text-align: right; padding: 8px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+        table.ledger th.l, table.ledger td.l { text-align: left; }
+        table.ledger tr:hover td { background: rgba(59,130,246,0.06); }
+        table.ledger tfoot td { font-weight: bold; border-top: 1px solid var(--border-color); }
+        .pos { color: var(--accent-green); }  /* 台股習慣：紅色=獲利 */
+        .neg { color: var(--accent-red); }    /* 綠色=虧損 */
+        .row-act a { color: var(--accent-blue); margin-left: 8px; cursor: pointer; text-decoration: underline; }
+        .row-act a.del { color: #f87171; }
+        .section-h { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; color: var(--accent-yellow); }
+        .hint { color: var(--text-sub); font-size: 0.82rem; margin-top: 8px; }
+        .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
+            align-items: center; justify-content: center; padding: 16px; }
+        .modal { background: #1e293b; border: 1px solid var(--accent-blue); border-radius: 12px; padding: 22px;
+            width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
+        .modal h3 { margin-bottom: 14px; }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modal-grid .full { grid-column: 1 / -1; }
+        .modal-grid label { display: block; color: var(--text-sub); font-size: 0.82rem; margin-bottom: 4px; }
+        .modal-grid input, .modal-grid select, .modal-grid textarea { width: 100%; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+        @media (max-width: 640px) { .modal-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>💰 損益總帳 (P&amp;L Ledger)</h1>
+        <p>所有已結清交易的完整紀錄。資料與「我的操盤室」退役結案紀錄是同一份，任一邊修改都會同步。</p>
+    </header>
+
+    <!-- 篩選與操作 -->
+    <div class="ledger-card">
+        <div class="ledger-toolbar">
+            <label>期間</label>
+            <select id="fPeriod">
+                <option value="all">全部</option>
+                <option value="ytd">今年</option>
+                <option value="lastyear">去年</option>
+                <option value="m1">近 1 個月</option>
+                <option value="m3">近 3 個月</option>
+                <option value="custom">自訂…</option>
+            </select>
+            <span id="customRange" style="display:none;">
+                <input type="date" id="fFrom"> ～ <input type="date" id="fTo">
+            </span>
+            <label>多空</label>
+            <select id="fType"><option value="all">全部</option><option value="long">多單</option><option value="short">空單</option></select>
+            <label>方案</label>
+            <select id="fStrategy"><option value="all">全部</option></select>
+            <input type="text" id="fSearch" placeholder="搜尋代號或名稱" style="width:150px;">
+            <span style="flex:1"></span>
+            <label title="例如券商手續費 2.8 折就填 0.28">手續費折數</label>
+            <input type="number" id="feeDiscount" step="0.01" min="0.1" max="1" value="1" style="width:80px;">
+        </div>
+        <div class="ledger-toolbar" style="margin-top:12px;">
+            <button class="btn btn-add" onclick="openEditor(null)">＋ 手動新增一筆</button>
+            <button class="btn" onclick="exportLedgerCSV()">📊 匯出目前清單 (CSV)</button>
+            <button class="btn btn-danger" id="btnBulkDelete" style="display:none;" onclick="deleteSelected()">🗑 刪除勾選項目</button>
+            <span id="loadStatus" class="hint" style="margin:0;"></span>
+        </div>
+    </div>
+
+    <!-- 統計 -->
+    <div class="ledger-card">
+        <div class="section-h">📈 統計與結算（依目前篩選結果）</div>
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="hint">費用＝手續費 0.1425%（買、賣各一次，乘上折數）＋證交稅 0.3%（賣出時）。未計最低手續費與融券相關費用。</div>
+    </div>
+
+    <div class="ledger-card">
+        <div class="section-h">累計淨損益走勢</div>
+        <div style="height:260px;"><canvas id="cumChart"></canvas></div>
+    </div>
+
+    <!-- 明細 -->
+    <div class="ledger-card">
+        <div class="section-h">🧾 逐筆明細</div>
+        <div class="table-wrap">
+            <table class="ledger">
+                <thead>
+                    <tr>
+                        <th class="l"><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th>
+                        <th class="l">賣出日</th><th class="l">買進日</th><th class="l">股票</th><th class="l">多空</th><th class="l">方案</th>
+                        <th>持有天數</th><th>張數</th><th>成本</th><th>平倉價</th>
+                        <th>毛損益</th><th>費用</th><th>淨損益</th><th>淨報酬率</th><th class="l">出場結果</th><th class="l">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerBody"><tr><td class="l" colspan="16">載入中…</td></tr></tbody>
+                <tfoot id="ledgerFoot"></tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- 月結 -->
+    <div class="ledger-card">
+        <div class="section-h">🗓 月結表（依賣出月份）</div>
+        <div class="table-wrap">
+            <table class="ledger">
+                <thead><tr><th class="l">月份</th><th>筆數</th><th>勝率</th><th>毛損益</th><th>費用</th><th>淨損益</th><th>累計淨損益</th></tr></thead>
+                <tbody id="monthBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 新增 / 編輯視窗 -->
+<div class="modal-bg" id="editorBg">
+    <div class="modal">
+        <h3 id="editorTitle">編輯交易</h3>
+        <div class="modal-grid">
+            <div><label>股票代號 *</label><input id="eTicker" placeholder="例如 2330"></div>
+            <div><label>股票名稱</label><input id="eName" placeholder="例如 台積電"></div>
+            <div><label>多空</label><select id="eType"><option value="long">多單</option><option value="short">空單</option></select></div>
+            <div><label>出場方案</label><select id="eStrategy"><option value="">（未指定）</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>R</option></select></div>
+            <div><label>買進日期 *</label><input type="date" id="eBuyDate"></div>
+            <div><label>賣出日期 *</label><input type="date" id="eExitDate"></div>
+            <div><label>進場成本（每股）*</label><input type="number" step="any" id="eCost"></div>
+            <div><label>平倉價（每股）*</label><input type="number" step="any" id="eExitPrice"></div>
+            <div><label>張數 *（零股請填小數，如 56 股＝0.056）</label><input type="number" step="any" id="eShares"></div>
+            <div><label>出場結果（留空會自動填）</label><input id="eOutcome" placeholder="例如 停損、土洋雙賣"></div>
+            <div class="full"><label>交易日誌 / 覆盤</label><textarea id="eJournal" rows="3"></textarea></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-plain" onclick="closeEditor()">取消</button>
+            <button class="btn btn-add" onclick="saveEditor()">儲存</button>
+        </div>
+    </div>
+</div>
+
+<script src="top_nav.js"></script>
+<script src="pnl_ledger.js?v=20260926"></script>
+</body>
+</html>

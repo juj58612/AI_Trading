@@ -35,3 +35,9 @@ backtest_database_custom.json
 
 # macOS re-signs .app bundles on first run, regenerating these each machine
 *.app/Contents/_CodeSignature/
+
+# Per-user portfolio/history files and local backups (personal data)
+portfolio_*.json
+history_*.json
+portfolio.backup_*.json
+history.backup_*.json

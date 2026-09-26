@@ -271,6 +271,117 @@ window.savePortfolioNote = function(index) {
     alert("✅ 筆記已儲存");
 }
 
+// ===== 結案紀錄共用工具 =====
+// 用本機時區取日期（toISOString 是 UTC，台灣早上 8 點前會變成前一天）
+function localDateStr(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+// 跳出輸入框要日期，格式錯誤會要求重填；按取消回傳 null
+function askTradeDate(message, defaultValue) {
+    let val = defaultValue;
+    while (true) {
+        val = prompt(message, val);
+        if (val === null) return null;
+        val = val.trim().replace(/\//g, '-');
+        const m = val.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m) {
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            if (d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3])) {
+                return localDateStr(d);
+            }
+        }
+        alert('日期格式不正確，請輸入 YYYY-MM-DD，例如 2026-09-26');
+    }
+}
+
+function buildOutcomeText(item, exitPrice) {
+    const isShort = item.type === 'short';
+    const pnl = isShort ? (item.cost - exitPrice) : (exitPrice - item.cost);
+    const pnlPercent = item.cost > 0 ? (pnl / item.cost * 100).toFixed(1) : 0;
+    if (pnl > 0) return `獲利 (+${pnlPercent}%)`;
+    if (pnl < 0) return `停損 (${pnlPercent}%)`;
+    return "平盤 (0%)";
+}
+
+// 台股交易成本：手續費 0.1425%（買賣各收一次，未計券商折扣與最低手續費）、證交稅 0.3%（賣出時收）
+const TW_FEE_RATE = 0.001425;
+const TW_TAX_RATE = 0.003;
+
+function calcTradeFigures(item) {
+    const isShort = item.type === 'short';
+    const shareCount = (item.shares || 0) * 1000;
+    const cost = item.cost || 0;
+    const exitPrice = item.exitPrice || item.closePrice || 0;
+    const buyAmount = cost * shareCount;
+    const sellAmount = exitPrice * shareCount;
+    const gross = Math.round(isShort ? (buyAmount - sellAmount) : (sellAmount - buyAmount));
+    // 手續費折數與「損益總帳」頁面共用同一個設定
+    let feeDisc = 1;
+    try { const v = parseFloat(localStorage.getItem('ai_trading_fee_discount')); if (v > 0 && v <= 1) feeDisc = v; } catch (e) {}
+    const fee = Math.round(buyAmount * TW_FEE_RATE * feeDisc) + Math.round(sellAmount * TW_FEE_RATE * feeDisc);
+    // 多單在出場時賣出；空單在進場時賣出(融券賣出)，證交稅依賣出那一邊的金額計
+    const tax = Math.round((isShort ? buyAmount : sellAmount) * TW_TAX_RATE);
+    const net = gross - fee - tax;
+    const grossPct = buyAmount > 0 ? gross / buyAmount * 100 : 0;
+    const netPct = buyAmount > 0 ? net / buyAmount * 100 : 0;
+    let holdDays = '';
+    if (item.buy_date && item.exitDate) {
+        const b = new Date(item.buy_date + 'T00:00:00');
+        const e = new Date(item.exitDate + 'T00:00:00');
+        if (!isNaN(b) && !isNaN(e)) holdDays = Math.round((e - b) / 86400000);
+    }
+    return { isShort, shareCount, cost, exitPrice, gross, fee, tax, net, grossPct, netPct, holdDays };
+}
+
+async function saveHistoryToServer() {
+    await fetch(`${API_BASE_URL}/api/history`, {
+        method: 'POST',
+        headers: {
+            'Authorization': getAuthHeader(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(myHistory)
+    });
+}
+
+// 修改已結案紀錄的賣出日期與平倉價
+window.editHistoryExit = async function(index) {
+    const item = myHistory[index];
+    if (!item) return;
+    const newDate = askTradeDate(`修改「${item.name}」的賣出日期 (YYYY-MM-DD)：`, item.exitDate || localDateStr());
+    if (newDate === null) return;
+    const priceStr = prompt(`修改「${item.name}」的實際平倉價：`, item.exitPrice || item.closePrice || '');
+    if (priceStr === null) return;
+    const newPrice = parseFloat(priceStr);
+    if (!(newPrice > 0)) {
+        alert('平倉價格式不正確，未修改。');
+        return;
+    }
+    if (item.buy_date && newDate < item.buy_date) {
+        if (!confirm(`賣出日期 ${newDate} 早於買進日期 ${item.buy_date}，確定要這樣存嗎？`)) return;
+    }
+    const priceChanged = newPrice !== (item.exitPrice || item.closePrice);
+    item.exitDate = newDate;
+    item.exitPrice = newPrice;
+    // 系統自動產生的出場結果(獲利/停損/平盤)會跟著新價格重算；手動或下單頁寫入的出場原因保留
+    if (priceChanged && /^(獲利|停損|平盤) \(/.test(item.outcome || '')) {
+        item.outcome = buildOutcomeText(item, newPrice);
+    }
+    try {
+        await saveHistoryToServer();
+        renderHistory(myHistory);
+        renderStatsDashboard();
+        alert('✅ 已更新賣出日期與平倉價');
+    } catch (e) {
+        console.error('更新失敗', e);
+        alert('❌ 更新失敗，請確認伺服器是否在執行');
+    }
+};
+
 window.removeFromPortfolio = async function(index) {
     const item = myPortfolio[index];
     const defaultPrice = item.closePrice || item.cost;
@@ -278,19 +389,14 @@ window.removeFromPortfolio = async function(index) {
     if (exitPriceStr === null) return;
     
     const exitPrice = parseFloat(exitPriceStr) || defaultPrice;
-    const isShort = item.type === 'short';
-    const pnl = isShort ? (item.cost - exitPrice) : (exitPrice - item.cost);
-    const pnlPercent = item.cost > 0 ? (pnl / item.cost * 100).toFixed(1) : 0;
-    
-    let outcome = "平盤 (0%)";
-    if (pnl > 0) outcome = `獲利 (+${pnlPercent}%)`;
-    else if (pnl < 0) outcome = `停損 (${pnlPercent}%)`;
-    
+    const exitDate = askTradeDate(`請輸入實際賣出日期 (格式 YYYY-MM-DD，預設今天)：`, localDateStr());
+    if (exitDate === null) return;
+
     const historyRecord = {
         ...item,
         exitPrice: exitPrice,
-        outcome: outcome,
-        exitDate: new Date().toISOString().split('T')[0]
+        outcome: buildOutcomeText(item, exitPrice),
+        exitDate: exitDate
     };
     
     try {
@@ -680,7 +786,9 @@ function renderHistory(data) {
                         <div class="history-title">${item.name} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-sub);">(${typeLabel})</span></div>
                         <div class="history-meta" style="margin-top: 8px;">
                             <span class="outcome-badge ${badgeClass}">${item.outcome}</span>
-                            <span style="margin-left: 15px;">歸檔日期：${item.exitDate || '未知'}</span>
+                            <span style="margin-left: 15px;">買進：${item.buy_date || '未知'}</span>
+                            <span style="margin-left: 12px;">賣出：${item.exitDate || '未知'}</span>
+                            <a href="javascript:void(0)" onclick="editHistoryExit(${originalIndex})" style="margin-left: 10px; color: var(--accent-blue); font-size: 0.85rem; text-decoration: underline;">✏️ 修改賣出日期/價格</a>
                         </div>
                     </div>
                 </div>
@@ -786,30 +894,42 @@ window.exportHistoryToCSV = function() {
         return;
     }
     
+    const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     let csvContent = "\uFEFF";
-    csvContent += "代號與名稱,多空,進場成本,操作張數,波段極端收盤價,最後紀錄收盤,實際平倉價,出場結果,歸檔日期,建倉理由,交易日誌\n";
-    
-    myHistory.forEach(item => {
-        const typeLabel = item.type === 'short' ? '空單' : '多單';
-        const name = `"${(item.name || '').replace(/"/g, '""')}"`;
-        const cost = item.cost || 0;
-        const shares = item.shares || 0;
-        const high = item.high || 0;
-        const closePrice = item.closePrice || 0;
-        const exitPrice = item.exitPrice || item.closePrice || 0;
-        const outcome = `"${(item.outcome || '').replace(/"/g, '""')}"`;
-        const date = item.exitDate || '';
-        const reason = `"${(item.reason || '').replace(/"/g, '""')}"`;
-        const journal = `"${(item.journal || '').replace(/"/g, '""')}"`;
-        
-        csvContent += `${name},${typeLabel},${cost},${shares},${high},${closePrice},${exitPrice},${outcome},${date},${reason},${journal}\n`;
+    csvContent += "代號與名稱,多空,出場方案,買進日期,賣出日期,持有天數,進場成本,平倉價,張數,股數,毛損益(元),毛報酬率(%),手續費(元),證交稅(元),淨損益(元),淨報酬率(%),出場結果,建倉理由,交易日誌\n";
+
+    // 依賣出日期由舊到新排列，方便在試算表裡累加
+    const rows = [...myHistory].sort((a, b) => String(a.exitDate || '').localeCompare(String(b.exitDate || '')));
+    rows.forEach(item => {
+        const f = calcTradeFigures(item);
+        csvContent += [
+            q(item.name),
+            f.isShort ? '空單' : '多單',
+            q(item.exit_strategy || ''),
+            q(item.buy_date || ''),
+            q(item.exitDate || ''),
+            f.holdDays,
+            f.cost,
+            f.exitPrice,
+            item.shares || 0,
+            f.shareCount,
+            f.gross,
+            f.grossPct.toFixed(2),
+            f.fee,
+            f.tax,
+            f.net,
+            f.netPct.toFixed(2),
+            q(item.outcome),
+            q(item.reason),
+            q(item.journal)
+        ].join(',') + "\n";
     });
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `歷史交易紀錄_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `歷史交易紀錄_${localDateStr()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

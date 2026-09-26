@@ -10,6 +10,7 @@ import yfinance as yf
 from bs4 import BeautifulSoup
 import strategy_core
 import pandas as pd
+import re
 import requests
 from datetime import datetime, timedelta
 import os
@@ -771,6 +772,12 @@ def register_user(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="密碼至少需要包含 4 個字元！")
         
     users = load_registered_users()
+    # 帳號名稱會拿來組檔名(portfolio_<帳號>.json)，只允許英數字、底線、減號；
+    # admin/default/undefined 會被對應到管理者的檔案，不開放註冊。
+    if not re.fullmatch(r"[A-Za-z0-9_-]{3,30}", uname):
+        raise HTTPException(status_code=400, detail="帳號只能使用英文字母、數字、底線或減號，長度 3～30 字！")
+    if uname.lower() in ("admin", "default", "undefined"):
+        raise HTTPException(status_code=400, detail="此帳號名稱為系統保留字，請換一個！")
     if uname in users or uname == ADMIN_USERNAME:
         raise HTTPException(status_code=400, detail="此帳號名稱已被註冊，請換一個！")
 
@@ -844,20 +851,15 @@ def get_user_history_file(username: str) -> str:
 # 庫存持久化儲存 API (多用戶隔離與全域備援)
 @app.get("/api/portfolio")
 def get_portfolio(user: str = Depends(authenticate)):
+    # 每個帳號只讀自己的檔案（管理者=portfolio.json，其他人=portfolio_<帳號>.json）。
+    # 2026-09-26 移除「自己的檔案是空的就改讀管理者 portfolio.json」的備援，
+    # 那會讓受邀帳號看到管理者的持倉。
     pfile = get_user_portfolio_file(user)
     if os.path.exists(pfile):
         try:
             with open(pfile, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if data and isinstance(data, list) and len(data) > 0:
-                    return data
-        except Exception:
-            pass
-    # Fallback to main portfolio.json
-    if os.path.exists("portfolio.json"):
-        try:
-            with open("portfolio.json", "r", encoding="utf-8") as f:
-                return json.load(f)
+                return data if isinstance(data, list) else []
         except Exception:
             return []
     return []
@@ -867,11 +869,9 @@ async def save_portfolio(request: Request, user: str = Depends(authenticate)):
     try:
         pfile = get_user_portfolio_file(user)
         data = await request.json()
+        # 只寫入自己的檔案，不再同步覆寫管理者的 portfolio.json
         with open(pfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        if pfile != "portfolio.json":
-            with open("portfolio.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1101,20 +1101,13 @@ def check_portfolio_sell_signals(user: str = Depends(authenticate)):
 # 歷史交易庫房 API (多用戶隔離與全域備援)
 @app.get("/api/history")
 def get_history(user: str = Depends(authenticate)):
+    # 每個帳號只讀自己的結案紀錄，不再借用管理者的 history.json
     hfile = get_user_history_file(user)
     if os.path.exists(hfile):
         try:
             with open(hfile, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if data and isinstance(data, list) and len(data) > 0:
-                    return data
-        except Exception:
-            pass
-    # Fallback to main history.json
-    if os.path.exists("history.json"):
-        try:
-            with open("history.json", "r", encoding="utf-8") as f:
-                return json.load(f)
+                return data if isinstance(data, list) else []
         except Exception:
             return []
     return []
@@ -1124,11 +1117,9 @@ async def save_history(request: Request, user: str = Depends(authenticate)):
     try:
         hfile = get_user_history_file(user)
         data = await request.json()
+        # 只寫入自己的檔案，不再同步覆寫管理者的 history.json
         with open(hfile, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        if hfile != "history.json":
-            with open("history.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1467,7 +1458,9 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                 exists['high'] = max(exists.get('high', o.price), o.price)
             else:
                 atr_val = o.price * 0.04
-                mult = 2.2
+                # 初始ATR停損倍數要跟回測引擎(backtest_engine.py)一致：方案D用2.2x，
+                # 其餘方案(A/B/C/E/R)用3.0x。原本這裡寫死2.2，導致E等方案的實盤停損比回測更緊。
+                mult = 2.2 if (o.exit_strategy or 'D') == 'D' else 3.0
                 trailing_stop = o.price - (mult * atr_val)
 
                 supp_price = o.price * 0.95
@@ -1536,17 +1529,11 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                 })
 
     try:
+        # 只寫入下單者自己的持倉與結案紀錄，不再同步覆寫管理者的 portfolio.json / history.json
         with open(portfolio_file, "w", encoding="utf-8") as f:
             json.dump(portfolio, f, ensure_ascii=False, indent=4)
-        if portfolio_file != "portfolio.json":
-            with open("portfolio.json", "w", encoding="utf-8") as f:
-                json.dump(portfolio, f, ensure_ascii=False, indent=4)
-                
         with open(history_file, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=4)
-        if history_file != "history.json":
-            with open("history.json", "w", encoding="utf-8") as f:
-                json.dump(history, f, ensure_ascii=False, indent=4)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"儲存記帳失敗: {str(e)}")
 
@@ -1598,7 +1585,7 @@ def serve_research_data(filename: str):
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html", "research_report.html"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html", "research_report.html", "pnl_ledger.html", "pnl_ledger.js", "top_nav.js"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
