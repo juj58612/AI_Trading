@@ -23,6 +23,15 @@ if ! git pull --rebase --autostash origin main; then
 fi
 
 echo "--- 推送到 GitHub ---"
+if ! git push origin main; then
+    echo ""
+    echo "⚠️ GitHub 登入失效，已清除 Mac 鑰匙圈裡舊的 GitHub 登入資料，改用新的權杖重新登入。"
+    echo "   Username 輸入：juj58612"
+    echo "   Password 貼上：GitHub 個人存取權杖（ghp_ 開頭，貼上時畫面不會顯示任何字，貼完直接按 Enter）"
+    echo ""
+    printf "protocol=https\nhost=github.com\n\n" | git credential-osxkeychain erase 2>/dev/null
+    printf "protocol=https\nhost=github.com\n\n" | git credential reject 2>/dev/null
+fi
 if git push origin main; then
     echo ""
     echo "✅ 已成功同步至 GitHub！網頁版約數分鐘後自動更新。"
