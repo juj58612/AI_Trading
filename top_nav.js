@@ -25,6 +25,29 @@
             #globalTopNav a:hover { background:rgba(59,130,246,0.15); border-color:#3b82f6; color:#fff; }
             #globalTopNav a.active { background:rgba(245,158,11,0.18); border-color:#f59e0b; color:#f59e0b; }
             #globalTopNav a.ledger { border-color:rgba(239,68,68,0.5); }
+
+            /* ===== 手機版調整（螢幕寬度 640px 以下）===== */
+            @media (max-width: 640px) {
+                body { padding: 10px !important; }
+                /* 導覽列改成單列左右滑動，不佔四行高度 */
+                #globalTopNav { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+                    -webkit-overflow-scrolling: touch; padding: 8px; gap: 6px; margin-bottom: 12px; }
+                #globalTopNav a { flex: 0 0 auto; white-space: nowrap; padding: 6px 10px; font-size: 0.85rem; }
+                /* 標題旁絕對定位的「返回」按鈕改成放在標題下方，避免蓋住標題 */
+                header a[style*="absolute"], header > a, a[style*="position: absolute"][href$=".html"], a[style*="position:absolute"][href$=".html"] {
+                    position: static !important; transform: none !important; display: inline-block !important;
+                    margin-top: 10px !important; }
+                header { padding-right: 0 !important; }
+                header h1 { font-size: 1.45rem !important; }
+                /* 下拉選單、輸入框不超出螢幕 */
+                select, input, textarea { max-width: 100% !important; min-width: 0 !important; }
+                /* 行內 flex 排版在窄螢幕自動換行（例如下單頁的出場方案選單） */
+                [style*="display:flex"], [style*="display: flex"] { flex-wrap: wrap !important; }
+                .config-item, .config-item > *, .settings-panel, .count-setting { min-width: 0 !important; max-width: 100% !important; }
+                /* 寬表格改成可左右滑動 */
+                table:not(.ledger) { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+                img, canvas { max-width: 100% !important; }
+            }
         `;
         document.head.appendChild(style);
 
