@@ -44,3 +44,6 @@ history.backup_*.json
 
 # macOS Finder aliases (替身)
 *替身
+
+# 個人帳密備忘（絕對不能上傳 GitHub）
+我的帳密備忘*.txt
