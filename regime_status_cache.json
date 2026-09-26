@@ -1,17 +1,13 @@
 {
-    "date": "2026-08-12",
+    "date": "2026-09-26",
     "result": {
         "regime": "多頭",
-        "taiex_close": 44928.76,
-        "taiex_ma20": 43595.98,
-        "taiex_date": "2026-08-10",
-        "bias_pct": 3.06,
-        "recommendation": {
-            "entry": "一次買完（Lump-sum）",
-            "exit": "防線A（-8%停損）關閉，其餘防線（防線B／高點打折鎖利／保本停利）維持"
-        },
-        "note": "研究版建議，依「TAIEX收盤 vs 20日均線」逐日動態判斷；系統實際下單建議目前仍採單一固定模型，未套用此regime切換邏輯，僅供參考。",
-        "report_url": "research_report.html",
-        "case_url": "case_studies.html#case5"
+        "taiex_close": 48024.6,
+        "taiex_ma20": 46755.77,
+        "taiex_date": "2026-09-24",
+        "bias_pct": 2.71,
+        "note": "此面板僅供資訊參考，不代表推薦邏輯。個案研究⑤⑦⑧⑮已證實依此訊號切換出場規則或整包方案，皆輸給固定使用方案E；系統目前的下單建議固定採用方案E（個案⑭⑯驗證後的正式預設值），不隨此regime數值變動。",
+        "report_url": "case_studies.html#case15",
+        "case_url": "case_studies.html#case16"
     }
 }

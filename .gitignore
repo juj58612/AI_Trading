@@ -41,3 +41,6 @@ portfolio_*.json
 history_*.json
 portfolio.backup_*.json
 history.backup_*.json
+
+# macOS Finder aliases (替身)
+*替身
