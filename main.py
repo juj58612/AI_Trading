@@ -715,13 +715,12 @@ async def daily_auto_scan(user: str = Depends(authenticate)):
     all_usernames = [ADMIN_USERNAME] + list(load_registered_users().keys())
     portfolios_updated = 0
     for uname in all_usernames:
-        pf = get_user_portfolio_file(uname)
-        if not os.path.exists(pf):
-            continue
         try:
-            with open(pf, "r", encoding="utf-8") as f:
-                portfolio = json.load(f)
-        except Exception:
+            portfolio = load_user_list("portfolio", uname)
+        except Exception as e:
+            print(f"讀取 {uname} 持倉失敗: {e}")
+            continue
+        if not portfolio:
             continue
 
         changed = False
@@ -739,8 +738,7 @@ async def daily_auto_scan(user: str = Depends(authenticate)):
 
         if changed:
             try:
-                with open(pf, "w", encoding="utf-8") as f:
-                    json.dump(portfolio, f, ensure_ascii=False, indent=4)
+                save_user_list("portfolio", uname, portfolio)
                 portfolios_updated += 1
             except Exception as e:
                 print(f"Error updating portfolio for {uname}:", e)
@@ -848,30 +846,103 @@ def get_user_history_file(username: str) -> str:
         return "history.json"
     return f"history_{username}.json"
 
-# 庫存持久化儲存 API (多用戶隔離與全域備援)
-@app.get("/api/portfolio")
-def get_portfolio(user: str = Depends(authenticate)):
-    # 每個帳號只讀自己的檔案（管理者=portfolio.json，其他人=portfolio_<帳號>.json）。
-    # 2026-09-26 移除「自己的檔案是空的就改讀管理者 portfolio.json」的備援，
-    # 那會讓受邀帳號看到管理者的持倉。
-    pfile = get_user_portfolio_file(user)
-    if os.path.exists(pfile):
+# ===== 持倉 / 結案紀錄儲存層（2026-09-26）=====
+# 有設定 Firebase（Render 正式站已設定）時，每個帳號的持倉與結案紀錄存在 Firestore，
+# 不會因 Render 重新部署或閒置休眠而消失，任何裝置登入同一帳號都看到同一份資料。
+# 沒設定 Firebase 時（例如尚未補金鑰的本機），照舊存在本機 JSON 檔。
+# Firestore 結構：user_portfolios/{帳號}、user_histories/{帳號}，欄位 json = 整份清單的 JSON 字串。
+_FS_COLLECTIONS = {"portfolio": "user_portfolios", "history": "user_histories"}
+_HEAVY_FIELDS = ("inst_data", "margin_data", "history_dates", "history_prices")
+_FS_SIZE_LIMIT = 900_000  # Firestore 單一文件上限 1 MiB，保留緩衝
+
+def _canonical_username(username: str) -> str:
+    if not username or username in [ADMIN_USERNAME, "admin", "default", "undefined"]:
+        return ADMIN_USERNAME
+    return username
+
+def _local_path(kind: str, username: str) -> str:
+    return get_user_portfolio_file(username) if kind == "portfolio" else get_user_history_file(username)
+
+def _read_local_list(path: str) -> list:
+    if os.path.exists(path):
         try:
-            with open(pfile, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data if isinstance(data, list) else []
         except Exception:
             return []
     return []
 
+def _write_local_list(path: str, data: list):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def _strip_heavy(items: list) -> list:
+    # 籌碼/股價走勢等可重新抓取的大欄位，存雲端時拿掉以免超過文件大小上限
+    return [{k: v for k, v in it.items() if k not in _HEAVY_FIELDS} if isinstance(it, dict) else it for it in items]
+
+def load_user_list(kind: str, username: str) -> list:
+    path = _local_path(kind, username)
+    if firestore_db:
+        doc_ref = firestore_db.collection(_FS_COLLECTIONS[kind]).document(_canonical_username(username))
+        # 讀取失敗時直接丟出錯誤（API 回 500），不要回傳空清單，避免前端拿空清單回存而洗掉資料
+        snap = doc_ref.get()
+        if snap.exists:
+            try:
+                data = json.loads((snap.to_dict() or {}).get("json", "[]"))
+                return data if isinstance(data, list) else []
+            except Exception:
+                return []
+        # 雲端還沒有這個帳號的資料：若本機有舊檔，就當作初始資料搬上雲端
+        local = _read_local_list(path)
+        if local:
+            try:
+                save_user_list(kind, username, local)
+                print(f"☁️ 已將本機 {path} 搬移到 Firestore（{kind}/{_canonical_username(username)}）")
+            except Exception as e:
+                print(f"搬移 {path} 到 Firestore 失敗: {e}")
+        return local
+    return _read_local_list(path)
+
+def save_user_list(kind: str, username: str, data: list):
+    if not isinstance(data, list):
+        raise ValueError("資料格式錯誤：必須是清單")
+    path = _local_path(kind, username)
+    if firestore_db:
+        cloud = _strip_heavy(data) if kind == "history" else data
+        payload = json.dumps(cloud, ensure_ascii=False)
+        if len(payload.encode("utf-8")) > _FS_SIZE_LIMIT:
+            payload = json.dumps(_strip_heavy(data), ensure_ascii=False)
+        firestore_db.collection(_FS_COLLECTIONS[kind]).document(_canonical_username(username)).set({
+            "json": payload,
+            "count": len(data),
+            "updated_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+        # 本機檔同時留一份當備份（Render 上寫了也無妨，重新部署就清掉）
+        try:
+            _write_local_list(path, data)
+        except Exception:
+            pass
+        return
+    _write_local_list(path, data)
+
+# 庫存持久化儲存 API (多用戶隔離與全域備援)
+@app.get("/api/portfolio")
+def get_portfolio(user: str = Depends(authenticate)):
+    # 每個帳號只讀自己的檔案（管理者=portfolio.json，其他人=portfolio_<帳號>.json）。
+    # 2026-09-26 移除「自己的檔案是空的就改讀管理者 portfolio.json」的備援，
+    # 那會讓受邀帳號看到管理者的持倉。
+    try:
+        return load_user_list("portfolio", user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"讀取持倉失敗: {e}")
+
 @app.post("/api/portfolio")
 async def save_portfolio(request: Request, user: str = Depends(authenticate)):
     try:
-        pfile = get_user_portfolio_file(user)
         data = await request.json()
-        # 只寫入自己的檔案，不再同步覆寫管理者的 portfolio.json
-        with open(pfile, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+        # 只寫入自己的資料，不再同步覆寫管理者的持倉
+        save_user_list("portfolio", user, data)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1073,14 +1144,10 @@ def check_portfolio_sell_signals(user: str = Depends(authenticate)):
     賣出訊號。history.html 卡片上原本的紅色警示框是寫死的簡單規則(固定-8%停損/手動支撐價)，
     跟這套逐日重播模型是兩回事，兩者會並存顯示供比對，不直接互相取代。
     """
-    pfile = get_user_portfolio_file(user)
-    portfolio = []
-    if os.path.exists(pfile):
-        try:
-            with open(pfile, "r", encoding="utf-8") as f:
-                portfolio = json.load(f)
-        except Exception:
-            portfolio = []
+    try:
+        portfolio = load_user_list("portfolio", user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"讀取持倉失敗: {e}")
 
     regime_df = get_taiex_regime_df() if any(p.get('exit_strategy') == 'R' for p in portfolio) else None
 
@@ -1102,24 +1169,17 @@ def check_portfolio_sell_signals(user: str = Depends(authenticate)):
 @app.get("/api/history")
 def get_history(user: str = Depends(authenticate)):
     # 每個帳號只讀自己的結案紀錄，不再借用管理者的 history.json
-    hfile = get_user_history_file(user)
-    if os.path.exists(hfile):
-        try:
-            with open(hfile, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else []
-        except Exception:
-            return []
-    return []
+    try:
+        return load_user_list("history", user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"讀取結案紀錄失敗: {e}")
 
 @app.post("/api/history")
 async def save_history(request: Request, user: str = Depends(authenticate)):
     try:
-        hfile = get_user_history_file(user)
         data = await request.json()
-        # 只寫入自己的檔案，不再同步覆寫管理者的 history.json
-        with open(hfile, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+        # 只寫入自己的資料，不再同步覆寫管理者的結案紀錄
+        save_user_list("history", user, data)
         return {"msg": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1140,15 +1200,10 @@ class CommitRequest(BaseModel):
 def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', user: str = Depends(authenticate)):
     cash_twd = cash * 10000.0
     username = user
-    portfolio_file = get_user_portfolio_file(username)
-    
-    portfolio = []
-    if os.path.exists(portfolio_file):
-        try:
-            with open(portfolio_file, "r", encoding="utf-8") as f:
-                portfolio = json.load(f)
-        except Exception:
-            portfolio = []
+    try:
+        portfolio = load_user_list("portfolio", username)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"讀取持倉失敗: {e}")
             
     # Check Exits (Sells)
     sells = []
@@ -1423,24 +1478,11 @@ def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', u
 @app.post("/api/planner/commit")
 async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenticate)):
     username = user
-    portfolio_file = get_user_portfolio_file(username)
-    history_file = get_user_history_file(username)
-
-    portfolio = []
-    if os.path.exists(portfolio_file):
-        try:
-            with open(portfolio_file, "r", encoding="utf-8") as f:
-                portfolio = json.load(f)
-        except Exception:
-            portfolio = []
-
-    history = []
-    if os.path.exists(history_file):
-        try:
-            with open(history_file, "r", encoding="utf-8") as f:
-                history = json.load(f)
-        except Exception:
-            history = []
+    try:
+        portfolio = load_user_list("portfolio", username)
+        history = load_user_list("history", username)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"讀取持倉/結案紀錄失敗: {e}")
 
     today_str = datetime.today().strftime('%Y-%m-%d')
 
@@ -1529,11 +1571,9 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
                 })
 
     try:
-        # 只寫入下單者自己的持倉與結案紀錄，不再同步覆寫管理者的 portfolio.json / history.json
-        with open(portfolio_file, "w", encoding="utf-8") as f:
-            json.dump(portfolio, f, ensure_ascii=False, indent=4)
-        with open(history_file, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=4)
+        # 只寫入下單者自己的持倉與結案紀錄
+        save_user_list("portfolio", username, portfolio)
+        save_user_list("history", username, history)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"儲存記帳失敗: {str(e)}")
 
