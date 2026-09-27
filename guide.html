@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速上手說明 - AI概念股通用策略控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .guide-wrap { max-width: 860px; margin: 0 auto; }
+        .guide-step { background: linear-gradient(135deg, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);
+            border: 1px solid var(--border-color); border-left: 4px solid var(--accent-yellow);
+            border-radius: 12px; padding: 18px 22px; margin-bottom: 18px; line-height: 1.8; }
+        .guide-step h2 { font-size: 1.2rem; color: var(--accent-yellow); margin-bottom: 10px; }
+        .guide-step ol, .guide-step ul { padding-left: 1.4em; }
+        .guide-step li { margin-bottom: 6px; }
+        .guide-step ul ul { margin-top: 4px; }
+        .guide-step .note { color: var(--text-sub); font-size: 0.9rem; margin-top: 8px; }
+        .guide-step a { color: #60a5fa; }
+        .guide-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .guide-table th, .guide-table td { border-bottom: 1px solid var(--border-color); padding: 8px 10px; text-align: left; vertical-align: top; }
+        .guide-table th { color: var(--text-sub); font-weight: normal; }
+        .warn { color: #f87171; font-weight: bold; }
+        .disclaimer { text-align: center; color: var(--text-sub); font-size: 0.85rem; margin: 24px 0 10px; }
+    </style>
+</head>
+<body>
+<div class="container guide-wrap">
+    <header>
+        <h1>🔰 快速上手說明</h1>
+        <p>第一次使用？照著下面 4 個步驟做就好。</p>
+    </header>
+
+    <div class="guide-step">
+        <h2>步驟 1：第一次使用——開戶與登入</h2>
+        <ol>
+            <li>用手機或電腦打開 <a href="https://ai-trading-console-wf88.onrender.com">https://ai-trading-console-wf88.onrender.com</a>。第一次開啟可能要等 30～60 秒，網站在喚醒中。</li>
+            <li>點最上方導覽列右側的「🔑 邀請碼開戶/登入」。</li>
+            <li>輸入管理者給你的<strong>邀請碼</strong>，再自訂帳號（英文或數字，3～30 字）與密碼（至少 4 字）。</li>
+            <li>之後直接用帳密登入，不用再輸邀請碼。手機、電腦登入同一帳號，看到的是同一份資料。</li>
+        </ol>
+        <div class="note">忘記密碼：請管理者在「🔐 帳號管理」幫你重設。</div>
+    </div>
+
+    <div class="guide-step">
+        <h2>步驟 2：每天盤後 3 分鐘</h2>
+        <p>建議每天下午 3:30 後（三大法人資料公布後）操作，不需要盤中盯盤。</p>
+        <ol>
+            <li><strong>看首頁市況框</strong>（🏠 實戰控制台）：最上方一句話就是今天的結論。
+                <ul>
+                    <li>紅色、橘色框：可以進場（橘色黃燈表示新買進資金減半）。</li>
+                    <li>綠色「🚨 暫停新建倉」：今天不買，保留現金。</li>
+                </ul>
+            </li>
+            <li><strong>確認資料齊全</strong>：看到「⚡ 已載入今日盤後資料」就好；若顯示資料不完整，按「🚀 啟動 AI 深度掃描」補齊。</li>
+            <li><strong>看首頁是否有紅色「持倉觸發賣出」提醒</strong>：有的話點進去看是哪一檔。</li>
+            <li><strong>打開「📅 明日下單建議」</strong>：
+                <ul>
+                    <li>輸入這輪可用預算（萬元），出場方案維持預設 E，按重新計算。</li>
+                    <li>系統列出要買／要賣的股票、張數與建議價格。</li>
+                </ul>
+            </li>
+            <li><strong>隔天開盤前到券商 App 掛單</strong>。</li>
+            <li><strong>成交後回到下單建議頁</strong>：只勾選實際有成交的那幾筆，按「確認下單並寫入我的操盤室」。沒成交的不要勾。</li>
+        </ol>
+    </div>
+
+    <div class="guide-step">
+        <h2>步驟 3：買進後——在「我的操盤室」管理持倉</h2>
+        <ol>
+            <li>打開「🏦 我的操盤室」，上半部是<strong>現役持倉</strong>，每檔顯示成本、現價、帳面損益。</li>
+            <li>每檔卡片上的「🧭 模型驗證訊號」告訴你是否已觸發出場（綠色＝續抱，紅色＝該賣）。出場規則在買進時就固定，不用自己記。</li>
+            <li><strong>賣出後要「結清」</strong>：點該檔的結清按鈕 → 輸入實際賣出價 → 輸入實際賣出日期。這筆交易會移到下方「退役結案紀錄」。</li>
+            <li>填錯了？在結案紀錄點「✏️ 修改賣出日期/價格」即可更正。</li>
+        </ol>
+        <div class="note"><span class="warn">小心</span>：結案區的「🧹 一鍵清除所有紀錄」會刪掉全部歷史且無法復原。</div>
+    </div>
+
+    <div class="guide-step">
+        <h2>步驟 4：看成績——損益總帳</h2>
+        <p>所有結清過的交易都會自動出現在「💰 損益總帳」，不用另外記帳。</p>
+        <ul>
+            <li><strong>統計</strong>：淨損益（已扣手續費與證交稅）、勝率、平均獲利／虧損、月結表、累計走勢圖。</li>
+            <li><strong>篩選</strong>：選期間（今年、近 1 個月…），統計會跟著變。</li>
+            <li><strong>補記舊交易</strong>：按「＋ 手動新增一筆」。</li>
+            <li><strong>改錯、刪除</strong>：每筆右邊有「編輯」「刪除」。</li>
+            <li><strong>匯出 Excel</strong>：按「📊 匯出目前清單 (CSV)」。</li>
+            <li><strong>手續費折數</strong>：右上角填你券商的折扣（例如 2.8 折填 0.28），淨損益會更準。</li>
+        </ul>
+    </div>
+
+    <div class="guide-step">
+        <h2>各頁面一覽</h2>
+        <table class="guide-table">
+            <thead><tr><th>頁面</th><th>什麼時候用</th></tr></thead>
+            <tbody>
+                <tr><td>🏠 實戰控制台</td><td>每天看市況與 AI 推薦排名</td></tr>
+                <tr><td>📅 明日下單建議</td><td>要買賣時，算出張數與價格</td></tr>
+                <tr><td>🏦 我的操盤室</td><td>看持倉、賣出後結清</td></tr>
+                <tr><td>💰 損益總帳</td><td>看累計成績、匯出記帳</td></tr>
+                <tr><td>🧪 回測實驗室、📊 分析中心</td><td>進階研究，一般使用者可跳過</td></tr>
+                <tr><td>📄 策略白皮書</td><td>完整原理與 Q&amp;A</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="guide-step">
+        <h2>常見問題</h2>
+        <ul>
+            <li><strong>操盤室是空的？</strong> 先確認右上角是否已登入、登入的帳號正確。</li>
+            <li><strong>市況框三個指標說法不同？</strong> 以最上方的結論為準，詳見 <a href="doc.html#faq-market">策略白皮書 Q15～Q19</a>。</li>
+            <li><strong>黃燈要賣掉一半嗎？</strong> 不用，只是新買進的資金減半。</li>
+            <li><strong>「做空」區塊可以用嗎？</strong> <span class="warn">尚未分析測試，請勿使用。</span></li>
+            <li><strong>網站打開很慢？</strong> 閒置後第一次開啟需要喚醒，等約 1 分鐘即可。</li>
+        </ul>
+    </div>
+
+    <div class="disclaimer">本系統為個人研究工具，所有建議僅供參考，投資決定與風險請自行判斷。</div>
+</div>
+<script src="top_nav.js"></script>
+</body>
+</html>

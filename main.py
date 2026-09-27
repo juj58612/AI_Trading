@@ -1651,7 +1651,7 @@ def serve_research_data(filename: str):
 # 掛載靜態網頁與外部檔案 (提供開放網頁載入，由前端 UI 跳出邀請碼開戶 Modal)
 @app.get("/{filename}")
 def serve_static(filename: str):
-    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html", "research_report.html", "pnl_ledger.html", "pnl_ledger.js", "top_nav.js"]:
+    if os.path.exists(filename) and filename in ["index.html", "style.css", "app.js", "history.html", "history.js", "order_planner.html", "order_planner.js", "backtest.html", "backtest.js", "buyhold.js", "doc.html", "analysis.html", "data_hub.html", "leaderboard_full.html", "published_snapshot.json", "published_leaderboard.csv", "strategy_discussion.html", "admin_users.html", "admin_users.js", "case_studies.html", "research_report.html", "pnl_ledger.html", "pnl_ledger.js", "top_nav.js", "guide.html"]:
         headers = {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",

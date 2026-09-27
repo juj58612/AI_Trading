@@ -8,6 +8,7 @@
         { href: 'pnl_ledger.html', label: '💰 損益總帳' },
         { href: 'backtest.html', label: '🧪 回測實驗室' },
         { href: 'analysis.html', label: '📊 分析中心' },
+        { href: 'guide.html', label: '🔰 使用說明' },
         { href: 'doc.html', label: '📄 策略白皮書' }
     ];
 
