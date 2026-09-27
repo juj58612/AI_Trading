@@ -760,37 +760,11 @@ function updateMarketWeather(ratio, aboveCount, totalCount) {
         <div style="font-size:1.15rem;">${headline}</div>
         <div style="font-size:0.95rem; font-weight:500; margin-top:6px; color:rgba(255,255,255,0.95);">建議：${advice}</div>
         <style>
-            #market-weather-container .mw-cards { display: none; }
-            @media (max-width: 640px) {
-                #market-weather-container .mw-table { display: none; }
-                #market-weather-container .mw-cards { display: block; }
-            }
+            #market-weather-container .mw-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; text-align: left; }
+            #market-weather-container .mw-cards > div { margin-bottom: 0 !important; }
+            @media (max-width: 900px) { #market-weather-container .mw-cards { grid-template-columns: 1fr; } }
         </style>
-        <div class="mw-table" style="overflow-x:auto; margin-top:12px;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; font-weight:500; background:rgba(0,0,0,0.12); border-radius:8px; overflow:hidden;">
-            <thead><tr>
-                <th style="${th} width:18%;"></th>
-                <th style="${th}">巨觀資金面</th>
-                <th style="${th}">大盤趨勢 <span style="font-weight:400; opacity:0.8;">（僅供參考）</span></th>
-                <th style="${th}">AI 族群強弱</th>
-            </tr></thead>
-            <tbody>
-                <tr><td style="${td} font-weight:bold;">分析</td>
-                    <td style="${td}">外資期貨空單、外資現貨買賣超、台幣匯率</td>
-                    <td style="${td}">加權指數與 20 日均線的相對位置</td>
-                    <td style="${td}">AI 族群個股站上 20 日均線的比例：${window._lastBreadthCounts ? `${window._lastBreadthCounts.above} / ${window._lastBreadthCounts.total} 檔（${ratio.toFixed(1)}%）` : `${ratio.toFixed(1)}%`}</td></tr>
-                <tr><td style="${td} font-weight:bold;">現況</td>
-                    <td style="${td}">${macroNow}</td>
-                    <td style="${td}">${rg ? `加權指數 ${rg.taiex_close} vs 20日均線 ${rg.taiex_ma20}，乖離 ${rg.bias_pct > 0 ? '+' : ''}${rg.bias_pct}%（${rg.taiex_date} 收盤）` : '載入中…'}</td>
-                    <td style="${td}">健康度 ${ratio.toFixed(1)}%</td></tr>
-                <tr><td style="${td} font-weight:bold;">判定</td>
-                    <td style="${td}">${macroVerdict}</td>
-                    <td style="${td}">${rg ? (rg.regime === '多頭' ? '🔴 ' : '🟢 ') + rg.regime : '—'}</td>
-                    <td style="${td}">${tier.icon} ${tier.status}</td></tr>
-            </tbody>
-        </table>
-        </div>
-        <div class="mw-cards" style="margin-top:12px; text-align:left;">
+        <div class="mw-cards">
             ${cols.map(c => `
             <div style="background:rgba(0,0,0,0.15); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:0.88rem; font-weight:500; line-height:1.6;">
                 <div style="font-weight:bold; font-size:0.95rem; margin-bottom:4px;">${c.name}</div>
