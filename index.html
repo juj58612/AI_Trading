@@ -12,6 +12,7 @@
     <header style="padding-bottom: 25px; border-bottom: 1px solid var(--border-color); text-align: center;">
         <h1>📈 AI 概念股通用交易策略控制台</h1>
         <div id="siteUpdatedLabel" style="font-size: 0.95rem; color: #94a3b8; margin-top: 6px; font-weight: bold;">juj</div>
+        <button type="button" onclick="openStockSearch()" style="margin-top:12px; background:rgba(59,130,246,0.15); color:var(--accent-blue); border:1px solid var(--accent-blue); padding:8px 18px; border-radius:8px; font-weight:bold; font-size:0.95rem; cursor:pointer;">🔍 個股快速查詢</button>
     </header>
 
     <div id="staleDataBanner" style="display:none; margin: 0 0 8px 0; padding: 12px 20px; border-radius: 10px; font-weight: bold; text-align: center; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); color: var(--accent-red);"></div>
@@ -65,7 +66,8 @@
 
     <div class="stocks-grid" id="stocksGrid"></div>
 
-    <!-- 做空策略區塊 -->
+    <!-- 做空策略區塊：尚未分析測試，整區調暗顯示 -->
+    <div id="shortSectionDimmed" style="opacity:0.45; filter:grayscale(0.85); transition:opacity .2s;" title="此功能尚未分析測試，請勿用於實際交易">
     <div class="section-title" style="color: var(--accent-purple); border-bottom-color: var(--accent-purple); margin-top: 50px; font-size: 1.4rem; font-weight: bold;">
         📉 AI 賣出與放空訊號推薦引擎 (做空) <span style="color:#f87171; font-size:0.85em; font-weight:bold; margin-left:8px; border:1px solid #f87171; border-radius:6px; padding:2px 8px; white-space:nowrap;">⚠️ 尚未分析測試勿使用</span>
     </div>
@@ -104,13 +106,17 @@
             <div class="empty-msg">點擊上方按鈕，由 AI 掃描並載入符合放空/離場模型之標的。</div>
         </div>
     </div>
+    </div>
 
-    <!-- 移至頁面最底部的個股快速查詢小框 -->
-    <div class="standalone-search-card" style="margin-top: 50px;">
+    <!-- 個股快速查詢：由首頁最上方按鈕開啟的彈出視窗 -->
+    <div id="stockSearchModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:9000; align-items:flex-start; justify-content:center; padding:60px 12px 12px;" onclick="if(event.target===this) closeStockSearch()">
+        <div style="width:100%; max-width:1100px;">
+    <div class="standalone-search-card" style="margin: 0; max-height: 85vh; overflow-y: auto; position: relative;">
         <div class="search-header">
             <div class="search-title" style="color: var(--accent-blue);">
-                🔍 個股股價與技術數據快速查詢 (支援動態任意代碼)
+                🔍 個股快速查詢
             </div>
+            <button type="button" onclick="closeStockSearch()" style="position:absolute; top:10px; right:12px; background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer;" aria-label="關閉">✕</button>
             <div class="search-controls">
                 <div class="count-setting" style="border-color: var(--accent-blue);">
                     <label for="globalSearchKeyword">股號/股票名稱：</label>
@@ -121,6 +127,8 @@
         </div>
         <div class="sort-note">📌 提示：支援查詢任意台股代碼，此框為純股價查詢，不影響上方策略排序與篩選邏輯。</div>
         <div id="globalSearchResult" style="margin-top: 15px; display: none;"></div>
+    </div>
+        </div>
     </div>
 
     <footer>
@@ -177,5 +185,14 @@
 
 <script src="app.js"></script>
 <script src="top_nav.js"></script>
+<script>
+function openStockSearch() {
+    const m = document.getElementById('stockSearchModal');
+    m.style.display = 'flex';
+    setTimeout(() => { const i = document.getElementById('globalSearchKeyword'); if (i) i.focus(); }, 50);
+}
+function closeStockSearch() { document.getElementById('stockSearchModal').style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStockSearch(); });
+</script>
 </body>
 </html>
