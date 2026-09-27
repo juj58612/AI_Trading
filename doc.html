@@ -160,6 +160,7 @@
             <li><strong>5 日均線 (MA5)</strong>：短線強弱。收盤價站上 MA5 才有資格計算籌碼積分；跌破 MA5 直接扣分（見 2.2 節）。</li>
             <li><strong>20 日均線 (MA20)</strong>：中線趨勢。用來計算動能（乖離率），也是方案 D 的大趨勢濾網。</li>
         </ul>
+        <p>系統另外有計算成交量加權均線 (VWMA5／VWMA20)，但<strong>不參與選股與進場</strong>。<a href="case_studies.html#case20" style="color:#ec4899;">個案研究⑳</a>驗證過「收盤站上 VWMA5」與「站上 VWMA5 且量增」兩種濾網，樣本外期間都沒有穩定優於現行條件，因此不採用。</p>
 
         <h3>2.2 三大法人籌碼積分矩陣 (Chip Score)</h3>
         <p>系統每日盤後依股價與法人買賣超計分：</p>
@@ -298,7 +299,7 @@
     <!-- 第五章 -->
     <div class="doc-section">
         <h2>🔄 第五章：回測反饋迴路與動態模型自我修正機制 (Feedback Loop & Self-Evolution)</h2>
-        <p>我們的回測引擎與實戰控制台採用相同的核心演算法 <code>strategy_core.py</code>。大數據庫的實驗組數會隨著你在回測實驗室的操作持續累積，<strong>本頁不列出會過時的具體筆數與報酬率數字</strong>——最新統計請直接看 <a href="strategy_discussion.html" target="_blank" style="color:#c084fc;">🧭 策略討論</a> 頁面（依目前資料庫即時整理，含完整方法論與資料表格）或 <a href="analysis.html" target="_blank" style="color:var(--accent-blue);">📊 分析中心</a>（即時計算的排行榜與洞察）。</p>
+        <p>我們的回測引擎與實戰控制台採用相同的核心演算法 <code>strategy_core.py</code>。大數據庫的實驗組數會隨著你在回測實驗室的操作持續累積，<strong>本頁不列出會過時的具體筆數與報酬率數字</strong>——最新統計請直接看 <a href="strategy_discussion.html" target="_blank" style="color:#c084fc;">🧭 策略討論</a> 頁面（各項研究的方法論與結論整理，內容為撰寫當時的研究紀錄，不會隨資料庫自動更新）或 <a href="analysis.html" target="_blank" style="color:var(--accent-blue);">📊 分析中心</a>（即時計算的排行榜與洞察）。</p>
 
         <h3>5.1 回測數據給予實戰模型的修正提醒（重點摘要，數字請見策略討論頁）</h3>
         <ul>

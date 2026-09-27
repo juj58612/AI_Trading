@@ -1619,43 +1619,11 @@ async def commit_planner_orders(req: CommitRequest, user: str = Depends(authenti
 # 個案研究附帶的原始資料檔 (無需登入即可下載，跟其他靜態頁面一致；白名單防止路徑穿越)
 @app.get("/research_data/{filename}")
 def serve_research_data(filename: str):
-    allowed = {
-        "README.md",
-        "case1_bias_momentum_trades.csv",
-        "case2_6213_entry_timing.csv",
-        "case3_staged_vs_lumpsum_trades.csv",
-        "case4_exit_mechanism_summary.csv",
-        "case5_regime_v1_trades.csv",
-        "case6_all_strategies_summary.csv",
-        "case7_strategyB_fullswap_failed_trades.csv",
-        "case7_strategyB_dualsell_overlay_trades.csv",
-        "case7_bear_exhaustive_48combos.csv",
-        "case7_bear_exhaustive_48combos_macroON.csv",
-        "case9_cobuy_pooled_flawed.csv",
-        "case9_cobuy_dedup_corrected.csv",
-        "case9_cobuy_by_year.csv",
-        "case9_cobuy_backtest_4way.csv",
-        "case9_cobuy_dedup_by_year.csv",
-        "case10_bigbuy_dedup_strict.csv",
-        "case10_bigbuy_dedup_loose.csv",
-        "case10_bigbuy_backtest_4way.csv",
-        "case10_bigbuy_weighting_screen.csv",
-        "case10_bigbuy_streak_cross.csv",
-        "case10_bigbuy_final_backtest.csv",
-        "case11_bigsell_event_summary.csv",
-        "case11_bigsell_weighting_screen.csv",
-        "case11_bigsell_streak_cross.csv",
-        "case11_bigsell_backtest_5.5yr.csv",
-        "case11_bigsell_year_robustness.csv",
-        "case12_trust_foreign_streak_summary.csv",
-        "case12_trust_foreign_reversal_summary.csv",
-        "case12_trust_fwdreturns.csv",
-        "case12_foreign_fwdreturns.csv",
-        "case13_48combo_lookahead_fixed.csv",
-        "case13_before_after_comparison.csv",
-    }
+    # 2026-09-27：原本用手寫白名單，個案⑭～⑲的檔案都漏加，下載連結會 404。改成：只允許
+    # research_data 資料夾內、純檔名（不含路徑）、副檔名為 csv/json/md 的既有檔案，一樣可防路徑穿越。
+    safe = (filename == os.path.basename(filename)) and filename.lower().endswith((".csv", ".json", ".md")) and ".." not in filename
     filepath = os.path.join("research_data", filename)
-    if filename not in allowed or not os.path.exists(filepath):
+    if not safe or not os.path.isfile(filepath):
         raise HTTPException(status_code=404)
     return FileResponse(filepath, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
