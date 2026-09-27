@@ -440,7 +440,12 @@ async def download_data(request: Request):
     # （例如股票池剛擴充、或前一次同步中途被 FinMind 配額擋掉），即使今天已經跑過一次，
     # 也要讓使用者可以繼續點擊補齊，不能被這個旗標卡死（2026-08-10 實測發現的 bug）。
     today_str = datetime.date.today().isoformat()
-    is_fully_covered = all(db["prices"].get(t) and db["chips"].get(t) for t in TICKERS)
+    # 除了「每檔都有資料」，還要求籌碼資料的最後日期跟上股價（2026-09-27 修正：原本只檢查有沒有資料，
+    # 籌碼停在舊日期也會被當成已完整同步而略過）
+    def _chips_fresh(t):
+        p_rows, c_rows = db["prices"].get(t), db["chips"].get(t)
+        return bool(p_rows and c_rows) and c_rows[-1].get("date", "") >= p_rows[-1].get("date", "")
+    is_fully_covered = all(_chips_fresh(t) for t in TICKERS)
     if not force and is_fully_covered and db.get("last_full_sync_date") == today_str:
         return {
             "message": f"今天（{today_str}）已經完整同步過一次，資料已是最新的前一天盤後資料，不需要再重新抓取",
