@@ -663,6 +663,12 @@ function updateMacroStatusBanner(scanResult) {
     if (!banner) return;
 
     const macro = scanResult && scanResult.macro_status;
+    // 巨觀資金面已整合進下方「市況綜合判斷框」的對照表，這條橫幅不再另外顯示
+    window._lastMacroStatus = macro || null;
+    updateMarketWeather();
+    banner.style.display = 'none';
+    banner.textContent = '';
+    return;
     if (!macro || (!macro.veto_buy && !(macro.pos_scale < 1.0))) {
         banner.style.display = 'none';
         banner.textContent = '';
@@ -682,7 +688,26 @@ function updateMacroStatusBanner(scanResult) {
     banner.textContent = `${macro.title || ''}：${macro.advice || ''}`;
 }
 
-function updateMarketWeather(ratio) {
+// 市況綜合判斷框：把「AI 族群強弱（廣度）」與「三合一巨觀資金面」放在同一個框，
+// 用對照表並列兩個指標，最上方的結論以巨觀風控為準（跟下單建議頁同一套邏輯），
+// 避免出現「巨觀警戒要減碼」與「全面進攻」兩句話各說各話。
+window._lastBreadthRatio = null;
+window._lastMacroStatus = null;
+
+const BREADTH_TIERS = [
+    { test: r => r > 75, icon: '🟠', status: '高檔震盪 / 末升段', advice: '市場過熱，隨時拉回，嚴格鎖利，當心拉積盤出貨。', bg: '#ea580c', border: '#c2410c' },
+    { test: r => r >= 45, icon: '🔴', status: '穩定多頭', advice: '全面進攻，採等權重分配買滿排名前三標的。', bg: '#dc2626', border: '#b91c1c' },
+    { test: r => r >= 25, icon: '🟡', status: '破底翻 / 築底期', advice: '多頭初醒，可小額試單前三名黑馬，分批佈局。', bg: '#d97706', border: '#b45309' },
+    { test: r => r >= 10, icon: '🟢', status: '無差別股災', advice: '覆巢之下無完卵，空手觀望，保留現金。', bg: '#16a34a', border: '#15803d' },
+    { test: r => true, icon: '🟢', status: '極度恐慌 / 融資斷頭期', advice: '乖離過大，隨時有暴力反彈 (V轉)，準備搶短。', bg: '#059669', border: '#047857' }
+];
+
+function updateMarketWeather(ratio, aboveCount, totalCount) {
+    if (typeof ratio === 'number') window._lastBreadthRatio = ratio;
+    if (typeof totalCount === 'number') window._lastBreadthCounts = { above: aboveCount, total: totalCount };
+    ratio = window._lastBreadthRatio;
+    if (typeof ratio !== 'number') return;
+
     let container = document.getElementById('market-weather-container');
     if (!container) {
         container = document.createElement('div');
@@ -691,32 +716,90 @@ function updateMarketWeather(ratio) {
         stocksGrid.parentNode.insertBefore(container, stocksGrid);
     }
 
-    if (ratio > 75) {
-        container.style.background = '#ea580c'; // 橘色實心底
-        container.style.borderColor = '#c2410c';
-        container.style.color = '#ffffff';
-        container.innerHTML = `🟠 當前市況：高檔震盪 / 末升段 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：市場過熱，隨時拉回，嚴格鎖利，當心拉積盤出貨。</span>`;
-    } else if (ratio >= 45 && ratio <= 75) {
-        container.style.background = '#dc2626'; // 紅色實心底 (多頭)
-        container.style.borderColor = '#b91c1c';
-        container.style.color = '#ffffff';
-        container.innerHTML = `🔴 當前市況：穩定多頭 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：全面進攻，採等權重分配買滿排名前三標的。</span>`;
-    } else if (ratio >= 25 && ratio < 45) {
-        container.style.background = '#d97706'; // 琥珀黃實心底
-        container.style.borderColor = '#b45309';
-        container.style.color = '#ffffff';
-        container.innerHTML = `🟡 當前市況：破底翻 / 築底期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：多頭初醒，可小額試單前三名黑馬，分批佈局。</span>`;
-    } else if (ratio >= 10 && ratio < 25) {
-        container.style.background = '#16a34a'; // 綠色實心底 (台股股災色)
-        container.style.borderColor = '#15803d';
-        container.style.color = '#ffffff';
-        container.innerHTML = `🟢 當前市況：無差別股災 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：覆巢之下無完卵，空手觀望，保留現金。</span>`;
+    const tier = BREADTH_TIERS.find(t => t.test(ratio));
+    const macro = window._lastMacroStatus || {};
+    const veto = !!macro.veto_buy;
+    const reduced = !veto && typeof macro.pos_scale === 'number' && macro.pos_scale < 1.0;
+    const reasonMatch = String(macro.advice || '').match(/原因[:：]\s*([^。]*)/);
+    const reasons = reasonMatch ? reasonMatch[1] : '';
+
+    // 結論：以巨觀風控為準
+    let headline, advice, bg, border;
+    if (veto) {
+        headline = '🚨 巨觀風控熔斷中：暫停新建倉';
+        advice = `資金面三項警報全亮，即使 AI 族群判定為「${tier.status}」，本輪一律不建議新建多單，保留現金，靜待風控解除。`;
+        bg = '#059669'; border = '#047857';
+    } else if (reduced) {
+        headline = `⚠️ ${tier.status}（巨觀風控減碼中）`;
+        advice = `AI 族群走勢判定為「${tier.status}」，但資金面亮黃燈：原建議「${tier.advice.replace(/。$/, '')}」照做，但本輪新買進的資金減半（例如預算 100 萬只動用 50 萬），已持有的部位不用賣。`;
+        bg = '#b45309'; border = '#92400e';
     } else {
-        container.style.background = '#059669'; // 深綠實心底 (極度恐慌)
-        container.style.borderColor = '#047857';
-        container.style.color = '#ffffff';
-        container.innerHTML = `🟢 當前市況：極度恐慌 / 融資斷頭期 (AI 族群健康度：${ratio.toFixed(1)}%)<br><span style="font-size:0.95rem; font-weight:500; color: rgba(255, 255, 255, 0.95); margin-top: 4px; display: inline-block;">建議：乖離過大，隨時有暴力反彈 (V轉)，準備搶短。</span>`;
+        headline = `${tier.icon} 當前市況：${tier.status}`;
+        advice = tier.advice;
+        bg = tier.bg; border = tier.border;
     }
+
+    let rg = null; try { rg = regimeStatusData; } catch (e) {}
+    const macroNow = veto || reduced ? (reasons || '多項警報') : '無警報';
+    const macroVerdict = veto ? '🚨 紅燈熔斷（禁止新建倉）' : reduced ? '⚠️ 黃燈警戒（新進場資金減半）' : '🟢 安全';
+    const td = 'padding:6px 10px; border-top:1px solid rgba(255,255,255,0.25); vertical-align:top; text-align:left;';
+    const th = 'padding:6px 10px; text-align:left; font-weight:bold; background:rgba(0,0,0,0.18);';
+
+    const breadthCounts = window._lastBreadthCounts ? `${window._lastBreadthCounts.above} / ${window._lastBreadthCounts.total} 檔（${ratio.toFixed(1)}%）` : `${ratio.toFixed(1)}%`;
+    const cols = [
+        { name: '巨觀資金面', what: '外資期貨空單、外資現貨買賣超、台幣匯率', now: macroNow, verdict: macroVerdict },
+        { name: '大盤趨勢（僅供參考）', what: '加權指數與 20 日均線的相對位置',
+          now: rg ? `加權指數 ${rg.taiex_close} vs 20日均線 ${rg.taiex_ma20}，乖離 ${rg.bias_pct > 0 ? '+' : ''}${rg.bias_pct}%（${rg.taiex_date} 收盤）` : '載入中…',
+          verdict: rg ? (rg.regime === '多頭' ? '🔴 ' : '🟢 ') + rg.regime : '—' },
+        { name: 'AI 族群強弱', what: `AI 族群個股站上 20 日均線的比例：${breadthCounts}`, now: `健康度 ${ratio.toFixed(1)}%`, verdict: `${tier.icon} ${tier.status}` }
+    ];
+    container.style.background = bg;
+    container.style.borderColor = border;
+    container.style.color = '#ffffff';
+    container.innerHTML = `
+        <div style="font-size:1.15rem;">${headline}</div>
+        <div style="font-size:0.95rem; font-weight:500; margin-top:6px; color:rgba(255,255,255,0.95);">建議：${advice}</div>
+        <style>
+            #market-weather-container .mw-cards { display: none; }
+            @media (max-width: 640px) {
+                #market-weather-container .mw-table { display: none; }
+                #market-weather-container .mw-cards { display: block; }
+            }
+        </style>
+        <div class="mw-table" style="overflow-x:auto; margin-top:12px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; font-weight:500; background:rgba(0,0,0,0.12); border-radius:8px; overflow:hidden;">
+            <thead><tr>
+                <th style="${th} width:18%;"></th>
+                <th style="${th}">巨觀資金面</th>
+                <th style="${th}">大盤趨勢 <span style="font-weight:400; opacity:0.8;">（僅供參考）</span></th>
+                <th style="${th}">AI 族群強弱</th>
+            </tr></thead>
+            <tbody>
+                <tr><td style="${td} font-weight:bold;">分析</td>
+                    <td style="${td}">外資期貨空單、外資現貨買賣超、台幣匯率</td>
+                    <td style="${td}">加權指數與 20 日均線的相對位置</td>
+                    <td style="${td}">AI 族群個股站上 20 日均線的比例：${window._lastBreadthCounts ? `${window._lastBreadthCounts.above} / ${window._lastBreadthCounts.total} 檔（${ratio.toFixed(1)}%）` : `${ratio.toFixed(1)}%`}</td></tr>
+                <tr><td style="${td} font-weight:bold;">現況</td>
+                    <td style="${td}">${macroNow}</td>
+                    <td style="${td}">${rg ? `加權指數 ${rg.taiex_close} vs 20日均線 ${rg.taiex_ma20}，乖離 ${rg.bias_pct > 0 ? '+' : ''}${rg.bias_pct}%（${rg.taiex_date} 收盤）` : '載入中…'}</td>
+                    <td style="${td}">健康度 ${ratio.toFixed(1)}%</td></tr>
+                <tr><td style="${td} font-weight:bold;">判定</td>
+                    <td style="${td}">${macroVerdict}</td>
+                    <td style="${td}">${rg ? (rg.regime === '多頭' ? '🔴 ' : '🟢 ') + rg.regime : '—'}</td>
+                    <td style="${td}">${tier.icon} ${tier.status}</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <div class="mw-cards" style="margin-top:12px; text-align:left;">
+            ${cols.map(c => `
+            <div style="background:rgba(0,0,0,0.15); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:0.88rem; font-weight:500; line-height:1.6;">
+                <div style="font-weight:bold; font-size:0.95rem; margin-bottom:4px;">${c.name}</div>
+                <div><span style="opacity:0.75;">分析：</span>${c.what}</div>
+                <div><span style="opacity:0.75;">現況：</span>${c.now}</div>
+                <div><span style="opacity:0.75;">判定：</span>${c.verdict}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:0.78rem; font-weight:400; margin-top:8px; color:rgba(255,255,255,0.8);">結論以巨觀資金面為準，與「明日下單建議」頁的計算方式一致；大盤趨勢為研究參考，不影響下單建議。 <a href="doc.html#faq-market" target="_blank" style="color:#fff; text-decoration:underline;">三個指標怎麼看？→</a></div>`;
 }
 
 async function renderStockCards(count, forceRefresh = false) {
@@ -806,7 +889,7 @@ async function renderStockCards(count, forceRefresh = false) {
         filteredStocks.sort((a, b) => b.aiScore - a.aiScore);
         
         const breadthRatio = validStocks > 0 ? (above20MA / validStocks) * 100 : 0;
-        updateMarketWeather(breadthRatio);
+        updateMarketWeather(breadthRatio, above20MA, validStocks);
     } catch (e) {
         console.error("Dynamic ranking failed:", e);
         const progressContainer = document.getElementById('scanProgressContainer');
@@ -1096,6 +1179,13 @@ function renderRegimePanel() {
     const collapsed = document.getElementById('regimePanelCollapsed');
     const s = regimeStatusData;
     if (!panel || !collapsed || !s) return;
+    // 大盤趨勢（研究版市況面板）已整合進「市況綜合判斷框」的對照表，這裡不再另外顯示
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    collapsed.style.display = 'none';
+    collapsed.innerHTML = '';
+    updateMarketWeather();
+    return;
 
     const isBull = s.regime === '多頭';
     const accentColor = isBull ? '#dc2626' : '#10b981';
