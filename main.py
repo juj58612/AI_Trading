@@ -808,6 +808,22 @@ def admin_list_users(user: str = Depends(authenticate)):
     users = load_registered_users()
     return {"users": sorted(users.keys())}
 
+@app.get("/api/site_updated")
+def site_updated():
+    # 首頁「juj 最後更新日期」：取網站程式檔（html/js/css/py）中最新的修改時間。
+    # 本機=最後一次改檔的日期；Render=最後一次部署（推上 GitHub）的日期。每日掃描快取等資料檔不列入。
+    latest = 0.0
+    for fn in os.listdir("."):
+        if fn.endswith((".html", ".js", ".css", ".py")) and os.path.isfile(fn):
+            try:
+                latest = max(latest, os.path.getmtime(fn))
+            except OSError:
+                pass
+    if not latest:
+        return {"date": ""}
+    tw = datetime.utcfromtimestamp(latest) + timedelta(hours=8)  # 以台灣時間顯示
+    return {"date": tw.strftime("%Y-%m-%d")}
+
 @app.get("/api/admin/invite_info")
 def admin_invite_info(user: str = Depends(authenticate)):
     # 帳號管理頁「邀請朋友」區塊用：只有管理者拿得到邀請碼

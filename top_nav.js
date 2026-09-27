@@ -25,14 +25,26 @@
             #globalTopNav a:hover { background:rgba(59,130,246,0.15); border-color:#3b82f6; color:#fff; }
             #globalTopNav a.active { background:rgba(245,158,11,0.18); border-color:#f59e0b; color:#f59e0b; }
             #globalTopNav a.ledger { border-color:rgba(239,68,68,0.5); }
+            #globalTopNav { align-items:center; }
+            #globalTopNav .nav-links { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; flex:1 1 auto; min-width:0; }
+            #globalTopNav .nav-user { margin-left:auto; display:flex; align-items:center; gap:6px; flex:0 0 auto;
+                color:#f59e0b; font-size:0.85rem; font-weight:bold; padding:4px 10px; border:1px solid rgba(245,158,11,0.5);
+                border-radius:8px; background:rgba(245,158,11,0.1); white-space:nowrap; }
+            #globalTopNav .nav-user a { padding:2px 6px; font-size:0.82rem; border:none; text-decoration:underline; }
+            #globalTopNav .nav-user a.admin { color:#60a5fa; }
+            #globalTopNav .nav-user a.logout { color:#f87171; }
+            #globalTopNav .nav-user a.login { color:#f59e0b; }
 
             /* ===== 手機版調整（螢幕寬度 640px 以下）===== */
             @media (max-width: 640px) {
                 body { padding: 10px !important; }
                 /* 導覽列改成單列左右滑動，不佔四行高度 */
-                #globalTopNav { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
-                    -webkit-overflow-scrolling: touch; padding: 8px; gap: 6px; margin-bottom: 12px; }
-                #globalTopNav a { flex: 0 0 auto; white-space: nowrap; padding: 6px 10px; font-size: 0.85rem; }
+                #globalTopNav { flex-direction: column; flex-wrap: nowrap; align-items: stretch; padding: 8px; gap: 6px; margin-bottom: 12px; }
+                #globalTopNav .nav-links { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+                    -webkit-overflow-scrolling: touch; gap: 6px; }
+                #globalTopNav .nav-links a { flex: 0 0 auto; white-space: nowrap; padding: 6px 10px; font-size: 0.85rem; }
+                /* 登入狀態在手機上獨立一行，不會被擠到滑動列的最後面 */
+                #globalTopNav .nav-user { margin-left: 0; justify-content: center; flex-wrap: wrap; white-space: normal; }
                 /* 標題旁絕對定位的「返回」按鈕改成放在標題下方，避免蓋住標題 */
                 header a[style*="absolute"], header > a, a[style*="position: absolute"][href$=".html"], a[style*="position:absolute"][href$=".html"] {
                     position: static !important; transform: none !important; display: inline-block !important;
@@ -53,16 +65,56 @@
 
         const nav = document.createElement('nav');
         nav.id = 'globalTopNav';
+        const links = document.createElement('div');
+        links.className = 'nav-links';
+        nav.appendChild(links);
         NAV_ITEMS.forEach(item => {
             const a = document.createElement('a');
             a.href = item.href;
             a.textContent = item.label;
             if (item.href.toLowerCase() === current || (current === '' && item.href === 'index.html')) a.classList.add('active');
             if (item.href === 'pnl_ledger.html') a.classList.add('ledger');
-            nav.appendChild(a);
+            links.appendChild(a);
         });
+        const userBox = document.createElement('span');
+        userBox.className = 'nav-user';
+        userBox.id = 'topNavUser';
+        nav.appendChild(userBox);
         document.body.insertBefore(nav, document.body.firstChild);
+        refreshTopNavUser();
     }
+
+    // 右側登入狀態：每一頁都看得到目前登入的帳號，可登入／登出／進帳號管理
+    function refreshTopNavUser() {
+        const box = document.getElementById('topNavUser');
+        if (!box) return;
+        let creds = null;
+        try { creds = JSON.parse(localStorage.getItem('ai_trading_user') || 'null'); } catch (e) {}
+        box.textContent = '';
+        const link = (text, cls, onClick, href) => {
+            const a = document.createElement('a');
+            a.textContent = text; a.className = cls; a.href = href || 'javascript:void(0)';
+            if (onClick) a.addEventListener('click', onClick);
+            box.appendChild(a);
+        };
+        if (!creds || !creds.username) {
+            box.appendChild(document.createTextNode('👤 未登入'));
+            link('🔑 邀請碼開戶/登入', 'login', (e) => {
+                if (typeof window.openAuthModal === 'function') { e.preventDefault(); window.openAuthModal(true); }
+                else { location.href = 'index.html'; }
+            });
+            return;
+        }
+        const isAdmin = creds.username === 'cyc58612';
+        box.appendChild(document.createTextNode(isAdmin ? `👤 管理者 (${creds.username})` : `👤 ${creds.username}`));
+        if (isAdmin) link('🔐 帳號管理', 'admin', null, 'admin_users.html');
+        link('登出', 'logout', () => {
+            try { localStorage.removeItem('ai_trading_user'); } catch (e) {}
+            alert('已成功登出！');
+            location.href = 'index.html';
+        });
+    }
+    window.refreshTopNavUser = refreshTopNavUser;
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
     else build();

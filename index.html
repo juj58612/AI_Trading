@@ -11,20 +11,12 @@
 <div class="container">
     <header style="padding-bottom: 25px; border-bottom: 1px solid var(--border-color); text-align: center;">
         <h1>📈 AI 概念股通用交易策略控制台</h1>
-        <p style="margin-bottom: 6px;">多空雙向即時追蹤機制 (雙端智慧連線版)</p>
-        <div style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 15px; font-weight: bold;">juj    2026.8.10 更新中</div>
-        <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
-            <a href="order_planner.html" target="_blank" style="background: rgba(137, 87, 229, 0.15); color: #c084fc; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #8957e5; transition: all 0.2s; font-size: 0.95rem;">📅 明日下單建議</a>
-            <a href="history.html" target="_blank" style="background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid var(--accent-blue); transition: all 0.2s; font-size: 0.95rem;">🏦 我的操盤室</a>
-            <a href="backtest.html" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #10b981; transition: all 0.2s; font-size: 0.95rem;">🧪 AI 獨立回測實驗室</a>
-            <a href="doc.html" target="_blank" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #f59e0b; transition: all 0.2s; font-size: 0.95rem;">📄 說明文本</a>
-            <span id="userStatusBadge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 8px 14px; border-radius: 8px; font-weight: bold; border: 1px solid #f59e0b; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">👤 管理者 (cyc58612)</span>
-        </div>
+        <div id="siteUpdatedLabel" style="font-size: 0.95rem; color: #94a3b8; margin-top: 6px; font-weight: bold;">juj</div>
     </header>
 
     <div id="staleDataBanner" style="display:none; margin: 0 0 8px 0; padding: 12px 20px; border-radius: 10px; font-weight: bold; text-align: center; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); color: var(--accent-red);"></div>
     <div style="text-align:center; margin-bottom: 20px;">
-        <button id="btnForceRescan" style="display:none; background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer;">🔄 強制重新掃描補齊缺漏</button>
+        <button id="btnForceRescan" style="display:none !important; background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer;">🔄 強制重新掃描補齊缺漏</button>
     </div>
     <div id="macroStatusBanner" style="display:none; margin: 0 0 20px 0; padding: 12px 20px; border-radius: 10px; font-weight: bold; text-align: center;"></div>
     <a id="holdingsSellSignalBanner" href="history.html" target="_blank" style="display:none; margin: 0 0 20px 0; padding: 12px 20px; border-radius: 10px; font-weight: bold; text-align: center; text-decoration: none; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); color: var(--accent-red); cursor: pointer;"></a>

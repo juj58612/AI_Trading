@@ -100,6 +100,8 @@ function getAuthHeader() {
 }
 
 function updateUserBadge() {
+    // 登入狀態改顯示在最上方共用導覽列（top_nav.js）右側
+    if (window.refreshTopNavUser) window.refreshTopNavUser();
     const creds = getAuthCredentials();
     const badge = document.getElementById('userStatusBadge');
     if (badge) {
@@ -614,6 +616,8 @@ function updateStaleDataBanner(scanResult, totalRequested) {
 
     const count = (scanResult && scanResult.data) ? scanResult.data.length : 0;
     const total = (scanResult && scanResult.pool_size) || totalRequested || count;
+    // 記住今日資料是否不完整：下次按「啟動 AI 深度掃描」時自動改為補齊缺漏
+    window._scanIncomplete = !!(scanResult && !scanResult.fallback && total > 0 && count < total * 0.8);
     const cacheDate = (scanResult && scanResult.cache_date) || '';
 
     if (scanResult && scanResult.fallback) {
@@ -628,19 +632,19 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.innerHTML = `⚠️ <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count}/${total}</span> 今日${cacheDate ? ` (${cacheDate})` : ''} 快取尚不完整。再按一次「強制重新掃描」可以補齊缺漏的檔位，不會從頭重來。`;
+        banner.innerHTML = `⚠️ 今日${cacheDate ? `（${cacheDate}）` : ''}資料只取得 <span style="display:inline-block; background:rgba(0,0,0,0.25); padding:2px 10px; border-radius:6px; font-size:1.1em; margin:0 4px;">${count} / ${total}</span> 檔，請按「🚀 啟動 AI 深度掃描」補齊（只補缺漏的檔位，不會從頭重來）。`;
     } else if (scanResult && scanResult.cached) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(59, 130, 246, 0.12)';
         banner.style.borderColor = 'var(--accent-blue)';
         banner.style.color = 'var(--accent-blue)';
-        banner.textContent = `⚡ 已使用今日${cacheDate ? ` (${cacheDate})` : ''} 快取資料，共 ${count} 檔，無需重新連線。`;
+        banner.textContent = `⚡ 已載入今日${cacheDate ? `（${cacheDate}）` : ''}盤後資料，共 ${count} 檔，不需重新掃描。`;
     } else if (total > 0 && count < total * 0.8) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(245, 158, 11, 0.15)';
         banner.style.borderColor = 'var(--accent-yellow)';
         banner.style.color = 'var(--accent-yellow)';
-        banner.textContent = `⚠️ 本次即時掃描${cacheDate ? `（${cacheDate}）` : ''}僅成功取得 ${count}/${total} 檔資料，可能是暫時性連線問題，建議稍後再按一次掃描補齊。`;
+        banner.textContent = `⚠️ 本次掃描${cacheDate ? `（${cacheDate}）` : ''}只取得 ${count} / ${total} 檔資料，可能是暫時性連線問題，請稍後再按「🚀 啟動 AI 深度掃描」補齊。`;
     } else if (total > 0) {
         banner.style.display = 'block';
         banner.style.background = 'rgba(16, 185, 129, 0.12)';
@@ -654,7 +658,7 @@ function updateStaleDataBanner(scanResult, totalRequested) {
 
     const rescanBtn = document.getElementById('btnForceRescan');
     if (rescanBtn) {
-        rescanBtn.style.display = (total > 0 && count < total && !(scanResult && scanResult.fallback)) ? 'inline-block' : 'none';
+        rescanBtn.style.display = 'none'; // 已合併進「🚀 啟動 AI 深度掃描」：資料不完整時該按鈕會自動補齊
     }
 }
 
@@ -1051,9 +1055,10 @@ btnScanAI.addEventListener('click', async () => {
     btnScanAI.textContent = `⌛ 正在執行全市場動能掃描...`;
     btnScanAI.disabled = true;
     try {
-        await renderStockCards(stockCountInput.value);
+        // 今日資料不完整時自動改為「補齊缺漏」模式（原「強制重新掃描」按鈕已合併進來）
+        await renderStockCards(stockCountInput.value, !!window._scanIncomplete);
     } catch(e) {}
-    btnScanAI.textContent = "⚡ 載入並同步真實盤後數據";
+    btnScanAI.textContent = "🚀 啟動 AI 深度掃描 (約需 15 秒)";
     btnScanAI.disabled = false;
 });
 
@@ -1199,3 +1204,16 @@ function renderRegimePanel() {
         renderRegimePanel();
     });
 }
+
+
+// ===== 首頁「最後更新日期」：由伺服器依網站程式檔最後修改時間自動提供 =====
+(async function loadSiteUpdated() {
+    const el = document.getElementById('siteUpdatedLabel');
+    if (!el) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/site_updated`);
+        if (!res.ok) return;
+        const d = await res.json();
+        if (d.date) el.textContent = `juj ${d.date.replace(/-/g, '.')} 更新`;
+    } catch (e) {}
+})();
