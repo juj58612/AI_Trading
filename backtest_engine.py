@@ -945,6 +945,13 @@ class BacktestRequest(BaseModel):
     exit_strategy: str
     is_out_of_sample: bool = False
     is_grid_trial: bool = False
+    # 個案研究⑳（2026-09-27）VWMA 濾網研究開關，預設關閉＝與正式系統完全相同：
+    #   "off"       不使用（正式系統現況）
+    #   "above"     進場另外要求收盤價 > VWMA5（5日成交量加權均線）
+    #   "above_vol" 除 above 外，再要求當日成交量 > 20日均量（「站上VWMA且量增」才算真突破）
+    vwma_mode: str = "off"
+    # 研究用：False 時不寫入 SQLite，避免研究試驗混進分析中心排行榜
+    save_to_db: bool = True
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest, request: Request = None):
@@ -986,6 +993,9 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
             df['MA5'] = df['close'].rolling(5).mean()
             df['MA20'] = df['close'].rolling(20).mean()
             df['Vol_MA5'] = df['volume'].rolling(5).mean()
+            df['Vol_MA20'] = df['volume'].rolling(20).mean()
+            _pv = df['close'] * df['volume']
+            df['VWMA5'] = _pv.rolling(5).sum() / df['volume'].rolling(5).sum()
             df['TR'] = pd.concat([
                 df['high'] - df['low'],
                 (df['high'] - df['close'].shift(1)).abs(),
@@ -1133,6 +1143,16 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                     inst_list.append(cdf.iloc[idx-1].to_dict())
 
                 eval_res = strategy_core.evaluate_entry(today_price, inst_list, req.exit_strategy, req.max_hold_days)
+
+                # 個案⑳ VWMA 濾網（研究用，預設 off 不影響任何既有結果）
+                if eval_res and req.vwma_mode in ("above", "above_vol"):
+                    vw = today_price.get('VWMA5')
+                    if pd.isna(vw) or close <= vw:
+                        eval_res = None
+                    elif req.vwma_mode == "above_vol":
+                        vm20 = today_price.get('Vol_MA20')
+                        if pd.isna(vm20) or today_price['volume'] <= vm20:
+                            eval_res = None
                 
                 if eval_res:
                     candidates.append({
@@ -1349,8 +1369,10 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
         "sortino_ratio": sortino_ratio
     }
 
-    # Save to SQLite DB
+    # Save to SQLite DB（研究試驗 save_to_db=False 時略過）
     try:
+        if not getattr(req, "save_to_db", True):
+            raise StopIteration
         conn = sqlite3.connect(SQLITE_PATH)
         c = conn.cursor()
         c.execute('''
@@ -1377,11 +1399,14 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
             
         conn.commit()
         conn.close()
+    except StopIteration:
+        pass
     except Exception as e:
         print(f"Failed to log to SQLite: {e}")
 
     return {
         "metrics": metrics_dict,
+        "yearly_returns": yearly_returns,
         "daily_equity": daily_equity,
         "trades": trade_history,
         "macro_veto_weeks": macro_veto_weeks
