@@ -330,6 +330,14 @@ discountRateInput.addEventListener('input', () => {
     renderSellCards(sellCountInput.value);
 });
 
+// 在查詢框按 Enter（手機鍵盤的「確定／前往」）也能直接查詢，不必再用滑鼠點按鈕
+globalSearchKeyword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        if (!btnGlobalSearch.disabled) btnGlobalSearch.click();
+    }
+});
+
 btnGlobalSearch.addEventListener('click', async () => {
     const query = globalSearchKeyword.value.trim().toUpperCase();
     if (!query) { alert("請輸入股號或股票名稱！"); return; }
