@@ -621,7 +621,9 @@ async def download_data(request: Request):
     # 籌碼抓取失敗（例如 FinMind 配額被擋），就不設這個旗標，讓使用者下次點擊還能繼續重試，
     # 不會被「今天同步過了」卡住（呼應函式開頭的完整度檢查）
     still_incomplete = any(not (db["prices"].get(t) and db["chips"].get(t)) for t in TICKERS)
-    if not still_incomplete:
+    # 2026-09-27 修正：原本只檢查「每檔都有資料」，籌碼雖然抓取失敗（舊資料還在）也會被標成
+    # 今天已完整同步，導致當天再按同步會被直接略過、無法補齊。有任何失敗就不標記。
+    if not still_incomplete and not chip_fetch_failures:
         db["last_full_sync_date"] = today_str
     with open(DB_PATH, 'w', encoding='utf-8') as f:
         json.dump(db, f, ensure_ascii=False)
