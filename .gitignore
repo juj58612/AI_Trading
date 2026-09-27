@@ -51,3 +51,6 @@ history.backup_*.json
 # Firebase 服務帳戶金鑰（絕對不能上傳）
 *firebase-adminsdk*.json
 firebase_key*.json
+
+# Claude 預覽圖輸出資料夾（不需上傳）
+Claude outputs/
