@@ -21,5 +21,13 @@ disown
 # 4. 暫停 2 秒確保伺服器開機完成
 sleep 2
 
-# 5. 自動以預設瀏覽器打開回測控制台 (本地 HTML 檔案)
-open -a "Google Chrome" "file://$PROJECT_DIR/backtest.html" 2>/dev/null || open -a "Microsoft Edge" "file://$PROJECT_DIR/backtest.html" 2>/dev/null || open "file://$PROJECT_DIR/backtest.html"
+# 5. 確保主控台伺服器 (Port 58888) 也在執行：回測頁改從 http://localhost:58888 開啟，
+#    才能沿用首頁的登入狀態（用 file:// 開啟時瀏覽器視為不同網站，會變成未登入而無法同步/回測）
+if [ -z "$(lsof -t -i:58888)" ]; then
+    nohup python3 -m uvicorn main:app --port 58888 > server.log 2>&1 &
+    disown
+    sleep 3
+fi
+
+# 6. 以預設瀏覽器打開回測實驗室
+open -a "Google Chrome" "http://localhost:58888/backtest.html" 2>/dev/null || open -a "Microsoft Edge" "http://localhost:58888/backtest.html" 2>/dev/null || open "http://localhost:58888/backtest.html"
