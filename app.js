@@ -1126,12 +1126,6 @@ function renderRegimePanel() {
                     🧭 研究版市況面板：目前判定為「${s.regime}」
                     <span style="font-weight:normal; font-size:0.85rem; color: var(--text-sub);">（加權指數 ${s.taiex_close} vs 20日均線 ${s.taiex_ma20}，乖離 ${s.bias_pct > 0 ? '+' : ''}${s.bias_pct}%，${s.taiex_date}收盤）</span>
                 </div>
-                <div style="margin-top:8px; font-size:0.92rem; color: var(--text-main, #e5e7eb); line-height:1.7;">
-                    ⚠️ ${s.note}
-                </div>
-                <div style="margin-top:6px; font-size:0.82rem; color: var(--text-sub);">
-                    <a href="${s.report_url}" target="_blank" style="color:${accentColor};">依regime切換為何失敗 →</a>　<a href="${s.case_url}" target="_blank" style="color:${accentColor};">方案E為何是目前的選擇 →</a>
-                </div>
             </div>
             <button id="regimePanelHideBtn" style="background:none; border:1px solid ${accentColor}; color:${accentColor}; border-radius:6px; padding:4px 10px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">✕ 隱藏</button>
         </div>
