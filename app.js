@@ -348,57 +348,70 @@ btnGlobalSearch.addEventListener('click', async () => {
 
     globalSearchResult.style.display = "block";
     
-    // 永遠嘗試從後端抓取最新報價
-    let realPrice = null;
-    let targetTicker = match ? match.ticker : (!isNaN(query) ? query : null);
-    
+    // 永遠從後端抓取最新報價與技術數據（原本只取收盤價，其餘欄位沿用股池的預設文字「等待連線」，
+    // 所以查詢結果會一直顯示等待連線；2026-09-27 改成直接用後端回傳的資料計算顯示）
+    let data = null;
+    let targetTicker = match ? match.ticker : (/^\w+$/.test(query) ? query : null);
     if (targetTicker) {
         try {
             const res = await fetch(`${API_BASE_URL}/api/stock/${targetTicker}`);
-            const data = await res.json();
-            if (data.latest_close) {
-                realPrice = data.latest_close;
+            if (res.ok) {
+                const d = await res.json();
+                if (d && d.latest_close) data = d;
             }
         } catch (e) {
-            console.warn("動態查詢失敗");
+            console.warn("動態查詢失敗", e);
         }
     }
 
-    if (!match && realPrice) {
-        match = {
-            ticker: query,
-            name: `${query} 動態查詢標的`,
-            defaultPrice: realPrice,
-            signal: "動態獨立查詢",
-            sigClass: "sig-right",
-            instBuy: "無預設", volume: "無預設", maTrend: "無預設"
-        };
-    } else if (match && realPrice) {
-        // 為了不影響原始 stockPool 物件，我們做個淺層複製再修改
-        match = { ...match, defaultPrice: realPrice };
-    }
+    if (data) {
+        const name = match ? match.name : `${targetTicker}`;
+        const close = Number(data.latest_close);
+        const prices = Array.isArray(data.history_prices) ? data.history_prices.map(Number).filter(v => !isNaN(v)) : [];
+        const ma20 = prices.length >= 20 ? prices.slice(-20).reduce((a, b) => a + b, 0) / 20 : null;
+        const fmt = v => (v === null || v === undefined || isNaN(v)) ? '-' : Number(v).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+        const sign = v => (v > 0 ? '+' : '') + Number(v).toLocaleString('zh-TW');
+        const colorOf = v => v > 0 ? 'var(--accent-green)' : (v < 0 ? 'var(--accent-red)' : 'var(--text-sub)');
 
-    if (match) {
+        // 均線型態
+        const ma5 = Number(data.ma5);
+        const above5 = !isNaN(ma5) && close >= ma5;
+        const above20 = ma20 !== null && close >= ma20;
+        let maTrend = `${above5 ? '站上' : '跌破'} 5日均線（${fmt(ma5)}）`;
+        if (ma20 !== null) maTrend += `，${above20 ? '站上' : '跌破'} 20日均線（${fmt(ma20)}）`;
+        const bias20 = ma20 ? ((close - ma20) / ma20 * 100) : null;
+
+        // 法人籌碼（最近一個交易日）
+        const inst = Array.isArray(data.inst_data) && data.inst_data.length ? data.inst_data[data.inst_data.length - 1] : null;
+        let instHtml = '-';
+        if (inst && !data.is_mock) {
+            instHtml = `外資 <strong style="color:${colorOf(inst.foreign)}">${sign(inst.foreign)}</strong>　投信 <strong style="color:${colorOf(inst.trust)}">${sign(inst.trust)}</strong>　自營 <strong style="color:${colorOf(inst.dealer)}">${sign(inst.dealer)}</strong> 張（${inst.date || ''}）`;
+        }
+
+        const spark = (typeof buildSparklineSVG === 'function' && prices.length > 1) ? buildSparklineSVG(prices) : '';
         globalSearchResult.innerHTML = `
             <div class="stock-card" style="border-color: var(--accent-blue);">
                 <div class="stock-header">
-                    <span style="font-size:1.2rem; font-weight:bold; color:var(--text-main);">${match.name}</span>
-                    <span class="signal-tag sig-right">● 獨立即時查詢結果</span>
+                    <span style="font-size:1.2rem; font-weight:bold; color:var(--text-main);">${name}</span>
+                    <span class="signal-tag sig-right">● 即時查詢結果</span>
                 </div>
+                ${data.is_mock ? '<div style="color:var(--accent-yellow); font-size:0.85rem; margin:6px 0;">⚠️ 法人籌碼資料暫時無法取得，下方籌碼欄位僅供參考。</div>' : ''}
                 <div class="pnl-panel">
                     <div class="pnl-col">
-                        <span>預設參考價：<strong style="color:var(--accent-yellow); font-size:1.2rem;">${match.defaultPrice} 元</strong></span>
-                        <span>籌碼動能：<strong>${match.instBuy || '-'}</strong></span>
+                        <span>最新收盤價：<strong style="color:var(--accent-yellow); font-size:1.2rem;">${fmt(close)} 元</strong></span>
+                        <span>近 20 日高／低：<strong>${fmt(data.recent_high)} ／ ${fmt(data.recent_low)}</strong></span>
                     </div>
                     <div class="pnl-col" style="text-align: right;">
-                        <span>量價結構：<strong>${match.volume || '-'}</strong></span>
-                        <span>均線型態：<strong>${match.maTrend || '-'}</strong></span>
+                        <span>均線型態：<strong>${maTrend}</strong></span>
+                        <span>20日乖離：<strong style="color:${colorOf(bias20 || 0)}">${bias20 === null ? '-' : (bias20 > 0 ? '+' : '') + bias20.toFixed(2) + '%'}</strong></span>
                     </div>
                 </div>
+                <div style="margin-top:8px; font-size:0.92rem;">三大法人（最近一日）：${instHtml}</div>
+                ${spark ? `<div style="margin-top:10px;">${spark}</div>` : ''}
             </div>
         `;
     } else {
-        globalSearchResult.innerHTML = `<div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red); padding: 12px; border-radius: 8px; text-align: center; color: var(--accent-red);">⚠️ 未在資料庫中查到「${query}」之標的，且無法取得即時股價。</div>`;
+        globalSearchResult.innerHTML = `<div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red); padding: 12px; border-radius: 8px; text-align: center; color: var(--accent-red);">⚠️ 查不到「${query}」的即時股價。請確認股號是否正確（例如 2330），或稍後再試。</div>`;
     }
     btnGlobalSearch.textContent = "⚡ 查詢即時股價";
 });
