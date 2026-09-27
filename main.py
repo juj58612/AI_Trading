@@ -14,6 +14,17 @@ import re
 import requests
 from datetime import datetime, timedelta
 import os
+
+# macOS 預設每個程式最多只能同時開 256 個檔案；yfinance 一次下載 126 檔股票會開一堆連線與
+# 時區快取檔，超過上限就會出現「[Errno 24] Too many open files」。啟動時把上限調高（不超過系統允許值）。
+try:
+    import resource
+    _soft, _hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    _target = 4096 if _hard == resource.RLIM_INFINITY else min(4096, _hard)
+    if _soft < _target:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (_target, _hard))
+except Exception:
+    pass
 import json
 import time
 import concurrent.futures

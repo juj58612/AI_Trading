@@ -1,4 +1,15 @@
 import os
+
+# macOS 預設每個程式最多只能同時開 256 個檔案；yfinance 一次下載 126 檔股票會開一堆連線與
+# 時區快取檔，超過上限就會出現「[Errno 24] Too many open files」。啟動時把上限調高（不超過系統允許值）。
+try:
+    import resource
+    _soft, _hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    _target = 4096 if _hard == resource.RLIM_INFINITY else min(4096, _hard)
+    if _soft < _target:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (_target, _hard))
+except Exception:
+    pass
 import json
 import time
 import base64
@@ -458,7 +469,7 @@ async def download_data(request: Request):
             fetch_start = None  # 全部都已經涵蓋到 end_date，價格資料不用重抓
 
         if fetch_start and fetch_start <= end_date:
-            data = yf.download(yf_tickers, start=fetch_start, end=end_date, group_by='ticker', auto_adjust=True, progress=False)
+            data = yf.download(yf_tickers, start=fetch_start, end=end_date, group_by='ticker', auto_adjust=True, progress=False, threads=8)  # 限制同時連線數，避免檔案開啟數爆量
 
             for i, t in enumerate(TICKERS):
                 yf_t = yf_tickers[i]

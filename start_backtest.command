@@ -1,6 +1,8 @@
 #!/bin/bash
 # 1. 進入專案資料夾（用腳本自身的位置，不寫死路徑）
 cd "$(dirname "$0")"
+# 調高同時可開啟的檔案數（macOS 預設 256，下載 126 檔股票資料時不夠用）
+ulimit -n 4096 2>/dev/null || true
 PROJECT_DIR="$(pwd)"
 
 # 2. 自動尋找並關閉舊的 Port 58889 背景程序
