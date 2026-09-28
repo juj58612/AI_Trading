@@ -203,6 +203,9 @@
   對應 [個案㉓](../case_studies.html#case23)：與個案㉒ macro_mode=on（新參數）比較，依標準維持新參數；方案C/E樣本外轉弱列觀察。
   產生腳本：`research_case23_params.py`，2026-09-28。
 
+- **`case24_D_vs_E.csv`**（36列，方案D vs E 配對比較，Calmar／報酬／回撤／2022）
+  對應 [個案㉔](../case_studies.html#case24)：D 兩段皆勝僅 36%，維持方案 E 為預設。產生腳本：`research_case24_D_vs_E.py`，2026-09-28。
+
 ## 新增檔案時請比照
 
 存進來的檔案請在這份清單補一筆說明：對應哪個個案研究、涵蓋範圍、產生方式，避免以後看到檔案不知道是什麼。
