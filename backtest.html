@@ -504,6 +504,15 @@
                     <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 4px;" id="lbTimestampInfo"></div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-size:0.85rem; color:var(--text-sub);" title="綜合評分＝總報酬率 − 2 × 最大回撤，同時考慮賺多少與過程中最多會賠多少">排序：
+                        <select id="lbSortMode" onchange="renderLeaderboard()" style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:6px; padding:4px 6px;">
+                            <option value="score" selected>綜合評分（報酬 − 2×回撤）</option>
+                            <option value="return">總報酬率</option>
+                            <option value="mdd">最大回撤（小→大）</option>
+                            <option value="pf">獲利因子</option>
+                            <option value="winrate">勝率</option>
+                        </select>
+                    </label>
                     <a id="btnViewFullLeaderboard" href="leaderboard_full.html" target="_blank" class="btn-nav" style="display:none; background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #3b82f6 !important;">📋 按此顯示全部排行榜名單</a>
                     <button id="btnPublishSnapshot" class="btn-search" style="background-color: #8957e5; width: auto; padding: 5px 15px; font-size: 0.9rem;">📤 發布快照到正式站</button>
                     <button id="btnClearLeaderboard" class="btn-search" style="background-color: #ef4444; width: auto; padding: 5px 15px; font-size: 0.9rem;">🗑️ 清空所有紀錄</button>
@@ -531,7 +540,7 @@
         </div>
     </div>
 
-    <script src="backtest.js"></script>
+    <script src="backtest.js?v=20260928"></script>
     <script src="buyhold.js"></script>
 <script src="top_nav.js"></script>
 </body>

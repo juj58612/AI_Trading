@@ -298,10 +298,20 @@ function renderLeaderboard() {
         return;
     }
 
-    // 依總報酬率由高到低排序，表現最佳的排最上面；每一列仍記住它在
-    // leaderboardData 裡的原始 index，讓「匯出」「刪除」按鈕操作到正確的那一筆
+    // 排序方式（2026-09-28）：預設用「綜合評分＝總報酬 − 2×最大回撤」，避免只看總報酬選到
+    // 回撤很大的組合（研究個案㉑㉒㉓用的也是同一個評分）；可在上方下拉選單切換。
+    // 每一列仍記住它在 leaderboardData 裡的原始 index，讓「匯出」「刪除」按鈕操作到正確的那一筆
     const indexed = leaderboardData.map((row, idx) => ({ row, idx }));
-    indexed.sort((a, b) => (b.row.return ?? 0) - (a.row.return ?? 0));
+    const sortMode = (document.getElementById('lbSortMode') || {}).value || 'score';
+    const scoreOf = r => (r.return ?? 0) - 2 * (r.mdd ?? 0);
+    const sorters = {
+        score: (a, b) => scoreOf(b.row) - scoreOf(a.row),
+        return: (a, b) => (b.row.return ?? 0) - (a.row.return ?? 0),
+        mdd: (a, b) => (a.row.mdd ?? 999) - (b.row.mdd ?? 999),
+        pf: (a, b) => (b.row.pf ?? 0) - (a.row.pf ?? 0),
+        winrate: (a, b) => (b.row.winrate ?? 0) - (a.row.winrate ?? 0),
+    };
+    indexed.sort(sorters[sortMode] || sorters.score);
 
     // 主頁只顯示前 15 筆，其餘的透過「全部排行榜名單」連結到獨立頁面查看
     const MAX_VISIBLE_ROWS = 15;
@@ -333,7 +343,7 @@ function renderLeaderboard() {
             <td style="color: ${winColor}">${row.winrate ?? row.win_rate ?? 0}%</td>
             <td>${row.pf ?? row.profit_factor ?? 0}</td>
             <td>${row.mdd ?? 0}%</td>
-            <td style="color: ${retColor}">${row.return ?? 0}%</td>
+            <td style="color: ${retColor}">${row.return ?? 0}%<div style="font-size:0.75em; color:var(--text-sub);">評分 ${scoreOf(row).toFixed(1)}</div></td>
             <td>
                 <button class="btn-blue" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;" onclick="exportCSV(${i})">📥 匯出</button>
                 <button class="btn-blue" style="background-color: #ef4444; padding: 5px 10px; font-size: 0.8rem;" onclick="deleteRecord(${i})">刪除</button>
