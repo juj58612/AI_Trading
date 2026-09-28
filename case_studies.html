@@ -174,7 +174,8 @@
         <a href="#case17">⑰ 方案A極端漲幅風控訊號重新驗證（反證：原結論未能複現）</a>
         <a href="#case18">⑱ Optuna系統化參數搜尋擴大到方案A/B/C/D</a>
         <a href="#case19">⑲ 選股因子模型：加入技術面/籌碼面因子重新排序（反證）</a>
-        <a href="#case20">⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場（反證）</a>
+        <a href="#case20">⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場（修正後翻案，待全網格確認）</a>
+        <a href="#case21">㉑ 個股別出場方案：依籌碼／波動／規模分組給不同方案（未通過，不採用）</a>
         <a href="#retro-2026-08-13">📊 研究小結：2026-08-13這一天，只有1種嘗試真正有效</a>
     </div>
 
@@ -1160,41 +1161,74 @@
 
     <!-- 個案二十 -->
     <div class="doc-section" id="case20">
-        <h2>⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場<span class="status-tag status-solid">通用驗證（反證）</span></h2>
+        <h2>⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場<span class="status-tag status-solid">2026-09-28 修正後翻案，待全網格確認</span></h2>
+        <div style="background:rgba(245,158,11,0.12); border-left:4px solid #f59e0b; padding:12px 16px; border-radius:6px; color:#fbbf24; font-size:0.92rem; margin: 10px 0 14px;">
+            ⚠️ <strong>2026-09-28 更正</strong>：9/27 第一版結論（「不採用」）是在<strong>巨觀風控被靜默關閉</strong>的情況下跑出來的——回測引擎判斷本地巨觀快取是否涵蓋回測區間的條件過嚴（起日 2021-01-01 是假日、迄日超過最後同步日就判定沒涵蓋），因而改打 FinMind，配額用完時整批 fail-open。修正引擎後以「巨觀風控正常套用」（＝實戰系統的真實狀態）重跑，結論翻轉如下。舊版數據備份於 <code>backup_v1/case20_vwma_filter.before_macrofix.csv</code>。
+        </div>
         <p><strong>起因</strong>：<code>strategy_core.py</code> 自 2026-08-02 起就有計算 VWMA5／VWMA20，舊版白皮書也寫著「股價站上 VWMA5 且成交量放大才算真突破」，但 2026-09-27 全面校對時發現，選股與進場邏輯<strong>從未實際使用 VWMA</strong>。本研究驗證：如果真的把 VWMA 接進進場條件，會不會比較好？</p>
-        <p><strong>設計</strong>（只改一個條件，其餘與正式系統完全相同）：方案 E（系統預設）、持股 3／5 檔 × 持倉 30／60 天，比較三種模式——</p>
-        <ul>
-            <li><strong>不使用</strong>（現況）</li>
-            <li><strong>收盤 &gt; VWMA5</strong>：原本的進場條件之外，另要求收盤價站上 5 日成交量加權均線</li>
-            <li><strong>收盤 &gt; VWMA5 且量增</strong>：再要求當日成交量 &gt; 20 日均量（即舊白皮書所說的「真突破」）</li>
-        </ul>
-        <p>期間分三段：全期間 2021-01-01～2026-09-24、訓練期 2021-01-01～2024-12-31、樣本外 2025-01-01～2026-09-24。資料為 2026-09-27 同步後的最新版本；研究試驗不寫入排行榜資料庫。採用標準：<strong>全期間與樣本外都要同時優於「不使用」</strong>才建議接進正式程式。</p>
+        <p><strong>設計</strong>（只改一個條件，其餘與正式系統完全相同）：方案 E（系統預設）、持股 3／5 檔 × 持倉 30／60 天，比較三種模式——不使用（現況）／收盤 &gt; VWMA5／收盤 &gt; VWMA5 且當日量 &gt; 20 日均量。期間：全期間 2021-01-01～2026-09-24、訓練期 2021～2024、樣本外 2025-01-01～2026-09-24。採用標準：<strong>全期間與樣本外都要同時優於「不使用」</strong>。</p>
 
-        <h3>結果：報酬率（最大回撤）</h3>
-        <p>📎 <a href="research_data/case20_vwma_filter.csv" download style="color:#ec4899; font-weight:500;">下載完整結果（36 組，含逐年報酬、勝率、Sharpe）</a>　——無需登入即可下載。</p>
+        <h3>結果：報酬率（最大回撤）——巨觀風控正常套用</h3>
+        <p>📎 <a href="research_data/case20_vwma_filter.csv" download style="color:#ec4899; font-weight:500;">下載完整結果（36 組，含逐年報酬、勝率、Sharpe）</a></p>
         <table class="doc-table">
             <thead><tr><th>期間</th><th>組合</th><th>不使用（現況）</th><th>收盤&gt;VWMA5</th><th>收盤&gt;VWMA5且量增</th></tr></thead>
             <tbody>
-                <tr><td rowspan="4">全期間</td><td>3檔／30天</td><td>476.3%（31.1%）</td><td>480.4%（28.6%）</td><td>328.5%（36.1%）</td></tr>
-                <tr><td>3檔／60天</td><td>395.2%（46.2%）</td><td>418.9%（43.1%）</td><td>375.4%（33.2%）</td></tr>
-                <tr><td>5檔／30天</td><td>466.8%（23.8%）</td><td>468.5%（22.2%）</td><td>319.6%（34.5%）</td></tr>
-                <tr><td>5檔／60天</td><td><strong>440.3%</strong>（41.3%）</td><td>397.7%（31.3%）</td><td>409.7%（30.8%）</td></tr>
-                <tr><td rowspan="4">訓練期</td><td>3檔／30天</td><td>220.9%（31.1%）</td><td>236.7%（28.6%）</td><td>149.7%（36.1%）</td></tr>
-                <tr><td>3檔／60天</td><td>184.1%（46.2%）</td><td>197.2%（43.1%）</td><td>177.9%（33.2%）</td></tr>
-                <tr><td>5檔／30天</td><td>149.3%（22.6%）</td><td>173.6%（19.6%）</td><td>66.3%（34.5%）</td></tr>
-                <tr><td>5檔／60天</td><td>99.8%（41.3%）</td><td>154.8%（29.8%）</td><td>107.7%（30.8%）</td></tr>
-                <tr><td rowspan="4">樣本外</td><td>3檔／30天</td><td>163.3%（26.5%）</td><td>178.0%（26.5%）</td><td>133.6%（23.4%）</td></tr>
-                <tr><td>3檔／60天</td><td>202.6%（15.9%）</td><td>203.0%（20.3%）</td><td>124.5%（29.7%）</td></tr>
-                <tr><td>5檔／30天</td><td><strong>249.6%</strong>（23.1%）</td><td>244.0%（23.1%）</td><td>198.5%（20.8%）</td></tr>
-                <tr><td>5檔／60天</td><td><strong>279.6%</strong>（16.4%）</td><td>245.8%（16.4%）</td><td>205.6%（19.7%）</td></tr>
+                <tr><td rowspan="4">全期間</td><td>3檔／30天</td><td>358.2%（33.0%）</td><td><strong>405.4%</strong>（26.0%）</td><td>264.4%（34.1%）</td></tr>
+                <tr><td>3檔／60天</td><td>316.6%（34.3%）</td><td><strong>385.1%</strong>（26.3%）</td><td>219.0%（41.1%）</td></tr>
+                <tr><td>5檔／30天</td><td>284.9%（23.5%）</td><td><strong>319.1%</strong>（24.4%）</td><td>239.7%（34.0%）</td></tr>
+                <tr><td>5檔／60天</td><td>300.0%（41.2%）</td><td><strong>362.1%</strong>（28.5%）</td><td>283.4%（31.4%）</td></tr>
+                <tr><td rowspan="4">訓練期</td><td>3檔／30天</td><td>171.6%（33.0%）</td><td><strong>202.3%</strong>（26.0%）</td><td>118.8%（33.0%）</td></tr>
+                <tr><td>3檔／60天</td><td>154.9%（34.3%）</td><td><strong>191.6%</strong>（26.3%）</td><td>95.1%（34.2%）</td></tr>
+                <tr><td>5檔／30天</td><td>164.3%（23.5%）</td><td><strong>165.6%</strong>（24.4%）</td><td>82.6%（34.0%）</td></tr>
+                <tr><td>5檔／60天</td><td>141.1%（41.2%）</td><td><strong>167.3%</strong>（28.5%）</td><td>100.9%（31.4%）</td></tr>
+                <tr><td rowspan="4">樣本外</td><td>3檔／30天</td><td>158.6%（35.7%）</td><td><strong>174.0%</strong>（35.7%）</td><td>103.0%（45.0%）</td></tr>
+                <tr><td>3檔／60天</td><td>119.8%（35.7%）</td><td><strong>172.3%</strong>（35.7%）</td><td>123.8%（45.5%）</td></tr>
+                <tr><td>5檔／30天</td><td>100.6%（26.3%）</td><td><strong>130.6%</strong>（24.4%）</td><td>91.9%（24.5%）</td></tr>
+                <tr><td>5檔／60天</td><td>109.5%（26.2%）</td><td><strong>157.0%</strong>（18.9%）</td><td>125.8%（23.2%）</td></tr>
             </tbody>
         </table>
-        <div style="background:rgba(239,68,68,0.1); border-left:4px solid #ef4444; padding:12px 16px; border-radius:6px; color:#fca5a5; font-size:0.92rem; margin: 14px 0;">
-            🚨 <strong>「站上 VWMA5 且量增」（舊白皮書宣稱的真突破）全面落敗</strong>：12 組比較中 11 組報酬低於現況，樣本外 4 組全輸，5檔／30天全期間報酬從 466.8% 掉到 319.6%。量增條件會把大量「剛突破、但當天量沒放大」的好買點擋掉。
+        <div style="background:rgba(16,185,129,0.1); border-left:4px solid #10b981; padding:12px 16px; border-radius:6px; color:#86efac; font-size:0.92rem; margin: 14px 0;">
+            ✅ <strong>「收盤 &gt; VWMA5」12 組比較全勝</strong>（訓練期、樣本外、全期間各 4 組），多數最大回撤持平或更低，通過原訂採用標準。<br>
+            ❌ <strong>「站上 VWMA5 且量增」依然全面落敗</strong>，量增條件擋掉太多剛突破的好買點。
         </div>
-        <p><strong>「收盤 &gt; VWMA5」</strong>在訓練期 4 組全勝、多數最大回撤也較低，看起來有效；但到了<strong>樣本外就不成立</strong>：3檔／30天小勝，3檔／60天打平（回撤反而變大），5 檔的兩組都輸（5檔／60天少 33.8 個百分點）。這正是「在訓練資料上看起來有效、換一段沒看過的行情就失效」的典型過度擬合訊號，和個案⑨⑩⑮⑲的模式相同。</p>
-        <p><strong>合理解讀</strong>：現行進場條件已經要求收盤站上 MA5，而 VWMA5 與 MA5 在多數交易日非常接近，額外的過濾力很小，差異主要來自少數邊緣交易，結果容易受特定期間影響。</p>
-        <p><strong>結論</strong>：<strong>不採用 VWMA 濾網</strong>，正式系統維持現行進場條件。回測引擎保留研究開關（<code>vwma_mode</code>，預設 off），日後若有新想法可以直接重跑 <code>research_case20_vwma.py</code> 驗證。白皮書已改為如實說明「VWMA 有計算但不參與選股」。</p>
+        <p><strong>額外穩健度檢查</strong>（原設計以外的 5 組設定，全期間／樣本外）：方案E 5檔45天 兩段皆勝；方案A 5檔45天 兩段皆勝；方案E 8檔60天 全期間勝、樣本外小輸（137.1% vs 144.4%）；方案C 5檔45天 全期間小輸、樣本外勝；方案E 4檔45天 兩段皆輸。合計 17 組設定中 14 組至少一段勝出、10 組兩段皆勝——<strong>方向偏正面，但不是每個設定都有效</strong>。</p>
+        <p><strong>須特別注意</strong>：同一個濾網，巨觀風控關閉時（9/27 第一版）樣本外 4 組只有 2 勝，開啟時變成 4 勝——效果會受其他規則的交互影響，代表它的優勢可能不如表面上穩固。</p>
+        <p><strong>目前結論</strong>：<strong>暫不接進正式程式，列為最有希望的候選改善</strong>。下一步是在修正後的引擎上重跑完整排行榜網格，並對同一批網格加跑「收盤&gt;VWMA5」版本，若在多數設定（尤其實戰常用的 5 檔附近）全期間與樣本外都勝出，再正式採用。回測引擎保留研究開關 <code>vwma_mode</code>（預設 off）。</p>
+    </div>
+
+    <div class="doc-section" id="case21">
+        <h2>㉑ 個股別出場方案：依股票特性分組，給不同出場方案會不會更好？<span class="status-tag status-solid">通用驗證（未通過，不採用）</span></h2>
+        <p><strong>起因</strong>：排行榜冠軍是方案 E，但不同股票的籌碼性質差很多（有的由外資主導、有的由投信主導；有的波動大、有的是牛皮權值股）。使用者提問：系統能不能依每檔股票的性質，建議不同的出場方案？</p>
+        <p><strong>設計</strong>（全部只用<strong>訓練期</strong>資料決定，避免偷看答案）：</p>
+        <ul>
+            <li><strong>分組</strong>：用 2021～2024 資料把 126 檔股票依三個維度各分兩組（中位數切分）——籌碼主導（投信佔法人買賣的比重：外資主導／投信主導）、波動度（ATR14／股價：低波動／高波動）、規模（日均成交值：大型股／中小型股）。</li>
+            <li><strong>選方案</strong>：在訓練期逐一把某一組股票改用 A/B/C/D（其他仍用 E），以「報酬率 − 2×最大回撤」評分，選出每組最佳方案（沒有勝過 E 就維持 E）。</li>
+            <li><strong>驗證</strong>：把選出的「個股別方案表」拿到樣本外（2025-01-01～2026-09-24）與全期間，和「全部用 E」比較。兩組設定：5檔／45天（排行榜冠軍設定）、3檔／30天。</li>
+            <li>採用標準：<strong>兩組設定的樣本外與全期間都要優於全部用 E</strong>。</li>
+        </ul>
+        <h3>結果：報酬率（最大回撤）</h3>
+        <p>📎 <a href="research_data/case21_stock_plan_results.csv" download style="color:#ec4899; font-weight:500;">下載完整結果（66 組）</a>　·　<a href="research_data/case21_stock_groups.csv" download style="color:#ec4899; font-weight:500;">下載個股分組表（126 檔）</a></p>
+        <table class="doc-table">
+            <thead><tr><th>設定</th><th>分組方式（訓練期選出）</th><th>樣本外</th><th>全期間</th></tr></thead>
+            <tbody>
+                <tr><td rowspan="4">5檔／45天</td><td>全部用 E（基準）</td><td>94.7%（27.3%）</td><td>350.2%（24.9%）</td></tr>
+                <tr><td>籌碼主導：兩組都維持 E</td><td colspan="2">與基準相同（訓練期沒有任何替代方案勝出）</td></tr>
+                <tr><td>波動度：低波動=D、高波動=E</td><td><strong>138.4%</strong>（25.7%）</td><td><strong>524.3%</strong>（22.9%）</td></tr>
+                <tr><td>規模：中小型=C、大型=E</td><td><strong>148.3%</strong>（24.3%）</td><td><strong>397.1%</strong>（25.9%）</td></tr>
+                <tr><td rowspan="4">3檔／30天</td><td>全部用 E（基準）</td><td>158.6%（35.7%）</td><td>358.2%（33.0%）</td></tr>
+                <tr><td>籌碼主導：外資主導=B、投信主導=E</td><td>97.3%（28.2%）</td><td>333.9%（33.0%）</td></tr>
+                <tr><td>波動度：低波動=D、高波動=E</td><td>158.2%（39.5%）</td><td><strong>409.5%</strong>（32.6%）</td></tr>
+                <tr><td>規模：中小型=C、大型=E</td><td>155.8%（37.7%）</td><td>348.5%（37.5%）</td></tr>
+            </tbody>
+        </table>
+        <p><strong>判讀</strong>：</p>
+        <ul>
+            <li><strong>籌碼主導分組沒有用</strong>：5檔設定下訓練期就找不到勝過 E 的方案；3檔設定選出的「外資主導改用 B」在樣本外大輸（97.3% vs 158.6%）。「外資股／投信股該用不同出場方式」這個直覺，資料不支持。</li>
+            <li><strong>「低波動股改用方案 D」最值得注意</strong>：兩組設定在訓練期<strong>各自獨立選出同一個答案</strong>，5檔設定樣本外與全期間都明顯勝出；但 3檔設定樣本外只是打平（158.2% vs 158.6%，回撤反而較大）。</li>
+            <li><strong>規模分組</strong>：5檔設定勝出，3檔設定樣本外與全期間都輸。</li>
+        </ul>
+        <p><strong>結論</strong>：沒有任何一種分組在兩組設定都通過樣本外驗證，<strong>不採用個股別出場方案，系統維持全部預設方案 E</strong>（使用者仍可在下單頁手動切換個別持股的方案）。「低波動股改用 D」列為觀察名單，待排行榜在修正後引擎重跑後，可用更多持股設定再驗證一次。</p>
+        <p style="color:#94a3b8; font-size:0.85rem;">註：本研究第一次執行（2026-09-28 上午）時，5檔設定的樣本外段落用到了舊版巨觀快取，前後段資料不一致；修正回測引擎的巨觀快取判斷後重跑，以上為重跑結果。回測引擎新增 <code>strategy_map</code> 研究參數（預設不使用）；腳本 <code>research_case21_stock_plan.py</code>。</p>
     </div>
 
     <!-- 研究小結 -->
