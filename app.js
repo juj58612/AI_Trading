@@ -677,6 +677,14 @@ function updateStaleDataBanner(scanResult, totalRequested) {
         banner.textContent = '';
     }
 
+    // 盤中掃描的結果只是暫存（股價為盤中價），收盤後重新打開首頁會自動改用收盤價重掃
+    if (scanResult && scanResult.intraday && !scanResult.fallback && banner.style.display !== 'none') {
+        const note = document.createElement('div');
+        note.style.cssText = 'margin-top:6px; font-size:0.85em; opacity:0.9;';
+        note.textContent = '🕐 盤中暫存結果：股價為盤中即時價。收盤後（13:35 以後）重新打開首頁，系統會自動改用收盤價重新掃描。';
+        banner.appendChild(note);
+    }
+
     const rescanBtn = document.getElementById('btnForceRescan');
     if (rescanBtn) {
         rescanBtn.style.display = 'none'; // 已合併進「🚀 啟動 AI 深度掃描」：資料不完整時該按鈕會自動補齊

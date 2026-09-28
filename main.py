@@ -465,6 +465,52 @@ def save_daily_scan_cache(cache_data):
     except Exception as e:
         print(f"Error saving daily scan cache: {e}")
 
+# 2026-09-28：盤中掃描的結果只算「暫存」。股價是即時的，若 10:00 先掃過，當天的快取就會
+# 被鎖在盤中價；收盤後第一次掃描才算正式的當日結果。這裡記錄每天的快取是不是盤中產生的。
+SCAN_META_FILE = "daily_scan_meta.json"
+
+def _tw_now():
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Asia/Taipei"))
+    except Exception:
+        return datetime.now()
+
+def _is_intraday_now():
+    """台股盤中（週一～週五 09:00～13:35，含收盤後資料更新緩衝）"""
+    now = _tw_now()
+    if now.weekday() >= 5:
+        return False
+    hm = now.hour * 60 + now.minute
+    return 9 * 60 <= hm < 13 * 60 + 35
+
+def _load_scan_meta():
+    if os.path.exists(SCAN_META_FILE):
+        try:
+            with open(SCAN_META_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_scan_meta(meta):
+    try:
+        with open(SCAN_META_FILE, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving scan meta: {e}")
+
+def _today_cache_is_intraday(today_str):
+    return bool(_load_scan_meta().get(today_str, {}).get("intraday"))
+
+def _mark_today_cache(today_str, intraday):
+    meta = _load_scan_meta()
+    meta[today_str] = {"intraday": bool(intraday), "saved_at": _tw_now().strftime('%Y-%m-%d %H:%M')}
+    # 只保留最近 30 天的紀錄
+    for k in sorted(meta.keys())[:-30]:
+        meta.pop(k, None)
+    _save_scan_meta(meta)
+
 AI_STOCK_LIST_FILE = "ai_stock_list.txt"
 
 def load_ai_stock_list():
@@ -643,9 +689,14 @@ async def scan_all_stocks(request: Request):
         pool_size = len(canonical_pool) or len(tickers)
 
         # 當日快取邏輯：若非強制重新刷洗且今日數據已存在，直接 0ms 超高速回傳！
-        if not force_refresh and today_str in cache_db and cache_db[today_str]:
+        # 例外：今日快取是盤中產生的、而現在已收盤 → 視為過期，重新掃描取得收盤價版本
+        intraday_now = _is_intraday_now()
+        stale_intraday = (today_str in cache_db and _today_cache_is_intraday(today_str) and not intraday_now)
+        if stale_intraday:
+            print(f"🔄 今日快取為盤中掃描結果，已收盤，改用收盤價重新掃描")
+        if not force_refresh and not stale_intraday and today_str in cache_db and cache_db[today_str]:
             print(f"⚡ [0ms 本地防護] 秒速載入當日 ({today_str}) 盤後保存數據，免除線上連線！")
-            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str, "macro_status": macro_status, "pool_size": pool_size}
+            return {"data": cache_db[today_str], "cached": True, "cache_date": today_str, "intraday": _today_cache_is_intraday(today_str), "macro_status": macro_status, "pool_size": pool_size}
 
         results = run_scan(tickers)
 
@@ -657,19 +708,22 @@ async def scan_all_stocks(request: Request):
             # 跟今天既有的快取「合併」而不是整批覆蓋：同一檔以這次新結果為準，
             # 但這次沒抓到、之前抓到過的檔位保留下來，讓使用者多按幾次掃描就能
             # 逐漸把當天的完整度補滿，而不是每次都從零開始、隨機漏掉不同的股票。
-            merged = {s['ticker']: s for s in cache_db.get(today_str, [])}
+            # 盤中的舊快取不拿來合併（價格是盤中價），收盤後從頭建立當日結果
+            base = [] if stale_intraday else cache_db.get(today_str, [])
+            merged = {s['ticker']: s for s in base}
             for r in results:
                 merged[r['ticker']] = r
             results = list(merged.values())
 
             cache_db[today_str] = results
             save_daily_scan_cache(cache_db)
+            _mark_today_cache(today_str, intraday_now)
             try:
                 with open("latest_scan_results.json", "w", encoding="utf-8") as f:
                     json.dump(results, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 print("Error saving latest_scan_results.json:", e)
-            return {"data": results, "cached": False, "cache_date": today_str, "macro_status": macro_status, "pool_size": pool_size}
+            return {"data": results, "cached": False, "cache_date": today_str, "intraday": intraday_now, "macro_status": macro_status, "pool_size": pool_size}
 
         if not results and tickers:
             # 當當日線上連線失敗，自動回溯最近一次可用的盤後快取
@@ -715,6 +769,7 @@ async def daily_auto_scan(user: str = Depends(authenticate)):
 
     cache_db[today_str] = final_results
     save_daily_scan_cache(cache_db)
+    _mark_today_cache(today_str, _is_intraday_now())
     try:
         with open("latest_scan_results.json", "w", encoding="utf-8") as f:
             json.dump(final_results, f, ensure_ascii=False, indent=4)
