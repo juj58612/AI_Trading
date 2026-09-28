@@ -504,9 +504,10 @@
                     <div style="font-size: 0.75rem; color: var(--text-sub); margin-top: 4px;" id="lbTimestampInfo"></div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <label style="font-size:0.85rem; color:var(--text-sub);" title="綜合評分＝總報酬率 − 2 × 最大回撤，同時考慮賺多少與過程中最多會賠多少">排序：
+                    <label style="font-size:0.85rem; color:var(--text-sub);" title="Calmar 比率＝年化報酬 ÷ 最大回撤（業界常用，>1 不錯、>2 很好）；Sharpe＝報酬 ÷ 整體波動">排序：
                         <select id="lbSortMode" onchange="renderLeaderboard()" style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:6px; padding:4px 6px;">
-                            <option value="score" selected>綜合評分（報酬 − 2×回撤）</option>
+                            <option value="calmar" selected>Calmar 比率（年化報酬 ÷ 最大回撤）</option>
+                            <option value="sharpe">Sharpe 比率</option>
                             <option value="return">總報酬率</option>
                             <option value="mdd">最大回撤（小→大）</option>
                             <option value="pf">獲利因子</option>
@@ -540,7 +541,7 @@
         </div>
     </div>
 
-    <script src="backtest.js?v=20260928"></script>
+    <script src="backtest.js?v=20260928b"></script>
     <script src="buyhold.js"></script>
 <script src="top_nav.js"></script>
 </body>
