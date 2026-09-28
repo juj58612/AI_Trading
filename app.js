@@ -798,7 +798,7 @@ function updateMarketWeather(ratio, aboveCount, totalCount) {
                 <div><span style="opacity:0.75;">判定：</span>${c.verdict}</div>
             </div>`).join('')}
         </div>
-        <div style="font-size:0.78rem; font-weight:400; margin-top:8px; color:rgba(255,255,255,0.8);">結論以巨觀資金面為準，與「明日下單建議」頁的計算方式一致；大盤趨勢為研究參考，不影響下單建議。 <a href="doc.html#faq-market" target="_blank" style="color:#fff; text-decoration:underline;">三個指標怎麼看？→</a></div>`;
+        <div style="font-size:0.78rem; font-weight:400; margin-top:8px; color:rgba(255,255,255,0.8);">結論以巨觀資金面為準，與「明日下單建議」頁的計算方式一致；大盤趨勢為研究參考，不影響下單建議。巨觀風控的避險效果經<a href="case_studies.html#case22" target="_blank" style="color:#fff; text-decoration:underline;">個案㉒</a>回測<b>尚未證實</b>，燈號請當作參考，勿視為可靠的避險訊號。 <a href="doc.html#faq-market" target="_blank" style="color:#fff; text-decoration:underline;">三個指標怎麼看？→</a></div>`;
 }
 
 async function renderStockCards(count, forceRefresh = false) {
