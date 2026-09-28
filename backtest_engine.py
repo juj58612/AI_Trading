@@ -952,6 +952,9 @@ class BacktestRequest(BaseModel):
     vwma_mode: str = "off"
     # 研究用：False 時不寫入 SQLite，避免研究試驗混進分析中心排行榜
     save_to_db: bool = True
+    # 個案研究㉑（2026-09-28）：個股別出場方案 {股號: 方案}，未列出的股票用 exit_strategy。
+    # 預設 None＝全部股票同一方案（正式系統現況）
+    strategy_map: Optional[dict] = None
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest, request: Request = None):
@@ -966,6 +969,10 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
         require_admin(request)
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=400, detail="請先同步歷史資料庫")
+
+    _smap = getattr(req, "strategy_map", None) or {}
+    def _strat(tk):
+        return _smap.get(tk, req.exit_strategy)
         
     with open(DB_PATH, 'r', encoding='utf-8') as f:
         db = json.load(f)
@@ -1064,7 +1071,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
             sell_reason, p = strategy_core.evaluate_exit(
                 p, today_price, yesterday_close,
                 today_chip,
-                req.exit_strategy, req.max_hold_days, current_date,
+                _strat(t), req.max_hold_days, current_date,
                 is_bull_regime=is_bull_today
             )
 
@@ -1142,7 +1149,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                 if idx >= 1:
                     inst_list.append(cdf.iloc[idx-1].to_dict())
 
-                eval_res = strategy_core.evaluate_entry(today_price, inst_list, req.exit_strategy, req.max_hold_days)
+                eval_res = strategy_core.evaluate_entry(today_price, inst_list, _strat(t), req.max_hold_days)
 
                 # 個案⑳ VWMA 濾網（研究用，預設 off 不影響任何既有結果）
                 if eval_res and req.vwma_mode in ("above", "above_vol"):
@@ -1197,7 +1204,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
                         is_taiex_bull = t_idx['close'] > t_idx['MA20']
                 
                 # Initial Trailing Stop Multiplier (Dynamic ATR)
-                if req.exit_strategy == 'D':
+                if _strat(buy_target['ticker']) == 'D':
                     mult = 2.2 if is_taiex_bull else 1.5  # 多頭時放寬至 2.2 ATR 防止甩轎，空頭時收緊至 1.5 ATR 避險
                 else:
                     mult = 3.0
