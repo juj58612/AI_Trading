@@ -214,7 +214,7 @@
         <p>當大盤出現系統性風險時，「覆巢之下無完卵」。系統盤後自動評估 3 大巨觀指標，依<strong>同時觸發幾項</strong>決定燈號：</p>
         <ol>
             <li><strong>外資期貨淨空單</strong> ≥ 30,000 口（極端警戒）。</li>
-            <li><strong>台幣匯率 (USD/TWD)</strong> 5 日內貶值 &gt; 1.5 角（熱錢外流）。</li>
+            <li><strong>台幣匯率 (USD/TWD)</strong> 5 日內貶值 ≥ 0.15 角（熱錢外流）。<span style="color:#94a3b8;">原設計為 1.5 角，程式實際為 0.15 角；<a href="case_studies.html#case22" style="color:#ec4899;">個案㉒</a>驗證改回 1.5 角的回測結果明顯較差，故維持現況。</span></li>
             <li><strong>外資現貨單日賣超</strong> &gt; 100 億新台幣（提款拋售）。</li>
         </ol>
 
@@ -232,7 +232,7 @@
                 </tr>
                 <tr>
                     <td><strong>黃燈警戒（2 項觸發）</strong></td>
-                    <td>本輪<strong>新買進的資金減半</strong>（明日下單建議的可用預算打五折；回測中新增持股檔數減半）。已持有的部位不受影響，不需賣出。</td>
+                    <td>本輪<strong>新買進的資金減半</strong>（明日下單建議的可用預算打五折；回測中「剩餘空位 × 0.5 無條件捨去」，只剩 1 個空位時該週不買）。已持有的部位不受影響，不需賣出。</td>
                 </tr>
                 <tr>
                     <td><strong>紅燈熔斷（3 項全部觸發）</strong></td>
@@ -240,6 +240,7 @@
                 </tr>
             </tbody>
         </table>
+        <p style="background:rgba(245,158,11,0.1); border-left:4px solid #f59e0b; padding:10px 14px; border-radius:6px; color:#fbbf24; font-size:0.9rem;">⚠️ <strong>效果尚未證實</strong>：<a href="case_studies.html#case22" style="color:#fbbf24; text-decoration:underline;">個案㉒</a>（2026-09-28，1,440 次回測）發現，開啟巨觀風控時最大回撤與 2022 空頭年虧損的中位數都<strong>沒有</strong>比關閉時小，「完全不套用」與現況大致打平。依事先訂好的標準，系統暫維持現況，但請勿把巨觀燈號當成可靠的避險訊號。</p>
     </div>
 
     <!-- 第三章 -->
