@@ -174,7 +174,7 @@
         <a href="#case17">⑰ 方案A極端漲幅風控訊號重新驗證（反證：原結論未能複現）</a>
         <a href="#case18">⑱ Optuna系統化參數搜尋擴大到方案A/B/C/D</a>
         <a href="#case19">⑲ 選股因子模型：加入技術面/籌碼面因子重新排序（反證）</a>
-        <a href="#case20">⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場（修正後翻案，待全網格確認）</a>
+        <a href="#case20">⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場（完整網格未通過，暫不採用）</a>
         <a href="#case21">㉑ 個股別出場方案：依籌碼／波動／規模分組給不同方案（未通過，不採用）</a>
         <a href="#retro-2026-08-13">📊 研究小結：2026-08-13這一天，只有1種嘗試真正有效</a>
     </div>
@@ -1161,7 +1161,7 @@
 
     <!-- 個案二十 -->
     <div class="doc-section" id="case20">
-        <h2>⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場<span class="status-tag status-solid">2026-09-28 修正後翻案，待全網格確認</span></h2>
+        <h2>⑳ VWMA 成交量加權均線濾網：站上 VWMA5／量增才進場<span class="status-tag status-solid">完整網格未通過，暫不採用（方案E觀察中）</span></h2>
         <div style="background:rgba(245,158,11,0.12); border-left:4px solid #f59e0b; padding:12px 16px; border-radius:6px; color:#fbbf24; font-size:0.92rem; margin: 10px 0 14px;">
             ⚠️ <strong>2026-09-28 更正</strong>：9/27 第一版結論（「不採用」）是在<strong>巨觀風控被靜默關閉</strong>的情況下跑出來的——回測引擎判斷本地巨觀快取是否涵蓋回測區間的條件過嚴（起日 2021-01-01 是假日、迄日超過最後同步日就判定沒涵蓋），因而改打 FinMind，配額用完時整批 fail-open。修正引擎後以「巨觀風控正常套用」（＝實戰系統的真實狀態）重跑，結論翻轉如下。舊版數據備份於 <code>backup_v1/case20_vwma_filter.before_macrofix.csv</code>。
         </div>
@@ -1193,7 +1193,26 @@
         </div>
         <p><strong>額外穩健度檢查</strong>（原設計以外的 5 組設定，全期間／樣本外）：方案E 5檔45天 兩段皆勝；方案A 5檔45天 兩段皆勝；方案E 8檔60天 全期間勝、樣本外小輸（137.1% vs 144.4%）；方案C 5檔45天 全期間小輸、樣本外勝；方案E 4檔45天 兩段皆輸。合計 17 組設定中 14 組至少一段勝出、10 組兩段皆勝——<strong>方向偏正面，但不是每個設定都有效</strong>。</p>
         <p><strong>須特別注意</strong>：同一個濾網，巨觀風控關閉時（9/27 第一版）樣本外 4 組只有 2 勝，開啟時變成 4 勝——效果會受其他規則的交互影響，代表它的優勢可能不如表面上穩固。</p>
-        <p><strong>目前結論</strong>：<strong>暫不接進正式程式，列為最有希望的候選改善</strong>。下一步是在修正後的引擎上重跑完整排行榜網格，並對同一批網格加跑「收盤&gt;VWMA5」版本，若在多數設定（尤其實戰常用的 5 檔附近）全期間與樣本外都勝出，再正式採用。回測引擎保留研究開關 <code>vwma_mode</code>（預設 off）。</p>
+        <h3>⑳-2 完整網格驗證（2026-09-28）</h3>
+        <p><strong>設計</strong>：與排行榜同一套網格——方案 A～E × 持股 3／5／8／10 檔 × 持倉 5～120 天（120 天以上結果幾乎相同，省略）＝180 組，每組跑全期間與樣本外（2025-01-01～）、不使用／收盤&gt;VWMA5 各一次，共 720 次回測（「不使用」的全期間結果與排行榜 280 組逐筆比對完全一致）。<strong>事先訂好的採用標準</strong>：① 全部組合中「全期間與樣本外兩段皆勝」過半；② 實戰常用範圍（方案 E、3～8 檔、持倉 20～90 天）也要過半；③ 勝出時最大回撤不可明顯惡化。</p>
+        <p>📎 <a href="research_data/case20b_vwma_grid.csv" download style="color:#ec4899; font-weight:500;">下載完整結果（720 筆）</a></p>
+        <table class="doc-table">
+            <thead><tr><th>範圍</th><th>組數</th><th>全期間勝</th><th>樣本外勝</th><th>兩段皆勝</th><th>樣本外報酬差（中位數）</th></tr></thead>
+            <tbody>
+                <tr><td><strong>全部組合（標準①）</strong></td><td>180</td><td>111</td><td>103</td><td><strong>78（43%）❌</strong></td><td>+1.9 個百分點</td></tr>
+                <tr><td>方案 A</td><td>36</td><td>16</td><td>18</td><td>10（28%）</td><td>+0.2</td></tr>
+                <tr><td>方案 B</td><td>36</td><td>19</td><td>22</td><td>17（47%）</td><td>+5.2</td></tr>
+                <tr><td>方案 C</td><td>36</td><td>25</td><td>25</td><td>19（53%）</td><td>+5.6</td></tr>
+                <tr><td>方案 D</td><td>36</td><td>22</td><td>13</td><td>10（28%）</td><td>−2.0</td></tr>
+                <tr><td>方案 E</td><td>36</td><td>29</td><td>25</td><td>22（61%）</td><td>+7.8</td></tr>
+                <tr><td><strong>實戰範圍：E、3～8檔、20～90天（標準②）</strong></td><td>15</td><td>14</td><td>11</td><td><strong>11（73%）✅</strong></td><td>+15.4</td></tr>
+                <tr><td>持股 3 檔／5 檔</td><td>45／45</td><td>32／33</td><td>22／31</td><td>21（47%）／28（62%）</td><td>−1.6／+11.1</td></tr>
+                <tr><td>持股 8 檔／10 檔</td><td>45／45</td><td>21／25</td><td>23／27</td><td>14（31%）／15（33%）</td><td>+0.5／+0.9</td></tr>
+            </tbody>
+        </table>
+        <p><strong>判讀</strong>：標準②③通過（方案 E 實戰範圍 73% 兩段皆勝，勝出時最大回撤中位數反而改善 8 個百分點），但<strong>標準①沒過</strong>——全部組合只有 43% 兩段皆勝，方案 A、D 與持股 8～10 檔時幾乎沒有效果甚至變差。方案 E 持股 8 檔時樣本外 5 組有 4 組輸。</p>
+        <p><strong>為什麼不「只對方案 E 採用」？</strong>「只挑有效的子集合採用」是看過結果之後才決定的範圍，正是個案⑨⑩⑮⑲反覆出現的過度擬合陷阱；而且目前所有歷史資料都已經用過，沒有乾淨的新資料可以再驗證一次。</p>
+        <p><strong>結論</strong>：<strong>依事先訂好的標準，暫不接進正式程式</strong>。「方案 E＋持股 3～5 檔＋收盤&gt;VWMA5」列為觀察中的候選：等累積 2026-10 之後約 3～6 個月的全新資料，只針對這個範圍做一次真正的樣本外驗證，通過才採用。研究開關 <code>vwma_mode</code> 保留（預設 off），腳本 <code>research_case20b_vwma_grid.py</code>。</p>
     </div>
 
     <div class="doc-section" id="case21">
