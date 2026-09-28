@@ -979,6 +979,11 @@ class BacktestRequest(BaseModel):
     # 個案研究㉑（2026-09-28）：個股別出場方案 {股號: 方案}，未列出的股票用 exit_strategy。
     # 預設 None＝全部股票同一方案（正式系統現況）
     strategy_map: Optional[dict] = None
+    # 個案研究㉒（2026-09-28）：巨觀風控研究開關，預設 "on"＝正式系統現況
+    #   "off"             完全不套用巨觀風控
+    #   "fixed"           台幣警報門檻改成白皮書寫的 1.5 角；2 項警報時「總持股上限減半」（無條件進位）
+    #   "fixed_veto_only" 同 fixed 門檻，但只保留 3 項全亮時的否決，不做減半
+    macro_mode: str = "on"
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest, request: Request = None):
@@ -1009,6 +1014,26 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
 
     # 三合一巨觀風控熔斷保險絲：逐日訊號，套用於進場否決/減碼
     macro_series = fetch_macro_3in1_series(req.start_date, req.end_date)
+    _mm = getattr(req, "macro_mode", "on") or "on"
+    if _mm == "off":
+        macro_series = {}
+    elif _mm in ("fixed", "fixed_veto_only"):
+        try:
+            with open(DB_PATH, 'r', encoding='utf-8') as _f:
+                _mc = json.load(_f).get("macro", {})
+        except Exception:
+            _mc = {}
+        macro_series = {}
+        for _d, _row in _mc.items():
+            if req.start_date <= _d <= req.end_date:
+                _s = strategy_core.evaluate_macro_3in1_status(
+                    foreign_spot_buy=_row.get("foreign_spot_buy", 0),
+                    twd_rate_change_5d=_row.get("twd_rate_change_5d", 0),
+                    foreign_futures_short=_row.get("foreign_futures_short", 0),
+                    twd_threshold=1.5)
+                if _mm == "fixed_veto_only" and not _s.get("veto_buy"):
+                    _s = dict(_s, pos_scale=1.0)
+                macro_series[_d] = _s
     macro_veto_weeks = 0
 
     # Prepare DataFrame for prices
@@ -1148,7 +1173,11 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
             macro_veto_weeks += 1
         if is_monday and len(portfolio) < req.max_positions and not macro_status.get("veto_buy"):
             pos_scale = macro_status.get("pos_scale", 1.0)
-            slots_available = int((req.max_positions - len(portfolio)) * pos_scale)
+            if _mm in ("fixed", "fixed_veto_only"):
+                # 「總持股上限減半」：上限＝ceil(最大持股×比例)，扣掉已持有的檔數
+                slots_available = max(0, math.ceil(req.max_positions * pos_scale) - len(portfolio))
+            else:
+                slots_available = int((req.max_positions - len(portfolio)) * pos_scale)
             candidates = []
 
             for t in TICKERS:

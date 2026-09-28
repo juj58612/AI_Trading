@@ -27,7 +27,7 @@ def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def evaluate_macro_3in1_status(foreign_spot_buy: float, twd_rate_change_5d: float, foreign_futures_short: int) -> dict:
+def evaluate_macro_3in1_status(foreign_spot_buy: float, twd_rate_change_5d: float, foreign_futures_short: int, twd_threshold: float = 0.15) -> dict:
     """
     華爾街三合一巨觀風控算子 (外資現貨 + 台幣匯率 + 外資期貨空單)
     回傳: { 'level': 0|1|2, 'title': str, 'advice': str, 'veto_buy': bool, 'pos_scale': float }
@@ -41,7 +41,10 @@ def evaluate_macro_3in1_status(foreign_spot_buy: float, twd_rate_change_5d: floa
         reasons.append(f"期貨空單偏高 ({foreign_futures_short:,}口)")
         
     # 警報 2: 台幣 5 日內貶值超過 1.5 角 (資金外流)
-    if twd_rate_change_5d >= 0.15:
+    # 個案㉒（2026-09-28）：twd_rate_change_5d 的單位是「角」（呼叫端已 ×10），白皮書寫的門檻是
+    # 「5 日貶值 > 1.5 角」，但這裡一直用 0.15（＝0.15 角），導致此警報約一半交易日都亮。
+    # 預設值暫時維持 0.15（＝正式系統現況），研究以 twd_threshold=1.5 驗證修正效果。
+    if twd_rate_change_5d >= twd_threshold:
         alerts += 1
         reasons.append(f"台幣快速貶值 (+{twd_rate_change_5d:.2f}角)")
         
