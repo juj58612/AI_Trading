@@ -298,7 +298,13 @@ def fetch_macro_3in1_series(start_date, end_date):
 
     if macro_cache:
         all_cached_dates = sorted(macro_cache.keys())
-        covers_range = all_cached_dates[0] <= start_date and all_cached_dates[-1] >= end_date
+        # 2026-09-28 修正（個案㉑複核時發現）：原本要求快取「嚴格」涵蓋 start~end，但回測起日常填
+        # 2021-01-01（非交易日，快取第一天是 2021-01-04），迄日常填「今天」（快取只到最後同步的交易日），
+        # 結果幾乎每次都判定「沒涵蓋」而改打 FinMind，配額用完時整批 fail-open（巨觀風控沒套用）。
+        # 改為頭尾各容許 10 天落差（假日/尚未收盤的日子本來就沒有交易，不影響回測）。
+        _tol = pd.Timedelta(days=10)
+        covers_range = (pd.Timestamp(all_cached_dates[0]) <= pd.Timestamp(start_date) + _tol
+                        and pd.Timestamp(all_cached_dates[-1]) >= pd.Timestamp(end_date) - _tol)
         if covers_range:
             result = {}
             for d, row in macro_cache.items():
@@ -336,6 +342,11 @@ def fetch_macro_3in1_series(start_date, end_date):
             if row.get("name") == "Foreign_Investor":
                 spot_by_date[row["date"]] = (row.get("buy", 0) - row.get("sell", 0)) / 1e8  # 換算億元
 
+        # 2026-09-28：三支 API 任一回傳空資料（常見於配額用完），整批視為失敗，
+        # 不可把缺漏欄位當 0 寫進快取（會變成「永遠沒警報」而且不會被發現）
+        if not (fut_by_date and fx_dates and spot_by_date):
+            raise RuntimeError(f"FinMind 回傳資料不完整（期貨 {len(fut_by_date)}／匯率 {len(fx_dates)}／現貨 {len(spot_by_date)} 筆），可能是配額用完")
+
         all_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
         raw_by_date = {}
         for d in all_dates:
@@ -365,7 +376,20 @@ def fetch_macro_3in1_series(start_date, end_date):
             except Exception as e:
                 print(f"⚠️ 巨觀風控資料寫入本地快取失敗（不影響本次回測結果）: {e}")
     except Exception as e:
-        print(f"⚠️ 三合一巨觀風控資料抓取失敗，本次回測不套用風控 (fail-open): {e}")
+        print(f"⚠️ 三合一巨觀風控資料抓取失敗: {e}")
+    if not result and macro_cache:
+        # FinMind 配額用完時常常不是丟例外，而是回傳空資料；此時退回本地快取（涵蓋多少算多少），
+        # 避免整批 fail-open 讓回測結果隨 API 狀態漂移
+        print("⚠️ 巨觀風控即時資料為空，改用本地快取（可能未涵蓋整個區間）")
+        for d, row in macro_cache.items():
+            if start_date <= d <= end_date:
+                result[d] = strategy_core.evaluate_macro_3in1_status(
+                    foreign_spot_buy=row.get("foreign_spot_buy", 0),
+                    twd_rate_change_5d=row.get("twd_rate_change_5d", 0),
+                    foreign_futures_short=row.get("foreign_futures_short", 0),
+                )
+    if not result:
+        print("🚨 巨觀風控資料完全取不到，本次回測未套用巨觀風控 (fail-open)")
     return result
 
 OTC_TICKERS = {"3131", "3324", "3529", "3693", "4966", "5443", "6187", "6274", "6643", "8299",
