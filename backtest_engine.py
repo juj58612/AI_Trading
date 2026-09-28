@@ -984,6 +984,8 @@ class BacktestRequest(BaseModel):
     #   "fixed"           台幣警報門檻改成白皮書寫的 1.5 角；2 項警報時「總持股上限減半」（無條件進位）
     #   "fixed_veto_only" 同 fixed 門檻，但只保留 3 項全亮時的否決，不做減半
     macro_mode: str = "on"
+    # 個案研究㉓（2026-09-28）：出場參數版本，"new"＝正式系統現況（個案⑯⑱採用值），"old"＝採用前舊值
+    exit_params: str = "new"
 
 @app.post("/api/backtest/run")
 async def run_backtest(req: BacktestRequest, request: Request = None):
@@ -1013,6 +1015,7 @@ async def run_backtest(req: BacktestRequest, request: Request = None):
         taiex_df.index = pd.to_datetime(taiex_df.index)
 
     # 三合一巨觀風控熔斷保險絲：逐日訊號，套用於進場否決/減碼
+    strategy_core.LEGACY_EXIT_PARAMS = (getattr(req, "exit_params", "new") == "old")
     macro_series = fetch_macro_3in1_series(req.start_date, req.end_date)
     _mm = getattr(req, "macro_mode", "on") or "on"
     if _mm == "off":

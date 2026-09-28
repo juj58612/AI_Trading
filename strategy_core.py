@@ -206,6 +206,10 @@ def _evaluate_regime_exit(p: dict, close: float, today_chip: dict, is_bull: bool
 
     return None, p
 
+# 個案㉓研究開關（2026-09-28）：True 時改用個案⑯⑱採用前的舊出場參數（12%/1.25x/15%、C/D 2天/1.0x、
+# A 2天、E 1.0x），只供研究腳本比較新舊參數，正式系統永遠是 False。
+LEGACY_EXIT_PARAMS = False
+
 def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today_chip: dict, strategy: str, max_hold_days: int, current_date: pd.Timestamp, is_bull_regime: bool = None) -> tuple:
     """
     統一出場邏輯
@@ -243,7 +247,7 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         'C': (0.1804, 1.1555, 0.1410),
         'D': (0.1774, 1.6574, 0.15),
     }
-    _tuning = _EXIT_TUNING.get(strategy, (0.12, 1.25, 0.15))
+    _tuning = (0.12, 1.25, 0.15) if LEGACY_EXIT_PARAMS else _EXIT_TUNING.get(strategy, (0.12, 1.25, 0.15))
     profit_lock_trigger, profit_lock_mult, take_profit_pct = _tuning
 
     unrealized_pnl_pct = (close - p['buy_price']) / p['buy_price']
@@ -276,6 +280,8 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         #   D：1天/1.8842倍，確認天數縮短、倍數也放寬，兩者都通過樣本外驗證）。
         _chip_weak_threshold = 2 if strategy == 'C' else 1
         _chip_loosen_mult = 1.7126 if strategy == 'C' else 1.8842
+        if LEGACY_EXIT_PARAMS:
+            _chip_weak_threshold, _chip_loosen_mult = 2, 1.0
 
         if today_chip.get('foreign', 0) < 0 or today_chip.get('trust', 0) < 0:
             p['chip_weak_days'] = p.get('chip_weak_days', 0) + 1
@@ -303,7 +309,7 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
         else:
             p['score_weak_days'] = 0
 
-        if p['score_weak_days'] >= 3:
+        if p['score_weak_days'] >= (2 if LEGACY_EXIT_PARAMS else 3):
             sell_reason = "積分轉負"
             return sell_reason, p
             
@@ -330,7 +336,7 @@ def evaluate_exit(p: dict, today_price: pd.Series, yesterday_close: float, today
                 atr_val = today_price['ATR']
                 atr_val = atr_val if not pd.isna(atr_val) else 0.0
                 base_price = yesterday_close if yesterday_close else close
-                tightened_stop = base_price - (1.6226 * atr_val)
+                tightened_stop = base_price - ((1.0 if LEGACY_EXIT_PARAMS else 1.6226) * atr_val)
                 p['trailing_stop'] = max(p['trailing_stop'], tightened_stop)
                 if close < p['trailing_stop']:
                     sell_reason = "雙賣後鎖利出場"
