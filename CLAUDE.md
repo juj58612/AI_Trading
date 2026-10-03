@@ -7,8 +7,10 @@
 開工時先判斷目前在哪台電腦（`uname`／路徑：Mac 是 `/Volumes/1T  01/AI_Trading`，Windows 是 `D:\AI_Trading`），**只列出這台電腦現在能做的項目**。標【Windows】的項目，只有在 Windows 上才提醒；使用者在 Mac 時不能做，不要提。使用者確認做完後，就從這裡刪掉那一項並 commit。
 
 1. **【Windows／WIN2 各做一次】同步 2026-10-04 改寫過的 git 歷史**：GitHub 的歷史已經在 Mac 上改寫並強制推送（`bd90f30`），所以舊的本機版本不能直接 `git pull`。步驟：(1) 先用 `git status`、`git log origin/main..HEAD` 確認有沒有還沒推上去的修改，有的話先把檔案複製到別的地方備份；(2) 執行 `git fetch && git reset --hard origin/main`；(3) 把備份的修改放回來再 commit。做完要註明是哪一台。
-2. **【WIN2】確認本機 `.env` 有 `FIREBASE_SERVICE_ACCOUNT_JSON` 和 `ADMIN_PASSWORD`**：值從其他電腦的 `.env` 複製過去。
+2. **【Windows／WIN2 各做一次】核對本機 `.env` 和 Mac 一致**：`INVITATION_CODE` 在 2026-09-26 前後換過，Windows 上可能還是舊值；另外確認有 `ADMIN_PASSWORD`、`FIREBASE_SERVICE_ACCOUNT_JSON`。以 Mac 的 `.env`（或 Render 環境變數）為準，由使用者自己複製過去。比對時只回報「一致／不一致」，不要把值印在對話裡。做完要註明是哪一台。
 3. **2027-01 起：新資料驗證**：等累積 2026-10 之後約 3～6 個月的資料，驗證個案⑳（E＋3～5 檔＋VWMA5）、㉓（方案 C、E 新舊出場參數）、㉑（低波動股改用 D）。詳見 `STRATEGY_ANALYSIS_NOTES.md` 最後一節。在 2027-01 之前不用提醒。
+
+**對話結束前的維護規則**：每次對話結束前，如果有新的待辦、做完的待辦，或其他要讓下次對話知道的狀態改變，直接更新這一節（新增、刪除或修改項目），並跟其他修改一起 commit。不要另外寫交接筆記：`NEXT_SESSION_HANDOFF.md` 已經停用。待辦裡只寫要做什麼和值放在哪裡，絕不寫值本身。
 
 **不要再提醒的事**：推播通知（LINE／Telegram／Email），使用者 2026-10-04 決定先不做。管理者密碼和邀請碼，使用者決定不更換。
 
