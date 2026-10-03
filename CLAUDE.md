@@ -4,14 +4,14 @@
 
 ## ⏰ 待辦提醒：每次開新對話先提醒使用者
 
-不管在哪台電腦或哪個入口（Mac、Windows、WIN2、網頁版），開工時都先把下面還沒完成的項目列給使用者看。使用者確認做完後，就從這裡刪掉那一項並 commit。
+開工時先判斷目前在哪台電腦（`uname`／路徑：Mac 是 `/Volumes/1T  01/AI_Trading`，Windows 是 `D:\AI_Trading`），**只列出這台電腦現在能做的項目**。標【Windows】的項目，只有在 Windows 上才提醒；使用者在 Mac 時不能做，不要提。使用者確認做完後，就從這裡刪掉那一項並 commit。
 
-1. **【Mac】抹除 git 歷史裡的舊密碼**（2026-10-04 起）：commit `aee5d31` 之後的 `NEXT_SESSION_HANDOFF.md` 舊版本裡，還留著管理者密碼、邀請碼和測試帳號密碼的明文（目前最新版已經乾淨）。repo 是公開的。做法：在 Mac 用 `git filter-branch --tree-filter` 只替換這個檔案裡的那三個值，替換完再 `git push --force-with-lease`。這一步要使用者親自執行或授權，Claude 的自動模式會擋下來。值不要寫進任何追蹤檔，要用的時候從 `.env` 讀。改寫前的備份放在 Mac 的 `backup_v1/before_history_rewrite_2026-10-04.bundle`。**使用者決定不換密碼和邀請碼，不要再建議更換。**
-2. **【每台 Windows】第 1 項完成後才做**：先把那台電腦還沒推上去的修改推上 GitHub，再執行 `git fetch && git reset --hard origin/main`。沒先推的話，那些修改會被清掉。
-3. **【使用者自己操作】刪除正式站的測試帳號 `firebasetest2`**：到「帳號管理」頁刪除。這需要管理者密碼，Claude 不能代為登入。
-4. **【WIN2】確認本機 `.env` 有 `FIREBASE_SERVICE_ACCOUNT_JSON` 和 `ADMIN_PASSWORD`**：值從其他電腦的 `.env` 複製過去。
-5. **推播通知（LINE／Telegram／Email）要不要做**：使用者之前延後決定，要求下次提醒。
-6. **2027-01 起：新資料驗證**：等累積 2026-10 之後約 3～6 個月的資料，驗證個案⑳（E＋3～5 檔＋VWMA5）、㉓（方案 C、E 新舊出場參數）、㉑（低波動股改用 D）。詳見 `STRATEGY_ANALYSIS_NOTES.md` 最後一節。
+1. **【Windows／WIN2 各做一次】同步 2026-10-04 改寫過的 git 歷史**：GitHub 的歷史已經在 Mac 上改寫並強制推送（`bd90f30`），所以舊的本機版本不能直接 `git pull`。步驟：(1) 先用 `git status`、`git log origin/main..HEAD` 確認有沒有還沒推上去的修改，有的話先把檔案複製到別的地方備份；(2) 執行 `git fetch && git reset --hard origin/main`；(3) 把備份的修改放回來再 commit。做完要註明是哪一台。
+2. **【WIN2】確認本機 `.env` 有 `FIREBASE_SERVICE_ACCOUNT_JSON` 和 `ADMIN_PASSWORD`**：值從其他電腦的 `.env` 複製過去。
+3. **【任何電腦，使用者自己操作】刪除正式站的測試帳號 `firebasetest2`**：用管理者登入正式站，頂部導覽列點「🔐 帳號管理」，在那一列按「🗑️ 刪除帳號」，再按確定。Claude 不能代為登入。
+4. **2027-01 起：新資料驗證**：等累積 2026-10 之後約 3～6 個月的資料，驗證個案⑳（E＋3～5 檔＋VWMA5）、㉓（方案 C、E 新舊出場參數）、㉑（低波動股改用 D）。詳見 `STRATEGY_ANALYSIS_NOTES.md` 最後一節。在 2027-01 之前不用提醒。
+
+**不要再提醒的事**：推播通知（LINE／Telegram／Email），使用者 2026-10-04 決定先不做。管理者密碼和邀請碼，使用者決定不更換。
 
 ## 開工第一步（每次新對話）
 
