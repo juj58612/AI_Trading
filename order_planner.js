@@ -125,6 +125,8 @@ async function loadPlannerData() {
                         live_price: b.live_price,
                         gap_amount: b.gap_amount,
                         gap_atr_ratio: b.gap_atr_ratio,
+                        last_foreign: b.last_foreign,
+                        last_inst_date: b.last_inst_date,
                         exit_strategy: b.exit_strategy || 'E'
                     });
                 });
@@ -240,6 +242,17 @@ function buildGapWarningHtml(o) {
     return `<div class="status-banner status-banner-warning status-banner-sm">⚠️ 跳空提醒：${gapText}，追價前留意成本已偏高</div>`;
 }
 
+// 隔日沖提醒（個案㉕，2026-10-05）：最近一個已公布交易日外資買超、今天價格又比推薦價高，
+// 這正是隔日沖「前一天買、隔天開高倒貨」的典型位置。回測是用收盤價進場（已避開開盤賣壓），
+// 實戰若在開盤追價就跟回測不一致。只提醒，不擋下單，也不影響選股排序。
+function buildDayTradeFlipWarningHtml(o) {
+    const foreign = Number(o.last_foreign);
+    if (!isFinite(foreign) || foreign <= 0) return '';
+    if (typeof o.gap_atr_ratio !== 'number' || !isFinite(o.gap_atr_ratio) || o.gap_atr_ratio <= 0) return '';
+    const dateText = o.last_inst_date ? `（${o.last_inst_date}）` : '';
+    return `<div class="status-banner status-banner-neutral status-banner-sm">🕐 隔日沖提醒：最近一個交易日${dateText}外資買超 ${foreign.toLocaleString()} 張，今天價格又高於推薦價，可能有隔日沖賣壓。回測是用收盤價買進，建議別在開盤追價，13:00 後再決定。</div>`;
+}
+
 // Render Lists
 function renderOrders() {
     // 0. Render Urgent Sell Signals (觸發停損/時間到期) — 獨立醒目區塊，跟一般加碼建議分開
@@ -297,7 +310,7 @@ function renderOrders() {
             const costTwd = o.price * o.shares * 1000;
             const costWan = (costTwd / 10000).toFixed(2);
             const actionText = `<span style="color:var(--accent-green)">買進做多 (${o.stage})</span>`;
-            const gapWarningHtml = buildGapWarningHtml(o);
+            const gapWarningHtml = buildGapWarningHtml(o) + buildDayTradeFlipWarningHtml(o);
 
             const div = document.createElement('div');
             div.className = 'order-card buy-card';

@@ -582,6 +582,7 @@ def run_scan(tickers):
                 "chip_score": chip_score, "signal": signal_text,
                 "last_foreign": inst_data[-1]['foreign'] if inst_data else 0,
                 "last_trust": inst_data[-1]['trust'] if inst_data else 0,
+                "last_inst_date": inst_data[-1].get('date', '') if inst_data else '',
             }
         except Exception as e:
             print(f"Error scanning {ticker}: {e}")
@@ -1461,6 +1462,8 @@ def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', u
                     "name": item.get('name', t),
                     "price": item.get('latest_close'),
                     "atr": item.get('atr', 0),
+                    "last_foreign": item.get('last_foreign', 0),
+                    "last_inst_date": item.get('last_inst_date', ''),
                     "score": chip_score,
                     "signal": signal_text,
                     "stage": stage_text,
@@ -1477,6 +1480,8 @@ def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', u
                 "name": item.get('name', t),
                 "price": item.get('latest_close'),
                 "atr": item.get('atr', 0),
+                "last_foreign": item.get('last_foreign', 0),
+                "last_inst_date": item.get('last_inst_date', ''),
                 "score": chip_score,
                 "signal": item.get('signal', 'S1 止跌/右側試探盤'),
                 "stage": "首批 30%",
@@ -1504,6 +1509,9 @@ def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', u
                 "name": b['name'],
                 "price": price,
                 "atr": b.get('atr', 0),
+                # 隔日沖提醒用（個案㉕，2026-10-05）：最近一個已公布交易日的外資買賣超(張)
+                "last_foreign": b.get('last_foreign', 0),
+                "last_inst_date": b.get('last_inst_date', ''),
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
@@ -1518,6 +1526,9 @@ def get_planner_recommendations(cash: float = 100.0, exit_strategy: str = 'E', u
                 "name": b['name'],
                 "price": price,
                 "atr": b.get('atr', 0),
+                # 隔日沖提醒用（個案㉕，2026-10-05）：最近一個已公布交易日的外資買賣超(張)
+                "last_foreign": b.get('last_foreign', 0),
+                "last_inst_date": b.get('last_inst_date', ''),
                 "shares": shares_zhang,
                 "cost": needed_cost,
                 "score": b['score'],
