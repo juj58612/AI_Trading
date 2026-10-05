@@ -1,11 +1,11 @@
 {
-    "date": "2026-10-03",
+    "date": "2026-10-05",
     "result": {
         "regime": "多頭",
-        "taiex_close": 48475.74,
-        "taiex_ma20": 47097.17,
-        "taiex_date": "2026-10-02",
-        "bias_pct": 2.93,
+        "taiex_close": 49712.04,
+        "taiex_ma20": 47289.89,
+        "taiex_date": "2026-10-05",
+        "bias_pct": 5.12,
         "note": "此面板僅供資訊參考，不代表推薦邏輯。個案研究⑤⑦⑧⑮已證實依此訊號切換出場規則或整包方案，皆輸給固定使用方案E；系統目前的下單建議固定採用方案E（個案⑭⑯驗證後的正式預設值），不隨此regime數值變動。",
         "report_url": "case_studies.html#case15",
         "case_url": "case_studies.html#case16"
