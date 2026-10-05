@@ -329,7 +329,12 @@ def fetch_macro_3in1_series(start_date, end_date):
                 fut_by_date[row["date"]] = net_short
 
         # 2. 台幣匯率 (USD/TWD 即期買入)
-        fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={start_date}&end_date={end_date}&token={token}"
+        # 2026-10-05 修正：原本匯率也只抓 start_date 起，查詢區間最前面 5 個匯率日找不到「5 日前」
+        # 的匯率，台幣 5 日變化被當成 0（警報永遠不亮），而且這些 0 還會寫回本地快取、蓋掉原本正確的值
+        # （首頁每天只查最近 15 天，所以每天都會把前 5 天洗成 0）。改成匯率多往前抓 30 天，
+        # 且只輸出/寫回 start_date 之後的日子。
+        fx_start = (pd.Timestamp(start_date) - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
+        fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={fx_start}&end_date={end_date}&token={token}"
         fx_data = requests.get(fx_url, timeout=20).json().get("data", [])
         fx_dates = sorted([row["date"] for row in fx_data])
         fx_rate_by_date = {row["date"]: row.get("spot_buy", 0) for row in fx_data}
@@ -347,7 +352,7 @@ def fetch_macro_3in1_series(start_date, end_date):
         if not (fut_by_date and fx_dates and spot_by_date):
             raise RuntimeError(f"FinMind 回傳資料不完整（期貨 {len(fut_by_date)}／匯率 {len(fx_dates)}／現貨 {len(spot_by_date)} 筆），可能是配額用完")
 
-        all_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
+        all_dates = sorted(d for d in set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())) if d >= start_date)
         raw_by_date = {}
         for d in all_dates:
             twd_change_5d = 0.0
@@ -608,7 +613,10 @@ async def download_data(request: Request):
                     if row.get("institutional_investors") == "外資":
                         fut_by_date[row["date"]] = row.get("short_open_interest_balance_volume", 0) - row.get("long_open_interest_balance_volume", 0)
 
-                fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={macro_fetch_start}&end_date={end_date}&token={finmind_token}"
+                # 2026-10-05 修正：匯率多往前抓 30 天，否則續傳起點附近 5 個匯率日找不到「5 日前」匯率，
+                # 台幣 5 日變化被寫成 0、蓋掉快取裡原本正確的值（同 fetch_macro_3in1_series 的修正）
+                fx_fetch_start = (pd.Timestamp(macro_fetch_start) - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
+                fx_url = f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanExchangeRate&data_id=USD&start_date={fx_fetch_start}&end_date={end_date}&token={finmind_token}"
                 fx_data = requests.get(fx_url, timeout=20).json().get("data", [])
                 fx_dates = sorted([row["date"] for row in fx_data])
                 fx_rate_by_date = {row["date"]: row.get("spot_buy", 0) for row in fx_data}
@@ -620,7 +628,7 @@ async def download_data(request: Request):
                     if row.get("name") == "Foreign_Investor":
                         spot_by_date[row["date"]] = (row.get("buy", 0) - row.get("sell", 0)) / 1e8
 
-                all_macro_dates = sorted(set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())))
+                all_macro_dates = sorted(d for d in set(list(fut_by_date.keys()) + fx_dates + list(spot_by_date.keys())) if d >= macro_fetch_start)
                 if all_macro_dates:
                     db.setdefault("macro", {})
                     for d in all_macro_dates:

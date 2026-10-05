@@ -380,7 +380,9 @@ def get_latest_macro_status():
 def get_stock_data(ticker: str):
     try:
         # 1. 抓取即時/盤後價格與歷史走勢 (yfinance)
-        hist = fetch_yfinance_history(ticker)
+        # 2026-10-05：跟首頁掃描同一個 bug——1 個月遇連假不到 20 個交易日，前端算不出 20 日均線、
+        # 近 20 日高低點也少算。改抓 3 個月，回傳給前端的走勢只取最後 22 筆（維持約一個月的圖）。
+        hist = fetch_yfinance_history(ticker, period="3mo")
         if hist.empty:
             raise ValueError(f"無法抓取 {ticker} 的股價資料")
         # 資料源常常會多一列「今天/昨天」的佔位資料，成交量有了但收盤價還沒回填完成
@@ -395,8 +397,9 @@ def get_stock_data(ticker: str):
         recent_high = round(hist['High'].tail(20).max(), 2) if len(hist) >= 1 else latest_close
         recent_low = round(hist['Low'].tail(20).min(), 2) if len(hist) >= 1 else latest_close
         
-        history_dates = [d.strftime("%m-%d") for d in hist.index]
-        history_prices = [round(p, 2) for p in hist['Close'].tolist()]
+        chart_hist = hist.tail(22)
+        history_dates = [d.strftime("%m-%d") for d in chart_hist.index]
+        history_prices = [round(p, 2) for p in chart_hist['Close'].tolist()]
 
         # 2. 抓取真實籌碼與融資券 (FinMind)
         inst_data, margin_data, is_mock = fetch_chip_data_from_finmind(ticker)
@@ -535,7 +538,10 @@ def run_scan(tickers):
             time.sleep(sleep_time)
 
             # 1. Fetch Price
-            hist = fetch_yfinance_history(ticker)
+            # 2026-10-05 修正：原本用預設 period="1mo"，遇到連假（例如中秋＋教師節）一個月只剩
+            # 19 個交易日，不足 20 筆時 MA20 會退回等於收盤價 → 動能全變 0、首頁 AI 族群健康度
+            # 變成 0%（顯示「極度恐慌」），排序的動能鍵也全部失效。改抓 3 個月，確保一定有 20 筆以上。
+            hist = fetch_yfinance_history(ticker, period="3mo")
             if hist.empty: return None
             # 資料源常常會多一列「今天/昨天」的佔位資料，成交量已經有了但收盤價還沒回填
             # 完成（NaN）。直接用 .iloc[-1] 會拿到這個 NaN，不但害後面算出來的 MA/動能全部
@@ -545,7 +551,11 @@ def run_scan(tickers):
             if hist.empty: return None
             latest_close = round(hist['Close'].iloc[-1], 2)
             ma5 = round(hist['Close'].tail(5).mean(), 2) if len(hist) >= 5 else latest_close
-            ma20 = round(hist['Close'].tail(20).mean(), 2) if len(hist) >= 20 else latest_close
+            if len(hist) < 20:
+                # 資料不足 20 日時不要假裝 MA20＝收盤價（會讓動能變 0、健康度歸零），直接跳過這檔
+                print(f"⚠️ {ticker} 只有 {len(hist)} 個交易日資料，不足計算 MA20，略過")
+                return None
+            ma20 = round(hist['Close'].tail(20).mean(), 2)
             vol_today = hist['Volume'].iloc[-1]
             vol_ma5 = hist['Volume'].tail(5).mean()
 
